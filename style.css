@@ -1,53 +1,243 @@
-body{
-    background:#0a0a0a;
+body {
+
+    background-image:
+    linear-gradient(
+        rgba(0,0,0,0.75),
+        rgba(0,0,0,0.85)
+    ),
+    url("assets/background.jpg");
+
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+
     color:#00d9ff;
-    font-family:Arial, Helvetica, sans-serif;
+
+    font-family: Arial, Helvetica, sans-serif;
+
     margin:0;
+
 }
 
-.container{
+
+.container {
+
     width:90%;
     max-width:700px;
     margin:auto;
     padding-top:40px;
+
 }
 
-h1{
+
+h1 {
+
     text-align:center;
     font-size:50px;
-    letter-spacing:8px;
+    letter-spacing:10px;
+
 }
 
-.status{
+
+.status {
+
     text-align:center;
     color:#7ef9ff;
+
 }
 
-.card{
+
+.card {
+
     border:1px solid #00d9ff;
+
     padding:20px;
+
     margin-top:20px;
+
     border-radius:12px;
+
 }
 
-input{
-    width:100%;
+
+/* Unified Aegis Controls */
+
+input,
+select,
+textarea {
+
+    width:90%;
+
     padding:12px;
-    margin-top:10px;
+
+    margin-top:8px;
+
     background:#111;
+
     color:white;
+
     border:1px solid #00d9ff;
+
+    border-radius:8px;
+
+    box-sizing:border-box;
+
 }
 
-button{
+
+/* Text areas */
+
+textarea {
+
+    height:80px;
+
+    resize:vertical;
+
+}
+
+
+/* Buttons */
+
+button {
+
+    width:50%;
+
+    padding:12px;
+
     margin-top:15px;
-    padding:12px 20px;
-    background:#00d9ff;
-    border:none;
+
+    border-radius:8px;
+
     cursor:pointer;
-    font-weight:bold;
+
+    background:#111;
+
+    color:#00d9ff;
+
+    border:1px solid #00d9ff;
+
 }
 
-li{
+
+/* Labels */
+
+label {
+
+    display:block;
+
+    margin-top:15px;
+
+}
+
+
+/* Lists */
+
+li {
+
     margin-top:10px;
+
+}
+
+
+/* Logo */
+
+.logo-container {
+
+    text-align:center;
+
+}
+
+
+.aegis-logo {
+
+    width:120px;
+
+    height:120px;
+
+    object-fit:contain;
+
+    margin-bottom:10px;
+
+}
+
+
+/* Status Panel */
+
+#status {
+
+    text-align:center;
+
+    font-size:18px;
+
+    line-height:1.6;
+
+    padding:20px;
+
+}
+
+
+/* Reminder Items */
+
+.reminder-item {
+
+    padding:15px;
+
+    margin-top:15px;
+
+    border:1px solid #00d9ff;
+
+    border-radius:10px;
+
+}
+
+
+.reminder-item button,
+.event-item button {
+
+    background:#ff4444;
+
+    color:white;
+
+}
+
+
+/* Event Items */
+
+.event-item {
+
+    border:1px solid #00d9ff;
+
+    border-radius:10px;
+
+    padding:15px;
+
+    margin-top:15px;
+
+}
+
+
+/* Aegis Notification */
+
+.aegis-alert {
+
+    position:fixed;
+
+    top:20px;
+
+    right:20px;
+
+    width:300px;
+
+    padding:20px;
+
+    background:#111;
+
+    border:2px solid #00d9ff;
+
+    border-radius:15px;
+
+    z-index:9999;
+
+    box-shadow:0 0 20px #00d9ff;
+
 }
