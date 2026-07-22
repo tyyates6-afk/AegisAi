@@ -241,3 +241,63 @@ li {
     box-shadow:0 0 20px #00d9ff;
 
 }
+
+#dashboard {
+
+    background: rgba(20, 30, 45, 0.85);
+
+    border: 1px solid rgba(102, 204, 255, 0.25);
+
+    border-radius: 16px;
+
+    padding: 35px;
+
+    margin-bottom: 25px;
+
+    text-align: center;
+
+    box-shadow: 0 0 20px rgba(0,0,0,.35);
+
+}
+
+#dashboard h2 {
+
+    color: #66ccff;
+
+    font-size: 2.4rem;
+
+    letter-spacing: 6px;
+
+    margin-bottom: 20px;
+
+}
+
+#greeting {
+
+    font-size: 1.8rem;
+
+    font-weight: 600;
+
+    margin-bottom: 10px;
+
+}
+
+#currentDate {
+
+    font-size: 1.1rem;
+
+    opacity: .75;
+
+}
+
+#currentTime {
+
+    margin-top: 20px;
+
+    font-size: 2.2rem;
+
+    color: #66ccff;
+
+    font-weight: bold;
+
+}

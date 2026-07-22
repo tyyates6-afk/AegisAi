@@ -7,74 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Aegis AI</title>
-<section class="card">
 
-<h2>⚙️ Aegis Profile</h2>
-
-
-<label>
-Name
-</label>
-
-<input id="userName"
-placeholder="Enter your name">
-
-
-<label>
-Bible Translation
-</label>
-
-<select id="bibleVersion">
-
-<option value="NIV">
-NIV
-</option>
-
-<option value="KJV">
-KJV
-</option>
-
-<option value="ESV">
-ESV
-</option>
-
-<option value="NKJV">
-NKJV
-</option>
-
-</select>
-
-
-<label>
-Assistant Style
-</label>
-
-<select id="assistantStyle">
-
-<option value="Professional">
-Professional
-</option>
-
-<option value="Friendly">
-Friendly
-</option>
-
-<option value="Technical">
-Technical
-</option>
-
-</select>
-
-
-<button onclick="saveProfile()">
-Save Profile
-</button>
-
-
-<p id="profileStatus"></p>
-
-
-</section>
 
 <link rel="stylesheet" href="style.css">
 
@@ -83,9 +16,52 @@ Save Profile
 </head>
 
 
+
 <body>
 
 <div class="container">
+
+<section id="dashboard" class="panel">
+
+    <h2>AEGIS</h2>
+
+    <div id="greeting"></div>
+
+    <div id="currentDate"></div>
+
+    <div id="currentTime"></div>
+
+</section>
+
+<section class="card">
+
+<h2>⚙️ Aegis Profile</h2>
+
+<label>Name</label>
+<input id="userName" placeholder="Enter your name">
+
+<label>Bible Translation</label>
+<select id="bibleVersion">
+    <option value="NIV">NIV</option>
+    <option value="KJV">KJV</option>
+    <option value="ESV">ESV</option>
+    <option value="NKJV">NKJV</option>
+</select>
+
+<label>Assistant Style</label>
+<select id="assistantStyle">
+    <option value="Professional">Professional</option>
+    <option value="Friendly">Friendly</option>
+    <option value="Technical">Technical</option>
+</select>
+
+<button onclick="saveProfile()">
+    Save Profile
+</button>
+
+<p id="profileStatus"></p>
+
+</section>
 
 <div class="logo-container">
 
@@ -101,6 +77,9 @@ Save Profile
 Initializing Aegis...
 
 </div>
+
+
+
 
 <section class="card">
 
@@ -336,7 +315,8 @@ Save Reminder
 <script src="js/calendar.js"></script>
 
 <script src="js/profile.js"></script>
-
+<script src="js/widgets/greetingWidget.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/reminders.js"></script>
 
 <script src="js/bible.js"></script>

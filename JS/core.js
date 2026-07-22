@@ -4,9 +4,9 @@
 
 const Aegis = {
 
-    version: "1.1.5",
-
     modules: {},
+
+    listeners: {},
 
     register(name, module) {
 
@@ -60,6 +60,31 @@ const Aegis = {
 
 },
 
+    refreshAll(){
+
+        Object.values(this.modules).forEach(module => {
+
+            if (typeof module.api.refresh === "function") {
+
+                try {
+
+                    module.api.refresh();
+
+                } catch (error) {
+
+                    console.error(
+                        `Failed to refresh ${module.name}`,
+                        error
+                    );
+
+                }
+
+            }
+
+        });
+
+    },
+
     broadcast(eventName, data = null){
 
         window.dispatchEvent(
@@ -112,7 +137,7 @@ const Aegis = {
 
     
 
-initModules(){
+initmodules(){
     const bootStart = performance.now();
     console.log("==========");
     console.log("Starting AEGIS...");
@@ -121,7 +146,7 @@ initModules(){
     Object.values(this.modules).forEach(module => {
         module.status = "INITIALIZING";
 
-        console.log(`Initializing ${module.name}...`);
+        
         if(typeof module.api.init === "function"){
 
             console.log(`Initializing ${module.name}...`);
@@ -167,8 +192,27 @@ window.addEventListener(
 
     () => {
 
-        Aegis.initModules();
+        Aegis.initmodules();
 
     }
 
 );
+
+getModule(name);{
+    return this.modules[name];
+
+};
+
+refresh(name);{
+
+    const module = this.modules[name];
+
+    if (!module) return;
+
+    if (typeof module.api.refresh === "function") {
+
+        module.api.refresh();
+
+    }
+
+};
