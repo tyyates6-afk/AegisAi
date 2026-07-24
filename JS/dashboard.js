@@ -2,31 +2,39 @@ Aegis.register("dashboard", {
 
     version: "1.2.0",
 
-    interval: null,
-
     init() {
 
-        console.log("Dashboard initialized.");
+        Dashboard.init();
 
-        updateGreetingWidget();
+        Aegis.listen("profileUpdated", () => {
 
-        this.interval = setInterval(() => {
+            Dashboard.broadcast("profileUpdated");
 
-            updateGreetingWidget();
+        });
 
-        }, 1000);
+        Aegis.listen("eventsUpdated", () => {
+
+            Dashboard.broadcast("eventsUpdated");
+
+        });
+
+        Aegis.listen("remindersUpdated", () => {
+
+            Dashboard.broadcast("remindersUpdated");
+
+        });
 
     },
 
     refresh() {
 
-        updateGreetingWidget();
+        Dashboard.refreshAll();
 
     },
 
     shutdown() {
 
-        clearInterval(this.interval);
+        Dashboard.shutdown();
 
     },
 
@@ -34,8 +42,7 @@ Aegis.register("dashboard", {
 
         return {
 
-            online: true,
-            version: this.version
+            widgets: Object.keys(Dashboard.widgets).length
 
         };
 

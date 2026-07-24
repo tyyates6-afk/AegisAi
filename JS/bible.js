@@ -1,46 +1,51 @@
+let dailyVerse = null;
+
+
 async function loadVerse(){
 
 
-try{
+    try{
 
 
-let response =
-await fetch(
-"https://beta.ourmanna.com/api/v1/get/?format=json"
-);
+        let response =
+        await fetch(
+            "https://beta.ourmanna.com/api/v1/get/?format=json"
+        );
 
 
-
-let data =
-await response.json();
-
-
-
-document.getElementById(
-"verse"
-).innerHTML =
-
-data.verse.details.text
-+
-"<br><br>— "
-+
-data.verse.details.reference;
+        let data =
+        await response.json();
 
 
 
-}
+        dailyVerse = {
 
-catch(error){
-
-
-document.getElementById(
-"verse"
-).innerText =
-"Unable to load verse.";
+            text:
+            data.verse.details.text,
 
 
-}
+            reference:
+            data.verse.details.reference
 
+        };
+
+
+        Aegis.broadcast(
+            "verseUpdated"
+        );
+
+
+    }
+
+
+    catch(error){
+
+        console.error(
+            "Unable to load verse.",
+            error
+        );
+
+    }
 
 }
 
@@ -50,6 +55,15 @@ Aegis.register("bible", {
 
     version: "1.1.5",
 
+
+    getDailyVerse(){
+
+        return dailyVerse;
+
+    },
+
+
+
     init() {
 
         console.log("Bible initialized.");
@@ -58,13 +72,16 @@ Aegis.register("bible", {
 
     },
 
+
     refresh() {
 
         loadVerse();
 
     },
 
+
     shutdown() {},
+
 
     status() {
 

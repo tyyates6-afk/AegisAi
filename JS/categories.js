@@ -1,33 +1,33 @@
-let categories =
-loadData("categories");
+let categories = loadData("categories");
 
 
 const defaultCategories = [
 
 {
 name:"Personal",
-color:"green"
+color:"#22c55e"
 },
 
 {
 name:"Work",
-color:"blue"
+color:"#ef4444"
 },
 
 {
-name:"Faith",
-color:"purple"
+name:"Church",
+color:"#9333ea"
 },
 
 {
 name:"Health",
-color:"red"
+color:"#2563eb"
 },
 
 {
 name:"Other",
-color:"gray"
+color:"#6b7280"
 }
+
 
 ];
 
@@ -166,13 +166,17 @@ category.name;
 
 
 option.textContent =
-category.name;
+"● " + category.name;
+
+option.style.color =
+category.color;
 
 
 
 menu.appendChild(
 option
 );
+
 
 
 });
@@ -208,17 +212,16 @@ categories.forEach(category=>{
 
 list.innerHTML += `
 
-<div>
+<div class="category-item">
 
-${category.name}
+    <span>${category.name}</span>
 
-<button onclick="removeCategory('${category.name}')">
-
-Delete
-
-</button>
+    <button onclick="removeCategory('${category.name}')">
+        Delete
+    </button>
 
 </div>
+
 
 `;
 
@@ -236,13 +239,34 @@ Aegis.register("categories", {
 
     init() {
 
+        categories = loadData("categories");
+
+        if(categories.length === 0){
+
+            categories = defaultCategories;
+
+            saveData(
+                "categories",
+                categories
+            );
+
+        }
+
+        updateCategoryMenus();
+
+        displayCategories();
+
         console.log("Categories initialized.");
 
     },
 
     refresh() {
 
-        loadCategories();
+        categories = loadData("categories");
+
+        updateCategoryMenus();
+
+        displayCategories();
 
     },
 

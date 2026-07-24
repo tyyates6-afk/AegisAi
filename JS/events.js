@@ -69,10 +69,17 @@ function addEvent(){
 
 
 
-    const reminder =
-    document.getElementById(
-        "eventReminder"
-    ).checked;
+    const notifications = [];
+
+    document.querySelectorAll(
+        "#eventNotifications input:checked"
+    ).forEach(box => {
+
+        notifications.push(
+            Number(box.value)
+        );
+
+    });
 
 
 
@@ -119,8 +126,9 @@ const newEvent = {
 
     notes:notes,
 
-    reminder:reminder
-
+    notifications:notifications
+    
+    
 
 };
 
@@ -142,7 +150,7 @@ const newEvent = {
     clearEventForm();
 
     Aegis.broadcast("eventsUpdated");
-
+    
 
 }
 
@@ -166,6 +174,8 @@ function deleteEvent(id){
 
 
     displayEvents();
+    
+    Aegis.broadcast("eventsUpdated");
 
 }
 
@@ -265,24 +275,30 @@ function displayEvents(){
 function clearEventForm(){
 
 
-document.getElementById(
-"eventTitle"
-).value="";
+    document.getElementById(
+    "eventTitle"
+    ).value="";
 
 
-document.getElementById(
-"eventLocation"
-).value="";
+    document.getElementById(
+    "eventLocation"
+    ).value="";
 
 
-document.getElementById(
-"eventNotes"
-).value="";
+    document.getElementById(
+    "eventNotes"
+    ).value="";
 
 
-document.getElementById(
-"eventReminder"
-).checked=false;
+    document
+    .querySelectorAll(
+    "#eventNotifications input"
+    )
+    .forEach(box => {
+
+        box.checked = false;
+
+    });
 
 
 }
@@ -347,10 +363,18 @@ function editEvent(id){
 
 
 
-    document.getElementById(
-        "eventReminder"
-    ).checked =
-    editingEvent.reminder;
+    document.querySelectorAll(
+        "#eventNotifications input"
+    ).forEach(box => {
+
+
+    box.checked =
+    editingEvent.notifications?.includes(
+    Number(box.value)
+    ) || false;
+
+
+    });
 
 
 
@@ -359,7 +383,7 @@ function editEvent(id){
     ).innerText =
     "Save Changes";
 
-
+    
 }
 
 
@@ -413,11 +437,20 @@ function saveEventChanges(){
     ).value;
 
 
+    editingEvent.notifications = [];
 
-    editingEvent.reminder =
-    document.getElementById(
-        "eventReminder"
-    ).checked;
+    document.querySelectorAll(
+    "#eventNotifications input:checked"
+    )
+    .forEach(box=>{
+
+        editingEvent.notifications.push(
+            Number(box.value)
+        );
+
+    });
+
+    
 
 
 
@@ -445,7 +478,7 @@ function saveEventChanges(){
 
     }
 
-
+    Aegis.broadcast("eventsUpdated");
 }
 
 displayEvents();
@@ -469,6 +502,32 @@ Aegis.register("events", {
     refresh() {
 
         displayEvents();
+
+    },
+
+    getTodaysEvents() {
+
+        const now = new Date();
+
+        const year =
+        now.getFullYear();
+
+        const month =
+        String(now.getMonth() + 1)
+        .padStart(2, "0");
+
+        const day =
+        String(now.getDate())
+        .padStart(2, "0");
+
+        const today =
+        `${year}-${month}-${day}`;
+
+        return events.filter(event => {
+
+            return event.date === today;
+
+        });
 
     },
 

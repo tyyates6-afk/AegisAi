@@ -4,6 +4,8 @@
 
 const Aegis = {
 
+    version: "1.1.5",
+
     modules: {},
 
     listeners: {},
@@ -60,7 +62,7 @@ const Aegis = {
 
 },
 
-    refreshAll(){
+    refreshAll() {
 
         Object.values(this.modules).forEach(module => {
 
@@ -82,6 +84,26 @@ const Aegis = {
             }
 
         });
+
+    },
+
+    refresh(name) {
+
+        const module = this.modules[name];
+
+        if (!module) return;
+
+        if (typeof module.api.refresh === "function") {
+
+            module.api.refresh();
+
+        }
+
+    },
+
+    getModule(name) {
+
+            return this.modules[name];
 
     },
 
@@ -137,51 +159,51 @@ const Aegis = {
 
     
 
-initmodules(){
-    const bootStart = performance.now();
-    console.log("==========");
-    console.log("Starting AEGIS...");
-    console.log("==========");
+    initModules(){
+        const bootStart = performance.now();
+        console.log("==========");
+        console.log("Starting AEGIS...");
+        console.log("==========");
 
-    Object.values(this.modules).forEach(module => {
+        Object.values(this.modules).forEach(module => {
         module.status = "INITIALIZING";
 
         
-        if(typeof module.api.init === "function"){
+            if(typeof module.api.init === "function"){
 
-            console.log(`Initializing ${module.name}...`);
+                console.log(`Initializing ${module.name}...`);
 
-            try {
+                try {
 
-                module.api.init();
+                    module.api.init();
                 
-                module.status = "ONLINE";
+                    module.status = "ONLINE";
 
-                console.log(`🟢 ${module.name} ONLINE`);
+                    console.log(`🟢 ${module.name} ONLINE`);
 
-            } catch (error) {
+                } catch (error) {
 
-                module.status = "ERROR";
+                    module.status = "ERROR";
 
-                console.error(`🔴 ${module.name} ERROR`, error);
+                    console.error(`🔴 ${module.name} ERROR`, error);
                 
+
+                }
 
             }
 
-        }
+        });
 
-    });
+        console.log("==========");
+        console.log("AEGIS READY");
+        console.log("==========");
+        const bootEnd = performance.now();
 
-    console.log("==========");
-    console.log("AEGIS READY");
-    console.log("==========");
-    const bootEnd = performance.now();
-
-    console.log(
-        `Boot completed in ${(bootEnd - bootStart).toFixed(2)} ms`
-    );
-},
-
+        console.log(
+            `Boot completed in ${(bootEnd - bootStart).toFixed(2)} ms`
+        );
+    },
+    
 };
 
 console.log("AEGIS CORE ONLINE");
@@ -192,27 +214,9 @@ window.addEventListener(
 
     () => {
 
-        Aegis.initmodules();
+        Aegis.initModules();
 
     }
 
 );
 
-getModule(name);{
-    return this.modules[name];
-
-};
-
-refresh(name);{
-
-    const module = this.modules[name];
-
-    if (!module) return;
-
-    if (typeof module.api.refresh === "function") {
-
-        module.api.refresh();
-
-    }
-
-};

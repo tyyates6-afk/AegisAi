@@ -1,48 +1,80 @@
-let profile =
-loadData("profile")[0] || {};
+let profile = 
+    loadData("profile")[0] || {}
 
 
 function saveProfile(){
 
-
-profile = {
-
-name:
-document.getElementById(
-"userName"
-).value,
+    const name =
+    document.getElementById("userName").value;
 
 
-bible:
-document.getElementById(
-"bibleVersion"
-).value,
+    const bible =
+    document.getElementById("bibleVersion").value;
 
 
-style:
-document.getElementById(
-"assistantStyle"
-).value
+    const style =
+    document.getElementById("assistantStyle").value;
 
-};
+    const city =
+    document.getElementById("userCity").value;
+
+    const state =
+    document.getElementById("userState").value;
+
+    const country =
+    document.getElementById("userCountry").value;
+
+    const temperature =
+    document.getElementById("temperatureUnit").value;
 
 
+    profile = {
 
-saveData(
-"profile",
-[profile]
-);
+        name: name,
+
+        city: city,
+
+        state: state,
+
+        country: country,
+
+        temperature: temperature,
+
+        bible: bible,
+
+        style: style,
+        
+        latitude:null,
+
+        longitude:null,
+    };
 
 
+    saveData(
+        "profile",
+        [profile]
+    );
 
-document.getElementById(
-"profileStatus"
-).innerText =
-"Profile Saved.";
+
+    document.getElementById(
+        "profileStatus"
+    ).innerText =
+    "Profile Saved.";
+
+
+    console.log(
+        "Profile saved:",
+        profile
+    );
+
+
+    Aegis.broadcast(
+        "profileUpdated"
+    );
 
 }
 
-Aegis.broadcast("profileUpdated");
+
 
 function loadProfile(){
 
@@ -67,6 +99,25 @@ document.getElementById(
 ).value =
 profile.style;
 
+document.getElementById(
+"userCity"
+).value =
+profile.city || "";
+
+document.getElementById(
+"userState"
+).value =
+profile.state || "";
+
+document.getElementById(
+"userCountry"
+).value =
+profile.country || "";
+
+document.getElementById(
+"temperatureUnit"
+).value =
+profile.temperature || "F";
 
 }
 
@@ -80,7 +131,8 @@ Aegis.register("profile", {
     version: "1.1.5",
 
     init() {
-
+        
+        
         console.log("Profile initialized.");
 
     },
@@ -88,6 +140,36 @@ Aegis.register("profile", {
     refresh() {
 
         loadProfile();
+
+    },
+
+    getProfile() {
+
+        const profile = loadData("profile");
+
+        if (profile.length === 0) {
+
+            return {
+
+            name: "there",
+
+            city: "",
+
+            state: "",
+
+            country: "",
+
+            temperature: "F",
+
+            bible: "NIV",
+
+            style: "Professional"
+
+        };
+
+    }
+
+        return profile[0];
 
     },
 

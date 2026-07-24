@@ -23,6 +23,9 @@ calendarEl,
 initialView:
 "dayGridMonth",
 
+eventDisplay:
+"block",
+
 
 events:
 getCalendarEvents(),
