@@ -1419,6 +1419,67 @@ hr {
 }
 
 }
+@media (max-width: 600px) {
+
+    .container {
+        width:95%;
+        padding-top:20px;
+    }
+
+
+    h1 {
+        font-size:32px;
+        letter-spacing:5px;
+    }
+
+
+    #dashboard {
+        padding:20px;
+    }
+
+
+    #dashboard h2 {
+        font-size:1.8rem;
+    }
+
+
+    .dashboard-grid {
+        grid-template-columns:1fr;
+        gap:15px;
+    }
+
+
+    .dashboard-card {
+        min-height:auto;
+        padding:15px;
+    }
+
+
+    button {
+        width:100%;
+    }
+
+
+    input,
+    select,
+    textarea {
+        width:100%;
+    }
+
+
+    .aegis-alert {
+        width:calc(100% - 40px);
+        right:20px;
+    }
+
+
+    .aegis-logo {
+        width:90px;
+        height:90px;
+    }
+
+
+}
 
 body {
 
