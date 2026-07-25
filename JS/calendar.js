@@ -19,6 +19,8 @@ new FullCalendar.Calendar(
 calendarEl,
 {
 
+height: "auto",
+expandRows: true,
 
 initialView:
 "dayGridMonth",

@@ -1563,38 +1563,54 @@ select{
    MOBILE CALENDAR FIX
 ====================================== */
 
-@media (max-width:768px){
+@media(max-width:768px){
 
     #calendar {
-        height:auto !important;
-        min-height:600px;
-        overflow:visible !important;
+
+        width:100%;
+
+        overflow:hidden;
+
     }
 
 
     .fc {
-        height:auto !important;
-    }
 
+        width:100%;
 
-    .fc-view-harness {
-        height:auto !important;
-        min-height:500px;
-    }
-
-
-    .fc-scrollgrid {
-        height:auto !important;
-    }
-
-
-    .fc-daygrid-body {
-        height:auto !important;
     }
 
 
     .fc-daygrid-day-frame {
-        min-height:70px;
+
+        min-height:75px;
+
+    }
+
+
+    .fc-daygrid-event {
+
+        font-size:.65rem !important;
+
+        padding:2px !important;
+
+    }
+
+
+    .fc-toolbar {
+
+        flex-wrap:wrap;
+
+        gap:8px;
+
+    }
+
+
+    .fc-toolbar-title {
+
+        font-size:1.1rem !important;
+
     }
 
 }
+
