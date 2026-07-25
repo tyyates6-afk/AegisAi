@@ -75,33 +75,46 @@ async function loadWeather(){
 
         const weatherResponse =
         await fetch(
-
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
-
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`,
+        {
+            cache:"no-store"
+        }
         );
 
 
 
         const data =
-        await weatherResponse.json();
+            await weatherResponse.json();
 
 
 
-        weatherData = {
+            if(!data.current_weather){
+
+        console.error(
+            "Weather data unavailable.",
+            data
+        );
+
+        return;
+
+    }
 
 
-            temperature:
-            data.current_weather.temperature,
+    weatherData = {
 
 
-            wind:
-            data.current_weather.windspeed,
+        temperature:
+        data.current_weather.temperature,
 
 
-            updated:
-            new Date()
+        wind:
+        data.current_weather.windspeed,
 
-        };
+
+        updated:
+        new Date()
+
+    };
 
 
 
