@@ -1253,6 +1253,16 @@ transform:translateY(0);
     padding: 4px;
 }
 
+.fc-event-title {
+
+    overflow:hidden;
+
+    text-overflow:ellipsis;
+
+    white-space:nowrap;
+
+}
+
 .category-item {
 
     display: flex;
