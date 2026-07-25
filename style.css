@@ -1531,13 +1531,28 @@ select{
 
 }
 
+@media(max-width:600px){
+
+    .dashboard-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+
+    .widget-small,
+    .widget-medium,
+    .widget-large,
+    .widget-full{
+
+        grid-column:span 1;
+
+    }
+
+}
 
 
 
-
-/* ======================================
-   AEGIS CALENDAR RESPONSIVE FINAL
-====================================== */
 
 
 /* ======================================
