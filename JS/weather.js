@@ -3,19 +3,24 @@ let weatherData = null;
 
 async function loadWeather(){
 
+    console.log("loadWeather() called");
 
     const profile =
     Aegis.getModule("profile")
     .api
     .getProfile();
 
+    console.log(profile);
 
 
     if(
         !profile.city ||
         !profile.country
     ){
-
+        console.log(
+        "City:", profile.city,
+        "Country:", profile.country
+    );
         console.log(
             "Weather waiting for location."
         );
@@ -113,16 +118,19 @@ async function loadWeather(){
 
         updated:
         new Date()
-
+        
     };
-
+    console.log("Weather data saved:", weatherData);
 
 
         Aegis.broadcast(
             "weatherUpdated"
         );
 
+        console.log("Weather broadcast sent");
+        console.log("Weather loaded:", weatherData);
 
+        Dashboard.refresh("weather"); 
     }
 
 
@@ -134,7 +142,9 @@ async function loadWeather(){
         );
 
     }
-
+    console.log("Weather data:", weatherData);
+    console.log("Broadcasting weatherUpdated");
+    console.log("Weather API returned:", data);
 
 }
 
@@ -163,14 +173,16 @@ Aegis.register("weather", {
     "Weather initialized."
     );
 
+    loadWeather();
 
-
-    setInterval(()=>{
+    setInterval(() => {
 
         loadWeather();
 
-    },1800000);
+    }, 1800000);
 
+
+    
 },
 
 

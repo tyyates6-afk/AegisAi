@@ -10,6 +10,7 @@ Dashboard.register("weather", {
 
     refresh(){
 
+        console.log("Weather widget refresh");
 
         const container =
         document.getElementById(
@@ -49,7 +50,7 @@ Dashboard.register("weather", {
         const weather =
         weatherModule.api.getWeather();
 
-
+        console.log(weather);
 
         if(!weather){
 
