@@ -158,7 +158,12 @@ const DragManager = {
 
     },
     touchStart(event){
-
+        
+        console.log(
+            "Touch start",
+            Dashboard.editMode
+        );
+        
         if(!Dashboard.editMode){
             return;
         }
