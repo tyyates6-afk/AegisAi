@@ -205,4 +205,6 @@ Aegis.listen(
 
         loadWeather();
 
-    });
+});
+
+Aegis.broadcast("weatherUpdated");
