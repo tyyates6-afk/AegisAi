@@ -1740,3 +1740,68 @@ select{
         0 0 8px #00d9ff;
 
 }
+
+/* ======================================
+   MOBILE DASHBOARD FIX
+====================================== */
+
+@media (max-width:768px){
+
+    #dashboard {
+
+        width:100%;
+        padding:15px;
+        overflow:hidden;
+
+    }
+
+
+    .dashboard-grid {
+
+        display:grid;
+
+        grid-template-columns:1fr;
+
+        width:100%;
+
+        gap:15px;
+
+    }
+
+
+    .dashboard-card {
+
+        width:100%;
+
+        min-width:0;
+
+        box-sizing:border-box;
+
+    }
+
+
+    .dashboard-card > div {
+
+        max-width:100%;
+
+        overflow:hidden;
+
+    }
+
+
+    #calendar {
+
+        width:100%;
+
+        overflow:hidden;
+
+    }
+
+
+    .calendar-container {
+
+        overflow:hidden;
+
+    }
+
+}
