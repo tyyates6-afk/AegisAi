@@ -153,26 +153,25 @@ Aegis.register("weather", {
 
     },
 
-
+    
 
 
 
     init(){
 
-        console.log(
-        "Weather initialized."
-        );
+    console.log(
+    "Weather initialized."
+    );
+
+
+
+    setInterval(()=>{
 
         loadWeather();
 
+    },1800000);
 
-        setInterval(()=>{
-
-            loadWeather();
-
-        }, 1800000); // 30 minutes
-
-    },
+},
 
 
     refresh(){
@@ -199,3 +198,11 @@ Aegis.register("weather", {
 
 
 });
+
+Aegis.listen(
+    "profileLoaded",
+    function(){
+
+        loadWeather();
+
+    });
