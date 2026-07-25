@@ -1614,3 +1614,58 @@ select{
 
 }
 
+/* ======================================
+   AEGIS Desktop Calendar Restore
+====================================== */
+
+@media(min-width:769px){
+
+    #calendar{
+
+        height:auto;
+
+        overflow:visible;
+
+    }
+
+
+    .fc{
+
+        width:100%;
+
+    }
+
+
+    .fc-view-harness{
+
+        min-height:650px;
+
+    }
+
+
+    .fc-daygrid-day-frame{
+
+        min-height:100px;
+
+    }
+
+}
+
+
+@media(max-width:768px){
+
+    .fc-view-harness{
+
+        min-height:0;
+
+    }
+
+
+    .fc-daygrid-day-frame{
+
+        min-height:70px;
+
+    }
+
+
+}
