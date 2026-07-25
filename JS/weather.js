@@ -199,11 +199,3 @@ Aegis.register("weather", {
 
 });
 
-Aegis.listen(
-    "profileLoaded",
-    function(){
-
-        loadWeather();
-
-});
-
