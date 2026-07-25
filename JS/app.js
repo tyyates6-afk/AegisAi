@@ -27,12 +27,6 @@ function getGreeting(){
 
 
 
-
-
-updateDashboard();
-
-
-
 setInterval(
     updateDashboard,
     1000
