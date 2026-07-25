@@ -1,51 +1,35 @@
 const CACHE_NAME = "aegis-v2";
 
+const BASE = self.location.pathname.replace("/service-worker.js", "");
+
 const FILES = [
-
-"/",
-
-"/index.html",
-
-"/style.css",
-
-"/manifest.json",
-
-"/js/core.js",
-
-"/js/storage.js",
-
-"/js/app.js"
-
+    `${BASE}/`,
+    `${BASE}/index.html`,
+    `${BASE}/style.css`,
+    `${BASE}/manifest.json`,
+    `${BASE}/js/core.js`,
+    `${BASE}/js/storage.js`,
+    `${BASE}/js/app.js`
 ];
 
 self.addEventListener("install", event => {
 
-event.waitUntil(
+    event.waitUntil(
 
-caches.open(CACHE_NAME)
+        caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(FILES))
 
-.then(cache => {
-
-return cache.addAll(FILES);
-
-})
-
-);
+    );
 
 });
 
 self.addEventListener("fetch", event => {
 
-event.respondWith(
+    event.respondWith(
 
-caches.match(event.request)
+        caches.match(event.request)
+        .then(response => response || fetch(event.request))
 
-.then(response => {
-
-return response || fetch(event.request);
-
-})
-
-);
+    );
 
 });
