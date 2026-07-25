@@ -1558,3 +1558,43 @@ select{
 
 
 }
+
+/* ======================================
+   MOBILE CALENDAR FIX
+====================================== */
+
+@media (max-width:768px){
+
+    #calendar {
+        height:auto !important;
+        min-height:600px;
+        overflow:visible !important;
+    }
+
+
+    .fc {
+        height:auto !important;
+    }
+
+
+    .fc-view-harness {
+        height:auto !important;
+        min-height:500px;
+    }
+
+
+    .fc-scrollgrid {
+        height:auto !important;
+    }
+
+
+    .fc-daygrid-body {
+        height:auto !important;
+    }
+
+
+    .fc-daygrid-day-frame {
+        min-height:70px;
+    }
+
+}
