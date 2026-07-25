@@ -1516,3 +1516,78 @@ background-position:60% 40%;
 }
 
 }
+
+/*Phone Calendar styling*/
+
+.calendar-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(7, 1fr);
+
+    gap: 4px;
+
+}
+
+@media (max-width: 768px) {
+
+    .calendar-grid {
+
+        gap: 2px;
+
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .calendar-day {
+
+        min-height: 55px;
+
+        padding: 4px;
+
+        font-size: .75rem;
+
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .calendar-header {
+
+        font-size: .8rem;
+
+    }
+
+}
+
+@media (max-width:768px){
+
+    .category-dot{
+
+        width:6px;
+        height:6px;
+
+    }
+
+}
+
+@media (max-width:768px){
+
+    .calendar-title{
+
+        font-size:1.3rem;
+
+    }
+
+}
+
+.calendar-container{
+
+    width:100%;
+
+    overflow-x:auto;
+
+}
