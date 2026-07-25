@@ -1825,3 +1825,23 @@ select{
     transform:scale(1.03);
 
 }
+
+.dashboard-card.dragging{
+
+    transform:scale(1.05);
+
+    z-index:999;
+
+    opacity:.8;
+
+    box-shadow:
+    0 0 30px rgba(0,217,255,.8);
+
+}
+
+
+.dashboard-grid{
+
+    touch-action:none;
+
+}

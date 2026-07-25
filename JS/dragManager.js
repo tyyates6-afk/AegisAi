@@ -159,25 +159,20 @@ const DragManager = {
     },
     touchStart(event){
 
-        if(
-            !Dashboard.editMode
-        ){
-
+        if(!Dashboard.editMode){
             return;
-
         }
 
 
-        DragManager.touchCard =
-        this;
+        DragManager.touchCard = this;
 
 
-        DragManager.touchStartY =
-        event.touches[0].clientY;
+        this.classList.add(
+            "dragging"
+        );
 
 
-        this.style.opacity =
-        "0.5";
+        this.style.opacity = "0.6";
 
 
     },
@@ -186,36 +181,16 @@ const DragManager = {
 
     touchMove(event){
 
-        if(
-            !DragManager.touchCard
-        ){
-
+        if(!DragManager.touchCard){
             return;
-
         }
 
 
         event.preventDefault();
 
 
-    },
-
-
-
-    touchEnd(event){
-
-
-        if(
-            !DragManager.touchCard
-        ){
-
-            return;
-
-        }
-
-
         const touch =
-        event.changedTouches[0];
+        event.touches[0];
 
 
         const element =
@@ -226,7 +201,7 @@ const DragManager = {
 
 
         const target =
-        element.closest(
+        element?.closest(
             ".dashboard-card"
         );
 
@@ -236,35 +211,68 @@ const DragManager = {
             target !== DragManager.touchCard
         ){
 
+            const grid =
+            document.querySelector(
+                ".dashboard-grid"
+            );
+
+
+            const cards =
+            [...grid.children];
+
+
+            const targetIndex =
+            cards.indexOf(target);
+
+
+            const draggedIndex =
+            cards.indexOf(
+                DragManager.touchCard
+            );
+
+
             if(
-                target.compareDocumentPosition(
-                    DragManager.touchCard
-                )
-                &
-                Node.DOCUMENT_POSITION_FOLLOWING
+                draggedIndex <
+                targetIndex
             ){
-
-                target.before(
-                    DragManager.touchCard
-                );
-
-            }
-            else{
 
                 target.after(
                     DragManager.touchCard
                 );
 
             }
+            else{
 
+                target.before(
+                    DragManager.touchCard
+                );
 
-            DragManager.save();
+            }
 
         }
+
+    },
+
+
+
+    touchEnd(){
+
+
+        if(!DragManager.touchCard){
+            return;
+        }
+
+
+        DragManager.touchCard.classList.remove(
+            "dragging"
+        );
 
 
         DragManager.touchCard.style.opacity =
         "1";
+
+
+        DragManager.save();
 
 
         DragManager.touchCard =
