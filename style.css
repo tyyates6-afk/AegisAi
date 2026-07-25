@@ -1530,27 +1530,33 @@ select{
     grid-column:span 4;
 
 }
+/* ======================================
+   AEGIS DASHBOARD MOBILE LAYOUT
+====================================== */
 
 @media(max-width:600px){
 
-    .dashboard-grid{
+.dashboard-grid{
 
-        grid-template-columns:1fr;
-
-    }
-
-
-    .widget-small,
-    .widget-medium,
-    .widget-large,
-    .widget-full{
-
-        grid-column:span 1;
-
-    }
+    grid-template-columns:1fr;
 
 }
 
+
+#todayEvents,
+#todayReminders,
+#notifications,
+#dailyVerse,
+#quickActions,
+#weather,
+#profileWidget,
+#aegisStatus{
+
+    grid-column:span 1 !important;
+
+}
+
+}
 
 
 
