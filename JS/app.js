@@ -24,14 +24,6 @@ function getGreeting(){
 }
 
 
-
-
-
-setInterval(
-    updateDashboard,
-    1000
-);
-
 if ("serviceWorker" in navigator) {
 
 window.addEventListener("load", () => {
