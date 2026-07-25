@@ -120,7 +120,7 @@ Aegis.register("calendar", {
     init() {
 
         console.log("Calendar initialized.");
-
+        
     },
 
     refresh() {

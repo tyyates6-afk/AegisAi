@@ -319,22 +319,13 @@ button:hover{
 
 .dashboard-grid{
 
-    position:relative;
-
-    z-index:1;
-
     display:grid;
 
     grid-template-columns:
 
-    repeat(
-        auto-fit,
-        minmax(250px,1fr)
-    );
+    repeat(4, minmax(0,1fr));
 
     gap:20px;
-
-    margin-top:25px;
 
 }
 
@@ -1456,5 +1447,114 @@ select{
         gap:6px;
 
     }
+
+}
+
+/* =========================================================
+   Mobile Calendar Equal Row Heights
+========================================================= */
+
+@media(max-width:600px){
+
+    .fc-daygrid-body,
+    .fc-daygrid-body table{
+
+        height:100% !important;
+
+    }
+
+
+    .fc-daygrid-day-frame{
+
+        min-height:70px !important;
+
+    }
+
+
+    .fc-daygrid-day{
+
+        height:70px !important;
+
+    }
+
+}
+
+/* =====================================
+   AEGIS Dashboard Widget Sizing
+===================================== */
+
+
+.dashboard-grid {
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(4, 1fr);
+
+    gap:20px;
+
+}
+
+
+/* 1 column wide */
+
+.small-card {
+
+    grid-column:span 1;
+
+}
+
+
+/* 2 columns wide */
+
+.medium-card {
+
+    grid-column:span 2;
+
+}
+
+
+/* Full dashboard width */
+
+.full-card {
+
+    grid-column:span 4;
+
+}
+
+
+/* Hero always full width */
+
+.hero-card {
+
+    grid-column:span 4;
+
+}
+
+
+
+/* =====================================
+   MOBILE DASHBOARD
+===================================== */
+
+@media(max-width:768px){
+
+
+.dashboard-grid{
+
+    grid-template-columns:1fr;
+
+}
+
+
+.small-card,
+.medium-card,
+.full-card,
+.hero-card{
+
+    grid-column:span 1;
+
+}
+
 
 }
