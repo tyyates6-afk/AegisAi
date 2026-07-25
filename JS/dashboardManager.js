@@ -179,3 +179,14 @@ window.addEventListener(
     }
 );
 
+
+window.addEventListener(
+    "weatherUpdated",
+    () => {
+
+        Dashboard.broadcast(
+            "weatherUpdated"
+        );
+
+    }
+);

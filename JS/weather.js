@@ -207,4 +207,3 @@ Aegis.listen(
 
 });
 
-Aegis.broadcast("weatherUpdated");
