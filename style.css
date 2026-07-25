@@ -1533,112 +1533,38 @@ select{
 
 
 
-/* =====================================
-   MOBILE DASHBOARD
-===================================== */
 
-@media(max-width:768px){
-
-
-.dashboard-grid{
-
-    grid-template-columns:1fr;
-
-}
-
-
-.small-card,
-.medium-card,
-.full-card,
-.hero-card{
-
-    grid-column:span 1;
-
-}
-
-
-}
 
 /* ======================================
-   MOBILE CALENDAR FIX
+   AEGIS CALENDAR RESPONSIVE FINAL
 ====================================== */
 
-@media(max-width:768px){
-
-    #calendar {
-
-        width:100%;
-
-        overflow:hidden;
-
-    }
-
-
-    .fc {
-
-        width:100%;
-
-    }
-
-
-    .fc-daygrid-day-frame {
-
-        min-height:75px;
-
-    }
-
-
-    .fc-daygrid-event {
-
-        font-size:.65rem !important;
-
-        padding:2px !important;
-
-    }
-
-
-    .fc-toolbar {
-
-        flex-wrap:wrap;
-
-        gap:8px;
-
-    }
-
-
-    .fc-toolbar-title {
-
-        font-size:1.1rem !important;
-
-    }
-
-}
 
 /* ======================================
-   AEGIS Desktop Calendar Restore
+   AEGIS DESKTOP CALENDAR FIX
 ====================================== */
 
 @media(min-width:769px){
 
     #calendar{
 
-        height:auto;
-
-        overflow:visible;
-
-    }
-
-
-    .fc{
-
-        width:100%;
+        height:auto !important;
 
     }
 
 
     .fc-view-harness{
 
-        min-height:650px;
+        min-height:0 !important;
+
+        height: auto !important;
+
+    }
+
+
+    .fc-daygrid-body{
+
+        width:100% !important;
 
     }
 
@@ -1652,11 +1578,22 @@ select{
 }
 
 
+/* Phone */
+
 @media(max-width:768px){
+
+    #calendar{
+
+        height:auto;
+
+        padding:0;
+
+    }
+
 
     .fc-view-harness{
 
-        min-height:0;
+        min-height:0 !important;
 
     }
 
@@ -1667,5 +1604,118 @@ select{
 
     }
 
+
+    .fc-toolbar{
+
+        display:flex;
+
+        flex-direction:column;
+
+        gap:10px;
+
+    }
+
+
+    .fc-toolbar-title{
+
+        font-size:1.2rem !important;
+
+    }
+
+
+    .fc-button{
+
+        padding:8px 12px !important;
+
+    }
+
+
+    .fc-daygrid-event{
+
+        font-size:.6rem !important;
+
+        padding:2px !important;
+
+    }
+
+}
+
+/* ======================================
+   AEGIS CALENDAR FINAL DESKTOP POLISH
+====================================== */
+
+@media(min-width:769px){
+
+    #calendar{
+
+        padding:12px;
+
+    }
+
+
+    .fc-daygrid-day{
+
+        height:120px !important;
+
+    }
+
+
+    .fc-daygrid-day-frame{
+
+        min-height:120px !important;
+
+        padding:8px;
+
+    }
+
+
+    .fc-daygrid-day-number{
+
+        font-size:1rem;
+
+    }
+
+
+    .fc-event{
+
+        margin-top:5px;
+
+        font-size:.8rem !important;
+
+    }
+
+}
+
+/* ======================================
+   AEGIS CALENDAR WEEK HEADER REVERSE
+====================================== */
+
+.fc-col-header-cell {
+
+    background:
+        rgba(10,25,45,.95) !important;
+
+    border-color:
+        rgba(0,217,255,.25) !important;
+
+}
+
+
+.fc-col-header-cell-cushion {
+
+    color:#66eaff !important;
+
+    font-weight:700;
+
+    letter-spacing:1px;
+
+    text-transform:uppercase;
+
+}
+
+.fc-col-header-cell-cushion {
+
+    text-shadow:
+        0 0 8px #00d9ff;
 
 }

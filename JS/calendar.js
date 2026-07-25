@@ -19,7 +19,7 @@ new FullCalendar.Calendar(
 calendarEl,
 {
 
-height:650,
+height:"auto",
 expandRows:true,
 
 initialView:
