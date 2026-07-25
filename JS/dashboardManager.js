@@ -1,8 +1,116 @@
+const defaultDashboardLayout = [
+
+    "card-greeting",
+    "card-events",
+    "card-verse",
+    "card-reminders",
+    "card-actions",
+    "card-weather",
+    "card-profile",
+    "card-notifications",
+    "card-status"
+
+];
 const Dashboard = {
-
+    
     widgets: {},
-
     listeners: {},
+    layout: [],
+    editMode:false,
+
+    renderLayout(){
+
+        const grid = document.querySelector(".dashboard-grid");
+
+        if(!grid) return;
+
+        this.layout.forEach(id => {
+
+            const card = document.getElementById(id);
+
+            if(card){
+
+                grid.appendChild(card);
+
+            }
+
+        });
+
+    },
+
+    loadLayout(){
+
+        const saved =
+        localStorage.getItem(
+            "aegisDashboardLayout"
+        );
+
+
+        if(saved){
+
+            this.layout =
+            JSON.parse(saved);
+
+        }
+        else{
+
+            this.layout =
+            [...defaultDashboardLayout];
+
+        }
+
+    },
+
+    saveLayout(){
+
+        localStorage.setItem(
+
+            "aegisDashboardLayout",
+
+            JSON.stringify(
+                this.layout
+            )
+
+        );
+
+    },
+
+    toggleEditMode(){
+
+    this.editMode =
+    !this.editMode;
+
+
+    document
+    .querySelectorAll(
+        ".dashboard-card"
+    )
+    .forEach(card=>{
+
+        if(this.editMode){
+
+            card.classList.add(
+                "edit-mode"
+            );
+
+        }
+        else{
+
+            card.classList.remove(
+                "edit-mode"
+            );
+
+        }
+
+    });
+
+
+    console.log(
+            "Dashboard Edit Mode:",
+            this.editMode
+        );
+
+    },
 
     register(name, widget) {
 
@@ -49,7 +157,12 @@ const Dashboard = {
         console.log("==========");
         console.log("Initializing DashboardManager...");
         console.log("==========");
+        
+        this.loadLayout();
 
+        this.renderLayout();
+        DragManager.init();
+        
         Object.values(this.widgets).forEach(widget => {
 
             console.log(`Initializing ${widget.name}...`);

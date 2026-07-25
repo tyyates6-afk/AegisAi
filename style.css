@@ -1805,3 +1805,23 @@ select{
     }
 
 }
+
+.dashboard-card.edit-mode{
+
+    cursor:grab;
+
+    border-color:#00d9ff;
+
+    box-shadow:
+    0 0 20px rgba(0,217,255,.5);
+
+}
+
+
+.dashboard-card.edit-mode:active{
+
+    cursor:grabbing;
+
+    transform:scale(1.03);
+
+}

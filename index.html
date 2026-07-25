@@ -81,6 +81,11 @@ rel="stylesheet">
 
 <section id="dashboard" class="panel">
 
+<button onclick="Dashboard.toggleEditMode()">
+
+⚙ Edit Dashboard
+
+</button>
 
 <h2 class="dashboard-title">
 
@@ -90,12 +95,12 @@ AEGIS Dashboard
 
 
 
+
 <div class="dashboard-grid">
 
 
 
-<div class="dashboard-card hero-card">
-
+<div class="dashboard-card hero-card" id="card-greeting">
     <div id="greeting"></div>
 
     <div id="currentDate"></div>
@@ -104,86 +109,37 @@ AEGIS Dashboard
 
 </div>
 
-
-
-
-
-
-
-
-
-
-
-<div class="dashboard-card small-card">
-
+<div class="dashboard-card small-card" id="card-events">
     <div id="todayEvents"></div>
-
 </div>
 
-
-
-
-
-<div class="dashboard-card small-card">
-
-    <div id="todayReminders"></div>
-
-</div>
-
-
-
-
-
-<div class="dashboard-card medium-card">
-
+<div class="dashboard-card medium-card" id="card-verse">
     <div id="dailyVerse"></div>
-
 </div>
 
+<div class="dashboard-card small-card" id="card-reminders">
+    <div id="todayReminders"></div>
+</div>
 
-
-
-
-
-
-<div class="dashboard-card full-card">
-
+<div class="dashboard-card full-card" id="card-actions">
     <div id="quickActions"></div>
-
 </div>
 
-
-
-<div class="dashboard-card small-card">
-
+<div class="dashboard-card small-card" id="card-weather">
     <div id="weather"></div>
-
 </div>
 
-
-
-
-
-<div class="dashboard-card medium-card">
-
+<div class="dashboard-card medium-card" id="card-profile">
     <div id="profileWidget"></div>
-
 </div>
 
-<div class="dashboard-card small-card">
-
+<div class="dashboard-card small-card" id="card-notifications">
     <div id="notifications"></div>
-
 </div>
 
-
-
-<div class="dashboard-card full-card">
-
+<div class="dashboard-card full-card" id="card-status">
     <div id="aegisStatus"></div>
-
 </div>
-
 
 
 </div>
@@ -749,7 +705,7 @@ Add Category
 
 
 <script src="JS/dashboardManager.js"></script>
-
+<script src="js/dragManager.js"></script>
 
 
 
