@@ -1905,3 +1905,13 @@ select{
     -webkit-touch-callout:none;
 
 }
+
+.dashboard-card.dragging {
+
+    opacity:.7;
+
+    transform:scale(1.03);
+
+    z-index:9999;
+
+}

@@ -185,22 +185,32 @@ const DragManager = {
     pointerDown(event){
 
 
-    if(
-        event.pointerType === "mouse" &&
-        event.button !== 0
-    ){
-
-        return;
-
-    }
+        if(!Dashboard.editMode){
+            return;
+        }
 
 
-    if(!Dashboard.editMode){
-        return;
-    }
-    
+        event.preventDefault();
 
-    event.preventDefault();
+
+        DragManager.activeCard =
+        this;
+
+
+        DragManager.isDragging =
+        true;
+
+
+        this.setPointerCapture(
+            event.pointerId
+        );
+
+
+        this.classList.add(
+            "dragging"
+        );
+
+
     },
 
     pointerMove(event){
@@ -210,9 +220,14 @@ const DragManager = {
             !DragManager.isDragging ||
             !DragManager.activeCard
         ){
+
             return;
+
         }
+
+
         event.preventDefault();
+
 
         const element =
         document.elementFromPoint(
@@ -221,67 +236,94 @@ const DragManager = {
         );
 
 
+        if(!element){
+            return;
+        }
+
+
         const target =
-        element?.closest(
+        element.closest(
             ".dashboard-card"
         );
 
 
         if(
-            target &&
-            target !== DragManager.activeCard
+            !target ||
+            target === DragManager.activeCard
         ){
 
+            return;
 
-            const cards =
-            [
-                ...document.querySelectorAll(
-                    ".dashboard-card"
-                )
-            ];
+        }
 
 
-            const from =
-            cards.indexOf(
+
+        const grid =
+        document.querySelector(
+            ".dashboard-grid"
+        );
+
+
+        const cards =
+        [...grid.children];
+
+
+        const draggedIndex =
+        cards.indexOf(
+            DragManager.activeCard
+        );
+
+
+        const targetIndex =
+        cards.indexOf(
+            target
+        );
+
+
+
+        if(
+            draggedIndex < targetIndex
+        ){
+
+            target.after(
                 DragManager.activeCard
             );
 
+        }
+        else{
 
-            const to =
-            cards.indexOf(
-                target
+            target.before(
+                DragManager.activeCard
             );
 
-
-            if(from < to){
-
-                target.after(
-                    DragManager.activeCard
-                );
-
-            }
-            else{
-
-                target.before(
-                    DragManager.activeCard
-                );
-
-            }
-
         }
+
 
     },
 
 
 
-    pointerUp(){
+    pointerUp(event){
 
 
         if(
             !DragManager.activeCard
         ){
+
             return;
+
         }
+
+
+        try{
+
+            this.releasePointerCapture(
+                event.pointerId
+            );
+
+        }
+        catch(e){}
+
 
 
         DragManager.activeCard.classList.remove(
@@ -300,6 +342,6 @@ const DragManager = {
         false;
 
 
-    }
+    },
 
 };
