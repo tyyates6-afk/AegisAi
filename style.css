@@ -1869,3 +1869,27 @@ select{
     touch-action:none;
 
 }
+
+.dashboard-card{
+
+    touch-action:none;
+
+    user-select:none;
+
+    -webkit-user-select:none;
+
+    -webkit-touch-callout:none;
+
+}
+
+
+.dashboard-card.dragging{
+
+    transform:scale(1.04);
+
+    z-index:9999;
+
+    box-shadow:
+    0 0 35px rgba(0,217,255,.8);
+
+}

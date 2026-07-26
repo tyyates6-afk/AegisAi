@@ -1,5 +1,7 @@
 const DragManager = {
-    touchCard:null,
+    activeCard:null,
+
+    isDragging:false,
 
     touchStartY:0,
 
@@ -34,22 +36,20 @@ const DragManager = {
             );
 
             card.addEventListener(
-                "touchstart",
-                this.touchStart,
-                {passive:false}
+                "pointerdown",
+                this.pointerDown
             );
 
 
             card.addEventListener(
-                "touchmove",
-                this.touchMove,
-                {passive:false}
+                "pointermove",
+                this.pointerMove
             );
 
 
             card.addEventListener(
-                "touchend",
-                this.touchEnd
+                "pointerup",
+                this.pointerUp
             );
 
         });
@@ -327,7 +327,137 @@ const DragManager = {
         );
 
 
-    }
+    },
+    pointerDown(event){
 
+
+        if(!Dashboard.editMode){
+            return;
+        }
+
+
+        event.preventDefault();
+
+
+        DragManager.activeCard =
+        this;
+
+
+        DragManager.isDragging =
+        true;
+
+
+        this.setPointerCapture(
+            event.pointerId
+        );
+
+
+        this.classList.add(
+            "dragging"
+        );
+
+
+    },
+
+
+
+    pointerMove(event){
+
+
+        if(
+            !DragManager.isDragging ||
+            !DragManager.activeCard
+        ){
+            return;
+        }
+
+
+        const element =
+        document.elementFromPoint(
+            event.clientX,
+            event.clientY
+        );
+
+
+        const target =
+        element?.closest(
+            ".dashboard-card"
+        );
+
+
+        if(
+            target &&
+            target !== DragManager.activeCard
+        ){
+
+
+            const cards =
+            [
+                ...document.querySelectorAll(
+                    ".dashboard-card"
+                )
+            ];
+
+
+            const from =
+            cards.indexOf(
+                DragManager.activeCard
+            );
+
+
+            const to =
+            cards.indexOf(
+                target
+            );
+
+
+            if(from < to){
+
+                target.after(
+                    DragManager.activeCard
+                );
+
+            }
+            else{
+
+                target.before(
+                    DragManager.activeCard
+                );
+
+            }
+
+        }
+
+    },
+
+
+
+    pointerUp(){
+
+
+        if(
+            !DragManager.activeCard
+        ){
+            return;
+        }
+
+
+        DragManager.activeCard.classList.remove(
+            "dragging"
+        );
+
+
+        DragManager.save();
+
+
+        DragManager.activeCard =
+        null;
+
+
+        DragManager.isDragging =
+        false;
+
+
+    }
 
 };
