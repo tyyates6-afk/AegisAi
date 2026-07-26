@@ -1,6 +1,6 @@
 const DragManager = {
     activeCard:null,
-
+    placeholder:null,
     isDragging:false,
 
    
@@ -193,7 +193,18 @@ const DragManager = {
 
         DragManager.activeCard =
         this;
+        DragManager.placeholder =
+        document.createElement("div");
 
+
+        DragManager.placeholder.className =
+        "dashboard-placeholder";
+
+
+        this.parentNode.insertBefore(
+            DragManager.placeholder,
+            this
+        );
 
         DragManager.isDragging =
         true;
@@ -203,7 +214,8 @@ const DragManager = {
             "dragging"
         );
 
-
+        this.style.visibility =
+        "hidden";
     },
 
     pointerMove(event){
@@ -326,7 +338,24 @@ const DragManager = {
         DragManager.activeCard.classList.remove(
             "dragging"
         );
+        if(
+            DragManager.placeholder
+        ){
 
+            DragManager.placeholder.replaceWith(
+                DragManager.activeCard
+            );
+
+
+        }
+
+
+        DragManager.activeCard.style.visibility =
+        "visible";
+
+
+        DragManager.placeholder =
+        null;
 
         DragManager.save();
 

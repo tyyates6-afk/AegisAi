@@ -1973,3 +1973,54 @@ select{
         scale(.98);
 
 }
+
+/* ======================================
+   AEGIS Drag Placeholder
+====================================== */
+
+
+.dashboard-placeholder {
+
+    border:
+
+        2px dashed rgba(0,217,255,.6);
+
+
+    border-radius:18px;
+
+
+    background:
+
+        rgba(0,217,255,.08);
+
+
+    min-height:120px;
+
+
+    animation:
+
+        placeholderPulse 1.2s infinite;
+
+
+}
+
+
+@keyframes placeholderPulse {
+
+
+    0%,
+    100%{
+
+        opacity:.5;
+
+    }
+
+
+    50%{
+
+        opacity:1;
+
+    }
+
+
+}
