@@ -161,8 +161,8 @@ const Dashboard = {
         this.loadLayout();
 
         this.renderLayout();
-        DragManager.init();
-        
+        dragManager.init();
+
         Object.values(this.widgets).forEach(widget => {
 
             console.log(`Initializing ${widget.name}...`);
