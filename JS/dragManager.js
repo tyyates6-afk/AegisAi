@@ -208,7 +208,11 @@ const DragManager = {
     },
 
     pointerMove(event){
-
+        console.log(
+            "moving",
+            event.clientX,
+            event.clientY
+        );
 
         if(
             !DragManager.isDragging ||
