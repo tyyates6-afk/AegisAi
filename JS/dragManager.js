@@ -158,18 +158,19 @@ const DragManager = {
 
     },
     touchStart(event){
-        
-        console.log(
-            "Touch start",
-            Dashboard.editMode
-        );
-        
-        if(!Dashboard.editMode){
-            return;
-        }
 
 
-        DragManager.touchCard = this;
+    if(!Dashboard.editMode){
+        return;
+    }
+
+
+    DragManager.pressTimer =
+    setTimeout(()=>{
+
+
+        DragManager.touchCard =
+        this;
 
 
         this.classList.add(
@@ -177,10 +178,14 @@ const DragManager = {
         );
 
 
-        this.style.opacity = "0.6";
+        this.style.opacity =
+        "0.6";
 
 
-    },
+    },400);
+
+
+},
 
 
 
