@@ -161,7 +161,7 @@ const Dashboard = {
         this.loadLayout();
 
         this.renderLayout();
-        dragManager.init();
+        DragManager.init();
 
         Object.values(this.widgets).forEach(widget => {
 
