@@ -1,4 +1,17 @@
 Dashboard.register("greeting", {
+    title: "Greeting",
+
+    size: "hero",
+
+    movable: false,
+
+    removable: false,
+
+    icon: "👋",
+
+    category: "system",
+
+    enabled: true,
 
     timer: null,
 
@@ -74,3 +87,4 @@ Dashboard.register("greeting", {
 });
 
 Dashboard.listen("profileUpdated", "greeting");
+

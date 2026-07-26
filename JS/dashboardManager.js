@@ -112,11 +112,30 @@ const Dashboard = {
 
     },
 
-    register(name, widget) {
+   register(name, widget) {
 
         this.widgets[name] = {
 
-            name,
+            id: name,
+
+            name: widget.title || name,
+
+            size: widget.size || "small",
+
+            movable:
+                widget.movable ?? true,
+
+            removable:
+                widget.removable ?? false,
+
+            icon:
+                widget.icon || null,
+
+            category:
+                widget.category || "general",
+
+            settings:
+                widget.settings || {},
 
             api: widget,
 
@@ -124,7 +143,23 @@ const Dashboard = {
 
         };
 
-        console.log(`✓ Dashboard Widget: ${name} REGISTERED`);
+        console.log(
+
+            `✓ Dashboard Widget: ${name} REGISTERED`
+
+        );
+
+    },
+
+    getWidget(id) {
+
+        return this.widgets[id] || null;
+
+    },
+
+    getWidgets() {
+
+        return Object.values(this.widgets);
 
     },
 
@@ -169,9 +204,21 @@ const Dashboard = {
 
             try {
 
+                if (typeof widget.api.onInit === "function") {
+
+                    widget.api.onInit();
+
+                }
+
                 if (typeof widget.api.init === "function") {
 
                     widget.api.init();
+
+                }
+
+                if (typeof widget.api.onReady === "function") {
+
+                    widget.api.onReady();
 
                 }
 
@@ -196,6 +243,12 @@ const Dashboard = {
         const widget = this.widgets[name];
 
         if (!widget) return;
+
+        if (typeof widget.api.onRefresh === "function") {
+
+            widget.api.onRefresh();
+
+        }
 
         if (typeof widget.api.refresh === "function") {
 
@@ -222,6 +275,12 @@ const Dashboard = {
     shutdown() {
 
         Object.values(this.widgets).forEach(widget => {
+
+            if (typeof widget.api.onShutdown === "function") {
+
+                widget.api.onShutdown();
+
+            }
 
             if (typeof widget.api.shutdown === "function") {
 
