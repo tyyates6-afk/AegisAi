@@ -160,13 +160,12 @@ const DragManager = {
     touchStart(event){
 
 
-    if(!Dashboard.editMode){
-        return;
-    }
+        if(!Dashboard.editMode){
+            return;
+        }
 
 
-    DragManager.pressTimer =
-    setTimeout(()=>{
+        event.preventDefault();
 
 
         DragManager.touchCard =
@@ -182,14 +181,12 @@ const DragManager = {
         "0.6";
 
 
-    },400);
-
-
-},
+    },
 
 
 
     touchMove(event){
+
 
         if(!DragManager.touchCard){
             return;
@@ -203,23 +200,24 @@ const DragManager = {
         event.touches[0];
 
 
-        const element =
+        const target =
         document.elementFromPoint(
             touch.clientX,
             touch.clientY
         );
 
 
-        const target =
-        element?.closest(
+        const card =
+        target.closest(
             ".dashboard-card"
         );
 
 
         if(
-            target &&
-            target !== DragManager.touchCard
+            card &&
+            card !== DragManager.touchCard
         ){
+
 
             const grid =
             document.querySelector(
@@ -231,35 +229,35 @@ const DragManager = {
             [...grid.children];
 
 
-            const targetIndex =
-            cards.indexOf(target);
-
-
-            const draggedIndex =
+            const from =
             cards.indexOf(
                 DragManager.touchCard
             );
 
 
-            if(
-                draggedIndex <
-                targetIndex
-            ){
+            const to =
+            cards.indexOf(
+                card
+            );
 
-                target.after(
+
+            if(from < to){
+
+                card.after(
                     DragManager.touchCard
                 );
 
             }
             else{
 
-                target.before(
+                card.before(
                     DragManager.touchCard
                 );
 
             }
 
         }
+
 
     },
 

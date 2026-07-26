@@ -1840,7 +1840,31 @@ select{
 }
 
 
-.dashboard-grid{
+
+.dashboard-card {
+
+    -webkit-user-select:none;
+    user-select:none;
+
+    -webkit-touch-callout:none;
+
+}
+
+
+.dashboard-card.dragging {
+
+    position:relative;
+
+    z-index:9999;
+
+    transform:scale(1.05);
+
+    opacity:.8;
+
+}
+
+
+.dashboard-grid {
 
     touch-action:none;
 
