@@ -2045,3 +2045,30 @@ select{
     }
 
 }
+
+/* ======================================
+   AEGIS Mobile Dashboard Fix
+====================================== */
+
+@media(max-width:600px){
+
+    .dashboard-grid {
+
+        grid-template-columns:1fr !important;
+
+        width:100%;
+
+    }
+
+
+    .dashboard-card,
+    .small-card,
+    .medium-card,
+    .full-card,
+    .hero-card {
+
+        grid-column:1 !important;
+
+    }
+
+}
