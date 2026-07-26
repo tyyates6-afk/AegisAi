@@ -1975,38 +1975,61 @@ select{
 }
 
 /* ======================================
-   AEGIS Drag Placeholder
+   AEGIS Dynamic Drag Placeholder
 ====================================== */
 
 
 .dashboard-placeholder {
 
     border:
-
         2px dashed rgba(0,217,255,.6);
-
 
     border-radius:18px;
 
-
     background:
-
         rgba(0,217,255,.08);
 
+    animation:
+        placeholderPulse 1.2s infinite;
+
+}
+
+
+/* Match widget sizes */
+
+
+.dashboard-placeholder.small-card {
 
     min-height:120px;
 
+}
 
-    animation:
 
-        placeholderPulse 1.2s infinite;
+.dashboard-placeholder.medium-card {
 
+    min-height:180px;
+
+}
+
+
+.dashboard-placeholder.full-card {
+
+    min-height:120px;
+
+    grid-column:
+        1 / -1;
+
+}
+
+
+.dashboard-placeholder.hero-card {
+
+    min-height:260px;
 
 }
 
 
 @keyframes placeholderPulse {
-
 
     0%,
     100%{
@@ -2015,12 +2038,10 @@ select{
 
     }
 
-
     50%{
 
         opacity:1;
 
     }
-
 
 }

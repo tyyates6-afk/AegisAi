@@ -198,7 +198,8 @@ const DragManager = {
 
 
         DragManager.placeholder.className =
-        "dashboard-placeholder";
+        "dashboard-placeholder " +
+        this.className;
 
 
         this.parentNode.insertBefore(
