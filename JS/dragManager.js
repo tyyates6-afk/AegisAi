@@ -31,12 +31,11 @@ const DragManager = {
                 this.pointerUp
             );
 
-
+            
             card.addEventListener(
                 "pointercancel",
                 this.pointerUp
             );
-
 
         });
 
@@ -199,11 +198,6 @@ const DragManager = {
 
         DragManager.isDragging =
         true;
-
-
-        this.setPointerCapture(
-            event.pointerId
-        );
 
 
         this.classList.add(
