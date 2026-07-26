@@ -209,26 +209,24 @@ const DragManager = {
 
         DragManager.isDragging =
         true;
-
+        this.setPointerCapture(
+            event.pointerId
+        );
 
         this.classList.add(
             "dragging"
         );
 
-        this.style.visibility =
-        "hidden";
+        this.style.opacity =
+        "0.35";
     },
 
     pointerMove(event){
-        console.log(
-            "moving",
-            event.clientX,
-            event.clientY
-        );
 
         if(
             !DragManager.isDragging ||
-            !DragManager.activeCard
+            !DragManager.activeCard ||
+            !DragManager.placeholder
         ){
 
             return;
@@ -246,13 +244,8 @@ const DragManager = {
         );
 
 
-        if(!element){
-            return;
-        }
-
-
         const target =
-        element.closest(
+        element?.closest(
             ".dashboard-card"
         );
 
@@ -267,7 +260,6 @@ const DragManager = {
         }
 
 
-
         const grid =
         document.querySelector(
             ".dashboard-grid"
@@ -275,12 +267,14 @@ const DragManager = {
 
 
         const cards =
-        [...grid.children];
+        [
+            ...grid.children
+        ];
 
 
-        const draggedIndex =
+        const placeholderIndex =
         cards.indexOf(
-            DragManager.activeCard
+            DragManager.placeholder
         );
 
 
@@ -290,31 +284,29 @@ const DragManager = {
         );
 
 
-
         if(
-            draggedIndex < targetIndex
+            placeholderIndex < targetIndex
         ){
 
             target.after(
-                DragManager.activeCard
+                DragManager.placeholder
             );
 
         }
+
         else{
 
             target.before(
-                DragManager.activeCard
+                DragManager.placeholder
             );
 
         }
-
 
     },
 
 
 
     pointerUp(event){
-
 
         if(
             !DragManager.activeCard
@@ -325,43 +317,54 @@ const DragManager = {
         }
 
 
-        try{
+        const card =
+        DragManager.activeCard;
+
+
+        const placeholder =
+        DragManager.placeholder;
+
+
+        if(
+            placeholder
+        ){
+
+            placeholder.replaceWith(
+                card
+            );
+
+        }
+
+
+        card.style.opacity =
+        "1";
+
+
+        card.style.visibility =
+        "visible";
+
+
+        card.classList.remove(
+            "dragging"
+        );
+
+
+        DragManager.save();
+
+        if(
+            event?.pointerId
+        ){
 
             this.releasePointerCapture(
                 event.pointerId
             );
 
         }
-        catch(e){}
-
-
-
-        DragManager.activeCard.classList.remove(
-            "dragging"
-        );
-        if(
-            DragManager.placeholder
-        ){
-
-            DragManager.placeholder.replaceWith(
-                DragManager.activeCard
-            );
-
-
-        }
-
-
-        DragManager.activeCard.style.visibility =
-        "visible";
+        DragManager.activeCard =
+        null;
 
 
         DragManager.placeholder =
-        null;
-
-        DragManager.save();
-
-
-        DragManager.activeCard =
         null;
 
 
@@ -369,6 +372,6 @@ const DragManager = {
         false;
 
 
-    },
+    }
 
 };
