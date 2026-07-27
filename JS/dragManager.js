@@ -7,6 +7,7 @@ const DragManager = {
 
     init(){
 
+
         document
         .querySelectorAll(
             ".dashboard-card"
@@ -16,26 +17,69 @@ const DragManager = {
 
             card.addEventListener(
                 "pointerdown",
-                this.pointerDown
+                event=>{
+
+
+                    if(!Dashboard.editMode){
+
+                        return;
+
+                    }
+
+
+                    DragManager.pointerDown.call(
+                        card,
+                        event
+                    );
+
+
+                }
             );
 
 
             card.addEventListener(
                 "pointermove",
-                this.pointerMove
+                event=>{
+
+
+                    if(!Dashboard.editMode){
+
+                        return;
+
+                    }
+
+
+                    DragManager.pointerMove.call(
+                        card,
+                        event
+                    );
+
+
+                }
             );
 
 
             card.addEventListener(
                 "pointerup",
-                this.pointerUp
+                event=>{
+
+
+                    if(!Dashboard.editMode){
+
+                        return;
+
+                    }
+
+
+                    DragManager.pointerUp.call(
+                        card,
+                        event
+                    );
+
+
+                }
             );
 
-            
-            card.addEventListener(
-                "pointercancel",
-                this.pointerUp
-            );
 
         });
 

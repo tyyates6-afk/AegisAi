@@ -2272,6 +2272,6 @@ select{
 
 .dashboard-card{
 
-    touch-action: pan-y;
+    touch-action:auto;
 
 }
