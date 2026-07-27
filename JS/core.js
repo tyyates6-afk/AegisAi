@@ -123,17 +123,25 @@ const Aegis = {
 
     listen(eventName, callback){
 
+        const handler = (event)=>{
+
+            callback(event.detail);
+
+        };
+
         window.addEventListener(
-
             eventName,
-
-            (event)=>{
-
-                callback(event.detail);
-
-            }
-
+            handler
         );
+
+        return ()=>{
+
+            window.removeEventListener(
+                eventName,
+                handler
+            );
+
+        };
 
     },
 

@@ -262,6 +262,12 @@ const Dashboard = {
 
         Object.values(this.widgets).forEach(widget => {
 
+            if (typeof widget.api.onRefresh === "function") {
+
+                widget.api.onRefresh();
+
+            }
+
             if (typeof widget.api.refresh === "function") {
 
                 widget.api.refresh();

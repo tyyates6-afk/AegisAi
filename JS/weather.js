@@ -142,10 +142,7 @@ async function loadWeather(){
         );
 
     }
-    console.log("Weather data:", weatherData);
-    console.log("Broadcasting weatherUpdated");
-    console.log("Weather API returned:", weatherData);
-
+    
 }
 
 Aegis.register("weather", {
