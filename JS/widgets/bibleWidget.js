@@ -1,5 +1,27 @@
 Dashboard.register("dailyVerse", {
+    title:
+    "Daily Verse",
 
+    icon:
+    "📖",
+
+    description:
+    "Your daily Bible verse",
+
+    category:
+    "spiritual",
+
+    size:
+    "medium-card",
+
+    movable:
+    true,
+
+    removable:
+    true,
+
+    resizable:
+    true,
 
     init() {
 

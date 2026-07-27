@@ -17,24 +17,454 @@ const Dashboard = {
     listeners: {},
     layout: [],
     editMode:false,
+    widgetSettings:{},
 
-    renderLayout(){
+    getDefaultWidgetSettings(id){
 
-        const grid = document.querySelector(".dashboard-grid");
+        return {
 
-        if(!grid) return;
+            size:"small-card",
 
-        this.layout.forEach(id => {
+            locked:false,
 
-            const card = document.getElementById(id);
+            hidden:false
 
-            if(card){
+        };
 
-                grid.appendChild(card);
+    },
+
+    saveWidgetSettings(){
+
+        localStorage.setItem(
+
+            "aegisWidgetSettings",
+
+            JSON.stringify(
+
+                this.widgetSettings
+
+            )
+
+        );
+
+
+        console.log(
+            "Widget settings saved",
+            this.widgetSettings
+        );
+
+    },
+    
+    loadWidgetSettings(){
+
+        const saved =
+
+        JSON.parse(
+
+            localStorage.getItem(
+                "aegisWidgetSettings"
+            )
+
+        );
+
+
+        if(saved){
+
+            this.widgetSettings =
+            saved;
+
+        }
+
+
+        Object.values(this.widgets)
+        .forEach(widget=>{
+
+
+            if(!this.widgetSettings[widget.id]){
+
+                this.widgetSettings[widget.id] =
+                this.getDefaultWidgetSettings(
+                    widget.id
+                );
 
             }
 
+
         });
+
+
+    },
+
+    applyWidgetSettings(){
+
+        Object.entries(
+            this.widgetSettings
+        )
+        .forEach(([id,settings])=>{
+
+
+            const widget =
+            this.getWidget(id);
+
+
+            const card =
+            document.querySelector(
+                `[data-widget="${id}"]`
+            );
+
+
+            if(!widget || !card){
+
+                return;
+
+            }
+
+
+
+            // Apply size
+
+            card.classList.remove(
+
+                "small-card",
+
+                "medium-card",
+
+                "full-card"
+
+            );
+
+
+            card.classList.add(
+
+                settings.size
+
+            );
+
+
+
+            // Apply lock
+
+            widget.locked =
+            settings.locked;
+
+
+
+            // Apply hidden
+
+            widget.hidden =
+            settings.hidden;
+
+
+            if(settings.hidden){
+
+                card.style.display =
+                "none";
+
+            }
+            else{
+
+                card.style.display =
+                "";
+
+            }
+
+
+
+        });
+
+
+        console.log(
+            "Widget settings applied"
+        );
+
+    },
+
+    openWidgetGallery(){
+
+        let gallery =
+        document.querySelector(
+            ".widget-gallery"
+        );
+
+
+        if(gallery){
+
+            gallery.remove();
+
+            return;
+
+        }
+
+
+        gallery =
+        document.createElement("div");
+
+
+        gallery.className =
+        "widget-gallery";
+
+
+        gallery.innerHTML = `
+
+            <h3>
+                Widget Gallery
+            </h3>
+
+            <div class="gallery-list"></div>
+
+        `;
+
+
+        document
+        .querySelector("#dashboard")
+        .appendChild(gallery);
+
+
+
+        const list =
+        gallery.querySelector(
+            ".gallery-list"
+        );
+
+
+
+        Object.values(this.widgets)
+        .forEach(widget=>{
+
+
+            if(widget.hidden){
+
+
+                const item =
+                document.createElement(
+                    "div"
+                );
+
+
+                item.className =
+                "gallery-item";
+
+
+                item.innerHTML = `
+
+                    <div class="gallery-icon">
+
+                        ${widget.icon}
+
+                    </div>
+
+
+                    <div class="gallery-info">
+
+                        <h4>
+                            ${widget.name}
+                        </h4>
+
+
+                        <p>
+                            ${widget.description}
+                        </p>
+
+
+                        <small>
+                            ${widget.category}
+                        </small>
+
+                    </div>
+
+
+                    <button>
+                        Restore
+                    </button>
+
+
+                `;
+
+
+                item
+                .querySelector("button")
+                .onclick = ()=>{
+
+
+                    this.restoreWidget(
+                        widget.id
+                    );
+
+
+                    gallery.remove();
+
+
+                };
+
+
+                list.appendChild(
+                    item
+                );
+
+
+            }
+
+
+        });
+
+
+        if(!list.children.length){
+
+            list.innerHTML = `
+
+                <p>
+                    No hidden widgets
+                </p>
+
+            `;
+
+        }
+
+
+    },
+
+    renderLayout(){
+
+            const grid = document.querySelector(".dashboard-grid");
+
+            if(!grid) return;
+
+            this.layout.forEach(id => {
+
+                const card =
+                document.getElementById(id);
+
+                if(card){
+
+                    this.createToolbar(card);
+
+                    grid.appendChild(card);
+
+                }
+
+            });
+
+        },
+        createToolbar(card){
+
+        if(
+            card.querySelector(
+                ".widget-toolbar"
+            )
+        ){
+
+            return;
+
+        }
+
+
+        const toolbar =
+        document.createElement("div");
+
+        toolbar.className =
+        "widget-toolbar";
+
+
+        toolbar.innerHTML = `
+
+            <button class="widget-tool resize-tool" title="Resize">
+
+                📏
+
+            </button>
+
+            <button class="widget-tool lock-tool" title="Lock">
+
+                🔒
+
+            </button>
+
+            <button class="widget-tool settings-tool" title="Settings">
+
+                ⚙
+
+            </button>
+
+            <button class="widget-tool hide-tool" title="Hide">
+
+                ✖
+
+            </button>
+
+        `;
+        toolbar.addEventListener(
+            "pointerdown",
+            event=>{
+
+                event.stopPropagation();
+
+            }
+        );
+        toolbar
+        .querySelector(".resize-tool")
+        .addEventListener(
+            "click",
+            (event)=>{
+
+                event.stopPropagation();
+
+                event.preventDefault();
+
+
+                const widgetId =
+                card.dataset.widget;
+
+
+                this.resizeWidget(
+                    widgetId
+                );
+
+            }
+        );
+
+        toolbar
+        .querySelector(".lock-tool")
+        .addEventListener(
+            "click",
+            (event)=>{
+
+                event.stopPropagation();
+
+                event.preventDefault();
+
+
+                this.toggleWidgetLock(
+
+                    card.dataset.widget
+
+                );
+
+            }
+        );
+
+        toolbar
+        .querySelector(".hide-tool")
+        .addEventListener(
+            "click",
+            (event)=>{
+
+                event.stopPropagation();
+
+                event.preventDefault();
+
+
+                this.hideWidget(
+
+                    card.dataset.widget
+
+                );
+
+            }
+        );
+
+        card.prepend(
+            toolbar
+        );
 
     },
 
@@ -116,32 +546,55 @@ const Dashboard = {
 
         this.widgets[name] = {
 
-            id: name,
+        id:name,
 
-            name: widget.title || name,
+        name:
+            widget.title || name,
 
-            size: widget.size || "small",
 
-            movable:
-                widget.movable ?? true,
+        icon:
+            widget.icon || "◻️",
 
-            removable:
-                widget.removable ?? false,
 
-            icon:
-                widget.icon || null,
+        description:
+            widget.description ||
+            "AEGIS Widget",
 
-            category:
-                widget.category || "general",
 
-            settings:
-                widget.settings || {},
+        category:
+            widget.category ||
+            "general",
 
-            api: widget,
 
-            status: "REGISTERED"
+        size:
+            widget.size ||
+            "small-card",
 
-        };
+
+        movable:
+            widget.movable ?? true,
+
+
+        removable:
+            widget.removable ?? true,
+
+
+        resizable:
+            widget.resizable ?? true,
+
+
+        locked:false,
+
+        hidden:false,
+
+
+        api:widget,
+
+
+        status:"REGISTERED"
+
+    };
+
 
         console.log(
 
@@ -160,6 +613,228 @@ const Dashboard = {
     getWidgets() {
 
         return Object.values(this.widgets);
+
+    },
+
+    resizeWidget(id){
+
+        const widget =
+        this.getWidget(id);
+
+        if(!widget){
+
+            return;
+
+        }
+
+        const card =
+        document.querySelector(
+
+            `[data-widget="${id}"]`
+
+        );
+
+        if(!card){
+
+            return;
+
+        }
+
+        const sizes = [
+
+            "small-card",
+
+            "medium-card",
+
+            "large-card",
+
+            "full-card"
+
+        ];
+
+        let currentIndex =
+
+            sizes.findIndex(size =>
+
+                card.classList.contains(size)
+
+            );
+
+        if(currentIndex === -1){
+
+            currentIndex = 0;
+
+        }
+
+        card.classList.remove(
+
+            ...sizes
+
+        );
+
+        const nextIndex =
+
+            (currentIndex + 1) %
+
+            sizes.length;
+
+        card.classList.add(
+
+            sizes[nextIndex]
+
+        );
+
+        widget.size =
+        sizes[nextIndex];
+
+
+        this.widgetSettings[id].size =
+        sizes[nextIndex];
+
+
+        this.saveWidgetSettings();
+    },
+
+    
+
+    
+
+    toggleWidgetLock(id){
+
+        const widget =
+        this.getWidget(id);
+
+
+        if(!widget){
+
+            return;
+
+        }
+
+
+        widget.locked =
+        !widget.locked;
+
+
+        this.widgetSettings[id].locked =
+        widget.locked;
+
+
+        this.saveWidgetSettings();
+
+
+        console.log(
+            "Widget lock:",
+            id,
+            widget.locked
+        );
+
+    },
+
+    
+
+    
+    hideWidget(id){
+
+        const widget =
+        this.getWidget(id);
+
+
+        const card =
+        document.querySelector(
+            `[data-widget="${id}"]`
+        );
+
+
+        if(!widget || !card){
+
+            return;
+
+        }
+
+
+        widget.hidden =
+        true;
+
+
+        this.widgetSettings[id].hidden =
+        true;
+
+
+        card.style.display =
+        "none";
+
+
+        this.saveWidgetSettings();
+
+
+        console.log(
+            "Widget hidden:",
+            id
+        );
+
+    },
+
+
+    
+
+    restoreWidget(id){
+
+        const widget =
+        this.getWidget(id);
+
+
+        const card =
+        document.querySelector(
+            `[data-widget="${id}"]`
+        );
+
+
+        if(!widget || !card){
+
+            console.error(
+                "Restore failed:",
+                id
+            );
+
+            return;
+
+        }
+
+
+        widget.hidden = false;
+
+
+        this.widgetSettings[id].hidden =
+        false;
+
+
+        card.style.display =
+        "";
+
+
+        // Make sure it returns to the dashboard layout
+
+        const grid =
+        document.querySelector(
+            ".dashboard-grid"
+        );
+
+
+        if(grid){
+
+            grid.appendChild(card);
+
+        }
+
+
+        this.saveWidgetSettings();
+
+
+        console.log(
+            "Widget restored:",
+            id
+        );
 
     },
 
@@ -196,6 +871,11 @@ const Dashboard = {
         this.loadLayout();
 
         this.renderLayout();
+
+        this.loadWidgetSettings();
+
+        this.applyWidgetSettings();
+
         DragManager.init();
 
         Object.values(this.widgets).forEach(widget => {

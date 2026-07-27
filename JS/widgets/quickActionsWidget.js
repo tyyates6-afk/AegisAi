@@ -1,5 +1,27 @@
 Dashboard.register("quickActions", {
+    title:
+    "Quick Actions",
 
+    icon:
+    "⚡",
+
+    description:
+    "Fast access to common commands",
+
+    category:
+    "utility",
+
+    size:
+    "full-card",
+
+    movable:
+    true,
+
+    removable:
+    true,
+
+    resizable:
+    true,
 
     init(){
 

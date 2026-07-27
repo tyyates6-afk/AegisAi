@@ -1,4 +1,27 @@
 Dashboard.register("todayReminders", {
+    title:
+    "Today's Reminders",
+
+    icon:
+    "⏰",
+
+    description:
+    "Keep track of your reminders",
+
+    category:
+    "productivity",
+
+    size:
+    "small-card",
+
+    movable:
+    true,
+
+    removable:
+    true,
+
+    resizable:
+    true,
 
     init() {
 

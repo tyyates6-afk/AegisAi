@@ -1,5 +1,27 @@
 Dashboard.register("aegisStatus", {
+    title:
+    "AEGIS Status",
 
+    icon:
+    "🟢",
+
+    description:
+    "System health and module status",
+
+    category:
+    "system",
+
+    size:
+    "full-card",
+
+    movable:
+    true,
+
+    removable:
+    false,
+
+    resizable:
+    true,
 
     init(){
 

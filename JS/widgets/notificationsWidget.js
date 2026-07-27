@@ -1,99 +1,121 @@
 Dashboard.register("notifications", {
+    title:
+    "Notifications",
 
+    icon:
+    "🔔",
 
-init(){
+    description:
+    "Important AEGIS alerts and updates",
 
-    this.refresh();
+    category:
+    "system",
 
-},
+    size:
+    "small-card",
 
+    movable:
+    true,
 
+    removable:
+    true,
 
-refresh(){
+    resizable:
+    true,
 
+    init(){
 
-const container =
-document.getElementById(
-"notifications"
-);
+        this.refresh();
 
-
-if(!container) return;
-
-
-
-const notifications =
-(loadData("notifications") || [])
-.filter(notification => !notification.dismissed);
-
-
-if(notifications.length === 0){
-
-container.innerHTML = `
-
-<div class="widget-header">
-    <h3>
-        🔔 Notifications
-    </h3>
-</div>
-
-<p class="empty-state">
-No notifications.
-</p>
-
-`;
-
-return;
-
-}
+    },
 
 
 
-let html = `
-<div class="widget-header">
-    <h3>
-        🔔 Notifications
-    </h3>
-</div>
-`;
+    refresh(){
+
+
+    const container =
+    document.getElementById(
+    "notifications"
+    );
+
+
+    if(!container) return;
 
 
 
-notifications
-.slice(-5)
-.reverse()
-.forEach(notification=>{
+    const notifications =
+    (loadData("notifications") || [])
+    .filter(notification => !notification.dismissed);
 
 
-html += `
+    if(notifications.length === 0){
 
-<div class="notification-item">
+    container.innerHTML = `
 
-<strong>
-${notification.title}
-</strong>
+    <div class="widget-header">
+        <h3>
+            🔔 Notifications
+        </h3>
+    </div>
 
-<br>
+    <p class="empty-state">
+    No notifications.
+    </p>
 
-${notification.message}
+    `;
 
-<br>
+    return;
 
-<small>
-${notification.category}
-</small>
-
-
-<button onclick="clearNotification(${notification.id})">
-
-Dismiss
-
-</button>
+    }
 
 
-</div>
 
-`;
+    let html = `
+    <div class="widget-header">
+        <h3>
+            🔔 Notifications
+        </h3>
+    </div>
+    `;
+
+
+
+    notifications
+    .slice(-5)
+    .reverse()
+    .forEach(notification=>{
+
+
+    html += `
+
+    <div class="notification-item">
+
+    <strong>
+    ${notification.title}
+    </strong>
+
+    <br>
+
+    ${notification.message}
+
+    <br>
+
+    <small>
+    ${notification.category}
+    </small>
+
+
+    <button onclick="clearNotification(${notification.id})">
+
+    Dismiss
+
+    </button>
+
+
+    </div>
+
+    `;
 
 });
 

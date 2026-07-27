@@ -186,9 +186,30 @@ const DragManager = {
         if(!Dashboard.editMode){
             return;
         }
-
-
+        
         event.preventDefault();
+
+        const widgetId =
+        this.dataset.widget;
+
+
+        const widget =
+         Dashboard.getWidget(
+            widgetId
+        );
+
+
+        if(
+            widget &&
+            widget.locked
+        ){
+
+            return;
+
+        }
+
+
+        
 
 
         DragManager.activeCard =

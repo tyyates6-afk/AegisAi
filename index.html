@@ -87,6 +87,12 @@ rel="stylesheet">
 
 </button>
 
+<button onclick="Dashboard.openWidgetGallery()">
+
+➕ Add Widget
+
+</button>
+
 <h2 class="dashboard-title">
 
 AEGIS Dashboard
@@ -100,44 +106,44 @@ AEGIS Dashboard
 
 
 
-<div class="dashboard-card hero-card" id="card-greeting">
+<div class="dashboard-card hero-card" id="card-greeting" data-widget="greeting">
     <div id="greeting"></div>
-
+    
     <div id="currentDate"></div>
 
     <div id="currentTime"></div>
 
 </div>
 
-<div class="dashboard-card small-card" id="card-events">
+<div class="dashboard-card small-card" id="card-events"data-widget="todayEvents">
     <div id="todayEvents"></div>
 </div>
 
-<div class="dashboard-card medium-card" id="card-verse">
+<div class="dashboard-card medium-card" id="card-verse" data-widget="dailyVerse">
     <div id="dailyVerse"></div>
 </div>
 
-<div class="dashboard-card small-card" id="card-reminders">
+<div class="dashboard-card small-card" id="card-reminders" data-widget="todayReminders">
     <div id="todayReminders"></div>
 </div>
 
-<div class="dashboard-card full-card" id="card-actions">
+<div class="dashboard-card full-card" id="card-actions" data-widget="quickActions">
     <div id="quickActions"></div>
 </div>
 
-<div class="dashboard-card small-card" id="card-weather">
+<div class="dashboard-card small-card" id="card-weather" data-widget="weather">
     <div id="weather"></div>
 </div>
 
-<div class="dashboard-card medium-card" id="card-profile">
+<div class="dashboard-card medium-card" id="card-profile" data-widget="profileWidget">
     <div id="profileWidget"></div>
 </div>
 
-<div class="dashboard-card small-card" id="card-notifications">
+<div class="dashboard-card small-card" id="card-notifications" data-widget="notifications">
     <div id="notifications"></div>
 </div>
 
-<div class="dashboard-card full-card" id="card-status">
+<div class="dashboard-card full-card" id="card-status" data-widget="aegisStatus">
     <div id="aegisStatus"></div>
 </div>
 

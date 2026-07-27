@@ -1,5 +1,27 @@
 Dashboard.register("profileWidget", {
+    title:
+    "Profile",
 
+    icon:
+    "👤",
+
+    description:
+    "Manage your AEGIS profile",
+
+    category:
+    "personal",
+
+    size:
+    "medium-card",
+
+    movable:
+    true,
+
+    removable:
+    true,
+
+    resizable:
+    true,
 
     init(){
 

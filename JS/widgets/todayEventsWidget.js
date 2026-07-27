@@ -1,7 +1,30 @@
 
 
 Dashboard.register("todayEvents", {
+    title:
+    "Today's Events",
 
+    icon:
+    "📅",
+
+    description:
+    "View your scheduled events for today",
+
+    category:
+    "planning",
+
+    size:
+    "small-card",
+
+    movable:
+    true,
+
+    removable:
+    true,
+
+    resizable:
+    true,
+    
     init() {
 
         this.refresh();

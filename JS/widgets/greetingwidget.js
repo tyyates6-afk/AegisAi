@@ -1,17 +1,27 @@
 Dashboard.register("greeting", {
-    title: "Greeting",
+    title:
+    "Greeting",
 
-    size: "hero",
+    icon:
+    "👋",
 
-    movable: false,
+    description:
+    "Personal greeting and current time",
 
-    removable: false,
+    category:
+    "personal",
 
-    icon: "👋",
+    size:
+    "hero-card",
 
-    category: "system",
+    movable:
+    true,
 
-    enabled: true,
+    removable:
+    true,
+
+    resizable:
+    true,
 
     timer: null,
 

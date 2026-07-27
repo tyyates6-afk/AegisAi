@@ -1,11 +1,49 @@
-Dashboard.register("weather", {
+Dashboard.register(
+    "weather",
+    {
+
+        title:
+        "Weather",
 
 
+        icon:
+        "☁️",
+
+
+        description:
+        "Current weather conditions",
+
+
+        category:
+        "environment",
+
+
+        size:
+        "small-card",
+
+
+        movable:
+        true,
+
+
+        removable:
+        true,
+
+
+        resizable:
+        true,
+
+
+        
+    
+    
     init(){
-
         this.refresh();
 
     },
+
+        
+  
 
 
     refresh(){
