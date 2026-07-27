@@ -509,7 +509,28 @@ const Dashboard = {
 
     this.editMode =
     !this.editMode;
+        document
+    .querySelectorAll(
+        ".dashboard-card"
+    )
+    .forEach(card=>{
 
+
+        if(this.editMode){
+
+            card.style.touchAction =
+            "none";
+
+        }
+        else{
+
+            card.style.touchAction =
+            "pan-y";
+
+        }
+
+
+    });
 
     document
     .querySelectorAll(

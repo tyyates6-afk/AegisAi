@@ -245,6 +245,7 @@ const DragManager = {
     pointerMove(event){
 
         if(
+            !Dashboard.editMode ||
             !DragManager.isDragging ||
             !DragManager.activeCard ||
             !DragManager.placeholder
