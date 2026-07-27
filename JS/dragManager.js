@@ -230,29 +230,33 @@ const DragManager = {
     },
     pointerDown(event){
 
-
         if(!Dashboard.editMode){
-
             return;
-
         }
 
+        const widget =
+        Dashboard.getWidget(
+            this.dataset.widget
+        );
+
+        if(
+            !widget ||
+            widget.locked
+        ){
+            return;
+        }
 
         DragManager.activeCard =
         this;
 
-
         DragManager.startX =
         event.clientX;
-
 
         DragManager.startY =
         event.clientY;
 
-
         DragManager.dragStarted =
         false;
-
 
     },
 
@@ -263,9 +267,19 @@ const DragManager = {
             !Dashboard.editMode ||
             !DragManager.activeCard
         ){
-
             return;
+        }
 
+        const widget =
+        Dashboard.getWidget(
+            DragManager.activeCard.dataset.widget
+        );
+
+        if(
+            !widget ||
+            widget.locked
+        ){
+            return;
         }
 
 
