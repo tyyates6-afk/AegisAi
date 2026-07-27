@@ -2,7 +2,11 @@ const DragManager = {
     activeCard:null,
     placeholder:null,
     isDragging:false,
+    dragStarted:false,
 
+    startX:0,
+
+    startY:0,
    
 
     init(){
@@ -228,71 +232,36 @@ const DragManager = {
 
 
         if(!Dashboard.editMode){
-            return;
-        }
-        
-        event.preventDefault();
-
-        const widgetId =
-        this.dataset.widget;
-
-
-        const widget =
-         Dashboard.getWidget(
-            widgetId
-        );
-
-
-        if(
-            widget &&
-            widget.locked
-        ){
 
             return;
 
         }
-
-
-        
 
 
         DragManager.activeCard =
         this;
-        DragManager.placeholder =
-        document.createElement("div");
 
 
-        DragManager.placeholder.className =
-        "dashboard-placeholder " +
-        this.className;
+        DragManager.startX =
+        event.clientX;
 
 
-        this.parentNode.insertBefore(
-            DragManager.placeholder,
-            this
-        );
+        DragManager.startY =
+        event.clientY;
 
-        DragManager.isDragging =
-        true;
-        this.setPointerCapture(
-            event.pointerId
-        );
 
-        this.classList.add(
-            "dragging"
-        );
+        DragManager.dragStarted =
+        false;
 
-        this.style.opacity =
-        "0.35";
+
     },
 
     pointerMove(event){
 
+
         if(
             !Dashboard.editMode ||
-            !DragManager.isDragging ||
-            !DragManager.activeCard ||
-            !DragManager.placeholder
+            !DragManager.activeCard
         ){
 
             return;
@@ -300,7 +269,59 @@ const DragManager = {
         }
 
 
-        event.preventDefault();
+
+        const distance = Math.sqrt(
+
+            Math.pow(
+                event.clientX -
+                DragManager.startX,
+                2
+            )
+
+            +
+
+            Math.pow(
+                event.clientY -
+                DragManager.startY,
+                2
+            )
+
+        );
+
+
+
+        if(
+            distance < 10
+        ){
+
+            return;
+
+        }
+
+
+
+        if(
+            !DragManager.dragStarted
+        ){
+
+            event.preventDefault();
+
+
+            DragManager.isDragging =
+            true;
+
+
+            DragManager.dragStarted =
+            true;
+
+
+            DragManager.activeCard
+            .classList.add(
+                "dragging"
+            );
+
+        }
+
 
 
         const element =
@@ -317,54 +338,30 @@ const DragManager = {
 
 
         if(
-            !target ||
-            target === DragManager.activeCard
+            target &&
+            target !== DragManager.activeCard
         ){
 
-            return;
+            if(
+                target.compareDocumentPosition(
+                    DragManager.activeCard
+                )
+                &
+                Node.DOCUMENT_POSITION_FOLLOWING
+            ){
 
-        }
+                target.before(
+                    DragManager.activeCard
+                );
 
+            }
+            else{
 
-        const grid =
-        document.querySelector(
-            ".dashboard-grid"
-        );
+                target.after(
+                    DragManager.activeCard
+                );
 
-
-        const cards =
-        [
-            ...grid.children
-        ];
-
-
-        const placeholderIndex =
-        cards.indexOf(
-            DragManager.placeholder
-        );
-
-
-        const targetIndex =
-        cards.indexOf(
-            target
-        );
-
-
-        if(
-            placeholderIndex < targetIndex
-        ){
-
-            target.after(
-                DragManager.placeholder
-            );
-
-        }
-
-        else{
-
-            target.before(
-                DragManager.placeholder
-            );
+            }
 
         }
 
@@ -381,7 +378,19 @@ const DragManager = {
             return;
 
         }
+        DragManager.activeCard
+        .classList.remove(
+            "dragging"
+        );
 
+
+        if(
+            DragManager.dragStarted
+        ){
+
+            DragManager.save();
+
+        }
 
         const card =
         DragManager.activeCard;
