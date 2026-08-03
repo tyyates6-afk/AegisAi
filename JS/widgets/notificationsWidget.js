@@ -22,7 +22,54 @@ Dashboard.register("notifications", {
 
     resizable:
     true,
+    dismiss(id){
 
+        const notification =
+        notifications.find(
+            n => n.id === id
+        );
+
+        if(notification){
+
+            notification.dismissed = true;
+
+            saveData(
+                "notifications",
+                notifications
+            );
+
+        }
+
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+    },
+
+
+    clearAll(){
+
+        notifications =
+        notifications.map(notification=>{
+
+            notification.dismissed = true;
+
+            return notification;
+
+        });
+
+
+        saveData(
+            "notifications",
+            notifications
+        );
+
+
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+    },
     init(){
 
         this.refresh();
@@ -33,146 +80,155 @@ Dashboard.register("notifications", {
 
     refresh(){
 
+        const container =
+        document.getElementById(
+            "notifications"
+        );
 
-    const container =
-    document.getElementById(
-    "notifications"
-    );
+        if(!container){
+            return;
+        }
 
+        const notifications =
+        Aegis
+        .getModule("notifications")
+        .api
+        .getNotifications()
+        .filter(
+            notification => !notification.dismissed
+        );
 
-    if(!container) return;
+        if(notifications.length === 0){
 
+            container.innerHTML = `
 
+            <div class="widget-header">
 
-    const notifications =
-    (loadData("notifications") || [])
-    .filter(notification => !notification.dismissed);
+                <h3>
 
+                    🔔 Notifications
 
-    if(notifications.length === 0){
+                </h3>
 
-    container.innerHTML = `
+            </div>
 
-    <div class="widget-header">
-        <h3>
-            🔔 Notifications
-        </h3>
-    </div>
+            <p class="empty-state">
 
-    <p class="empty-state">
-    No notifications.
-    </p>
+                No notifications.
 
-    `;
+            </p>
 
-    return;
+            `;
+
+            return;
+
+        }
+
+        const unread =
+        notifications.filter(
+            notification =>
+            !notification.read
+        ).length;
+
+        let html = `
+
+        <div class="widget-header">
+
+            <h3>
+
+                🔔 Notifications (${unread})
+
+            </h3>
+
+        </div>
+
+        `;
+
+        notifications
+        .slice(0,5)
+        .forEach(notification=>{
+
+            html += `
+
+            <div
+            class="notification-item"
+            data-id="${notification.id}">
+
+                <strong>
+
+                    ${notification.icon}
+                    ${notification.title}
+
+                </strong>
+
+                <br>
+
+                ${notification.message}
+
+                <br>
+
+                <small>
+
+                    ${notification.source}
+
+                </small>
+
+                <br><br>
+
+                <button
+                onclick="event.stopPropagation(); dismissNotification('${notification.id}')">
+
+                    Dismiss
+
+                </button>
+
+            </div>
+
+            `;
+
+        });
+
+        container.innerHTML = html;
+
+        container.innerHTML += `
+
+        <button onclick="clearAllNotifications()">
+
+            Clear All
+
+        </button>
+
+        `;
+        container
+        .querySelectorAll(
+            ".notification-item"
+        )
+        .forEach(card=>{
+
+            card.onclick = ()=>{
+
+                Aegis
+                .getModule("notifications")
+                .api
+                .markRead(
+                    card.dataset.id
+                );
+
+            };
+
+        });
 
     }
 
 
 
-    let html = `
-    <div class="widget-header">
-        <h3>
-            🔔 Notifications
-        </h3>
-    </div>
-    `;
-
-
-
-    notifications
-    .slice(-5)
-    .reverse()
-    .forEach(notification=>{
-
-
-    html += `
-
-    <div class="notification-item">
-
-    <strong>
-    ${notification.title}
-    </strong>
-
-    <br>
-
-    ${notification.message}
-
-    <br>
-
-    <small>
-    ${notification.category}
-    </small>
-
-
-    <button onclick="clearNotification(${notification.id})">
-
-    Dismiss
-
-    </button>
-
-
-    </div>
-
-    `;
-
 });
+function dismissNotification(id){
 
-
-
-html += `
-
-<button onclick="clearAllNotifications()">
-
-Clear All
-
-</button>
-
-`;
-
-
-
-container.innerHTML = html;
-
-
-}
-
-
-
-});
-
-
-
-function clearNotification(id){
-
-let notifications =
-loadData("notifications") || [];
-
-
-notifications =
-notifications.map(notification=>{
-
-    if(notification.id === id){
-
-        notification.dismissed = true;
-
-    }
-
-    return notification;
-
-});
-
-
-saveData(
-"notifications",
-notifications
-);
-
-
-Dashboard.refresh(
-"notifications"
-);
+    Aegis
+    .getModule("notifications")
+    .api
+    .dismiss(id);
 
 }
 
@@ -180,28 +236,11 @@ Dashboard.refresh(
 
 function clearAllNotifications(){
 
-let notifications =
-loadData("notifications") || [];
-
-
-notifications =
-notifications.map(notification=>{
-
-    notification.dismissed = true;
-
-    return notification;
-
-});
-
-
-saveData(
-"notifications",
-notifications
-);
-
-
-Dashboard.refresh(
-"notifications"
-);
+    Aegis
+    .getModule("notifications")
+    .api
+    .clearAll();
 
 }
+
+

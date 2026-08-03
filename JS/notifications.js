@@ -4,6 +4,47 @@ let notifications =
 loadData("notifications") || [];
 
 
+function createNotification({
+
+    title,
+
+    message,
+
+    icon = "🔔",
+
+    type = "info",
+
+    priority = "normal",
+
+    source = "system"
+
+}){
+
+    return{
+
+        id: crypto.randomUUID(),
+
+        title,
+
+        message,
+
+        icon,
+
+        type,
+
+        priority,
+
+        source,
+
+        timestamp: Date.now(),
+
+        read: false
+
+    };
+
+}
+
+
 function checkNotifications(){
 
 
@@ -187,28 +228,24 @@ minutes
 ){
 
 
-const notification = {
+Aegis
+.getModule("notifications")
+.api
+.notify({
 
-id:Date.now(),
+    title: reminder.task,
 
-type:"reminder",
+    message: `Due in ${minutes} minutes.`,
 
-title:reminder.task,
+    icon: "⏰",
 
-message:"Reminder coming up.",
+    type: "reminder",
 
-created:new Date().toISOString()
+    priority: "high",
 
-};
+    source: "reminders"
 
-
-notifications.push(notification);
-
-
-saveData(
-"notifications",
-notifications
-);
+});
 
 
 
@@ -256,37 +293,62 @@ Aegis.broadcast(
 
 }
 
+function cleanupNotifications(){
+
+    const now =
+    Date.now();
+
+
+    notifications =
+    notifications.filter(notification=>{
+
+
+        const age =
+        now -
+        notification.timestamp;
+
+
+        // keep notifications for 30 days
+
+        return age <
+        1000 *
+        60 *
+        60 *
+        24 *
+        30;
+
+
+    });
+
+
+    saveNotifications();
+
+}
+
 function showAegisNotification(
 event,
 minutes
 ){
 
 
-const notification = {
-
-    id: Date.now(),
-
-    type: "event",
+Aegis
+.getModule("notifications")
+.api
+.notify({
 
     title: event.title,
 
-    message: "Starts soon.",
+    message: `Starts in ${minutes} minutes.`,
 
-    category: event.category,
+    icon: "📅",
 
-    created: new Date().toISOString()
+    type: "event",
 
-};
+    priority: "normal",
 
+    source: "events"
 
-
-notifications.push(notification);
-
-
-saveData(
-    "notifications",
-    notifications
-);
+});
 
 
 
@@ -351,7 +413,14 @@ Aegis.broadcast(
 
 }
 
+function saveNotifications(){
 
+    saveData(
+        "notifications",
+        notifications
+    );
+
+}
 
 
 Aegis.register("notifications", {
@@ -363,15 +432,146 @@ Aegis.register("notifications", {
     init() {
 
         console.log("Notifications initialized.");
-
+        cleanupNotifications();
         checkNotifications();
-
+        
         this.timer = setInterval(() => {
         checkNotifications();
 
         }, 1000);
 
+        
+
     },
+
+    notify(data){
+
+        const notification =
+        createNotification(data);
+
+        notifications.unshift(
+            notification
+        );
+
+        saveData(
+            "notifications",
+            notifications
+        );
+
+        Dashboard.refresh(
+            "notifications"
+        );
+        Aegis
+        .getModule("toast")
+        .api
+        .show(notification);
+        Aegis
+        .getModule("audio")
+        .api
+        .play("notification");
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+        return notification;
+
+    },
+
+    getNotifications(){
+
+            return notifications;
+
+        },
+    markRead(id){
+
+        const n =
+        notifications.find(
+            n => n.id === id
+        );
+
+        if(n){
+
+            n.read = true;
+
+            saveNotifications();
+
+        }
+
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+    },
+
+    dismiss(id){
+
+        const n =
+        notifications.find(
+            n => n.id === id
+        );
+
+
+        if(n){
+
+            n.dismissed = true;
+
+            saveNotifications();
+
+        }
+
+
+        Dashboard.refresh(
+            "notifications"
+        );
+
+
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+    },
+
+
+    clearAll(){
+
+        notifications =
+        notifications.map(notification=>{
+
+            notification.dismissed = true;
+
+            return notification;
+
+        });
+
+
+        saveNotifications();
+
+
+        Dashboard.refresh(
+            "notifications"
+        );
+
+
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+    },
+    clearRead(){
+
+        notifications =
+        notifications.filter(
+            n => !n.read
+        );
+
+        saveNotifications();
+
+        Aegis.broadcast(
+            "notificationsUpdated"
+        );
+
+    },
+
     refresh() {
 
         checkNotifications();
