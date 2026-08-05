@@ -8,8 +8,9 @@ const defaultDashboardLayout = [
     "card-weather",
     "card-profile",
     "card-notifications",
-    "card-status"
-
+    "card-status",
+    "card-voice",
+    "card-account",
 ];
 const Dashboard = {
     
@@ -1065,6 +1066,17 @@ window.addEventListener(
 
         Dashboard.broadcast(
             "weatherUpdated"
+        );
+
+    }
+);
+
+window.addEventListener(
+    "cloudUpdated",
+    () => {
+
+        Dashboard.broadcast(
+            "cloudUpdated"
         );
 
     }

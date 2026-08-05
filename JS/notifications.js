@@ -453,6 +453,22 @@ Aegis.register("notifications", {
             notification
         );
 
+        if(notification.speak === true){
+
+            const voice =
+            Aegis.getModule("voice");
+
+
+            if(voice){
+
+                voice.api.speakNotification(
+                    notification
+                );
+
+            }
+
+        }
+
         saveData(
             "notifications",
             notifications
@@ -465,10 +481,17 @@ Aegis.register("notifications", {
         .getModule("toast")
         .api
         .show(notification);
-        Aegis
-        .getModule("audio")
-        .api
-        .play("notification");
+        
+        if(notification.speak !== false){
+
+            Aegis
+            .getModule("voice")
+            ?.api
+            .speakNotification(
+                notification
+            );
+
+        }
         Aegis.broadcast(
             "notificationsUpdated"
         );

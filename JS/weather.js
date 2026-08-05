@@ -1,6 +1,149 @@
 let weatherData = null;
+let weatherAlerts =
+loadData("weatherAlerts") || {};
+
+function cleanupWeatherAlerts(){
+
+    const now =
+    Date.now();
 
 
+    const threeDays =
+    1000 *
+    60 *
+    60 *
+    24 *
+    3;
+
+
+    Object.keys(weatherAlerts)
+    .forEach(id=>{
+
+
+        if(
+            now -
+            weatherAlerts[id]
+            >
+            threeDays
+        ){
+
+            delete weatherAlerts[id];
+
+        }
+
+
+    });
+
+
+    saveData(
+        "weatherAlerts",
+        weatherAlerts
+    );
+
+}
+
+function checkWeatherNotifications(weather){
+
+    cleanupWeatherAlerts();
+    
+    if(!weather){
+        return;
+    }
+
+
+    const today =
+    new Date()
+    .toISOString()
+    .split("T")[0];
+
+
+
+    function sendWeatherAlert(
+        id,
+        data
+    ){
+
+        if(weatherAlerts[id]){
+            return;
+        }
+
+
+        Aegis
+        .getModule("notifications")
+        .api
+        .notify(data);
+
+
+
+        weatherAlerts[id] =
+        Date.now();
+
+
+        saveData(
+            "weatherAlerts",
+            weatherAlerts
+        );
+
+    }
+
+
+
+    if(weather.temperature >= 100){
+
+
+        sendWeatherAlert(
+
+            "heat-" + today,
+
+            {
+
+            title:"Extreme Heat Warning",
+
+            message:
+            `Temperature is currently ${weather.temperature} degrees.`,
+
+            icon:"☀️",
+
+            source:"weather",
+
+            speak:true
+
+            }
+
+        );
+
+    }
+
+
+
+    if(weather.wind >= 40){
+
+
+        sendWeatherAlert(
+
+            "wind-" + today,
+
+            {
+
+            title:"High Wind Alert",
+
+            message:
+            `Wind speeds are currently ${weather.wind} miles per hour.`,
+
+            icon:"🌬️",
+
+            source:"weather",
+
+            speak:true
+
+            }
+
+        );
+
+    }
+
+
+}
 async function loadWeather(){
 
     console.log("loadWeather() called");
@@ -120,19 +263,19 @@ async function loadWeather(){
         new Date()
         
     };
-    console.log("Weather data saved:", weatherData);
-
+    checkWeatherNotifications(
+        weatherData
+    );
+        
 
         Aegis.broadcast(
             "weatherUpdated"
         );
 
-        console.log("Weather broadcast sent");
-        console.log("Weather loaded:", weatherData);
+        
 
         Dashboard.refresh("weather"); 
     }
-
 
     catch(error){
 
@@ -144,6 +287,7 @@ async function loadWeather(){
     }
     
 }
+
 
 Aegis.register("weather", {
 

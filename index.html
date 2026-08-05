@@ -147,6 +147,22 @@ AEGIS Dashboard
     <div id="aegisStatus"></div>
 </div>
 
+<div 
+class="dashboard-card small-card"
+id="card-voice"
+data-widget="voiceWidget">
+
+    <div id="voiceWidget"></div>
+
+</div>
+
+<div 
+class="dashboard-card small-card"
+id="card-account"
+data-widget="accountWidget">
+    <div id="accountWidget"></div>
+</div>
+
 
 </div>
 
@@ -470,6 +486,9 @@ Assistant Style
 
 <select id="assistantStyle">
 
+<option value="Jarvis">
+Jarvis
+</option>
 
 <option value="Professional">
 Professional
@@ -481,14 +500,23 @@ Friendly
 </option>
 
 
-<option value="Technical">
-Technical
+<option value="Minimal">
+Minimal
 </option>
 
 
 </select>
 
+<label>
 
+<input 
+type="checkbox"
+id="voiceEnabled"
+checked>
+
+Enable AEGIS Voice Assistant
+
+</label>
 
 
 
@@ -674,7 +702,7 @@ Add Category
 
 <script src="JS/core.js"></script>
 
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
 
@@ -707,6 +735,8 @@ Add Category
 
 <script src="JS/audio.js"></script>
 
+<script src="JS/voice.js"></script>
+
 
 
 
@@ -715,6 +745,8 @@ Add Category
 ========================= -->
 
 <script src="JS/DragManager.js"></script>
+
+<script src="JS/cloud.js"></script>
 
 <script src="JS/dashboardManager.js"></script>
 
@@ -739,8 +771,9 @@ Add Category
 
 <script src="JS/widgets/weatherWidget.js"></script>
 
+<script src="JS/widgets/voiceWidget.js"></script>
 
-
+<script src="JS/widgets/accountWidget.js"></script>
 
 
 <script src="JS/dashboard.js"></script>

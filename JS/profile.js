@@ -27,6 +27,8 @@ function saveProfile(){
     const temperature =
     document.getElementById("temperatureUnit").value;
 
+    const voiceEnabled =
+    document.getElementById("voiceEnabled")?.checked ?? true;
 
     profile = {
 
@@ -43,7 +45,9 @@ function saveProfile(){
         bible: bible,
 
         style: style,
-        
+
+        voiceEnabled: voiceEnabled,
+
         latitude:null,
 
         longitude:null,
@@ -54,7 +58,17 @@ function saveProfile(){
         "profile",
         [profile]
     );
+    
+    if(
+        Aegis.getModule("cloud")
+    ){
 
+        Aegis
+        .getModule("cloud")
+        .api
+        .syncProfile(profile);
+
+    }
 
     document.getElementById(
         "profileStatus"
@@ -119,6 +133,17 @@ document.getElementById(
 ).value =
 profile.temperature || "F";
 
+const voiceToggle =
+document.getElementById("voiceEnabled");
+
+
+if(voiceToggle){
+
+    voiceToggle.checked =
+    profile.voiceEnabled !== false;
+
+}
+
 }
 
 
@@ -163,8 +188,9 @@ Aegis.register("profile", {
 
             bible: "NIV",
 
-            style: "Professional"
-
+            style: "Professional",
+            
+            voiceEnabled:true
         };
 
     }
