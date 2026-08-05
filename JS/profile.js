@@ -58,6 +58,8 @@ function saveProfile(){
         "profile",
         [profile]
     );
+
+    syncProfileToCloud();
     
     if(
         Aegis.getModule("cloud")
@@ -88,8 +90,110 @@ function saveProfile(){
 
 }
 
+async function syncProfileToCloud(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    ?.api;
 
 
+    const user =
+    cloud.getUser();
+
+
+    if(!user){
+
+        console.log(
+            "No cloud user. Skipping sync."
+        );
+
+        return;
+
+    }
+
+
+    await cloud.syncProfile(profile);
+
+}
+
+async function loadCloudProfile(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    ?.api;
+
+
+    const cloudProfile =
+    await cloud.loadProfileFromCloud();
+
+
+
+    if(!cloudProfile){
+
+        console.log(
+            "No cloud profile found."
+        );
+
+        return;
+
+    }
+
+
+
+    profile = {
+
+
+        name:
+        cloudProfile.name,
+
+
+        city:
+        cloudProfile.city,
+
+
+        state:
+        cloudProfile.state,
+
+
+        country:
+        cloudProfile.country,
+
+
+        temperature:
+        cloudProfile.temperature,
+
+
+        bible:
+        cloudProfile.bible,
+
+
+        style:
+        cloudProfile.style
+
+
+    };
+
+
+
+    saveData(
+        "profile",
+        [profile]
+    );
+
+
+    Aegis.broadcast(
+        "profileUpdated"
+    );
+
+
+    console.log(
+        "Local profile updated from cloud:",
+        profile
+    );
+
+}
 function loadProfile(){
 
 
@@ -159,6 +263,20 @@ Aegis.register("profile", {
         
         
         console.log("Profile initialized.");
+
+    },
+    onInit(){
+
+        Aegis.listen(
+            "cloudUpdated",
+            "profile"
+        );
+
+    },
+
+    onRefresh(){
+
+        loadCloudProfile();
 
     },
 

@@ -16,7 +16,7 @@ supabase.createClient(
     SUPABASE_KEY
 );
 
-let cloudUser = null;
+
 
 let cloudConnected = false;
 
@@ -27,27 +27,125 @@ Aegis.register("cloud", {
 
     version:"1.0.0",
 
-    syncProfile(profile){
+    async syncProfile(profile){
+
+        const user =
+        this.user;
+
+
+        if(!user){
+
+            console.log(
+                "No cloud account."
+            );
+
+            return;
+
+        }
+
+
+        const {data,error} =
+        await supabaseClient
+        .from("profiles")
+        .upsert({
+
+            id:user.id,
+
+            name:profile.name,
+
+            city:profile.city,
+
+            state:profile.state,
+
+            country:profile.country,
+
+            temperature:profile.temperature,
+
+            bible:profile.bible,
+
+            style:profile.style
+
+        });
+
+
+
+        if(error){
+
+            console.error(
+                "Profile sync failed:",
+                error
+            );
+
+            return false;
+
+        }
+
 
         console.log(
-            "Preparing profile sync:",
-            profile
+            "Profile synced:",
+            data
         );
-
-
-        /*
-            Later:
-
-            send profile
-            to Supabase
-
-        */
 
 
         return true;
 
     },
 
+    async loadProfileFromCloud(){
+
+        const user =
+        this.user;
+
+
+        if(!user){
+
+            console.log(
+                "No cloud user. Cannot load profile."
+            );
+
+            return null;
+
+        }
+
+
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq(
+            "id",
+            user.id
+        )
+        .single();
+
+
+
+        if(error){
+
+            console.error(
+                "Cloud profile load failed:",
+                error
+            );
+
+            return null;
+
+        }
+
+
+
+        console.log(
+            "Cloud profile loaded:",
+            data
+        );
+
+
+        return data;
+
+    },
     async init(){
 
         console.log(
@@ -96,76 +194,96 @@ Aegis.register("cloud", {
 
         },
 
+    async createAccount(email, password){
 
-    loadSession(){
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient.auth.signUp({
+
+            email:email,
+
+            password:password
+
+        });
 
 
-        const saved =
 
-        loadData(
-            "cloudUser"
+        if(error){
+
+            console.error(
+                "Account creation failed:",
+                error
+            );
+
+            return false;
+
+        }
+
+
+
+        console.log(
+            "AEGIS account created:",
+            data
         );
 
 
 
-        if(
-            saved &&
-            saved.length
-        ){
+        this.user =
+        data.user;
 
 
-            cloudUser =
-            saved[0];
+
+        Aegis.broadcast(
+            "cloudUpdated"
+        );
 
 
-            cloudConnected =
-            true;
-
-
-            console.log(
-                "Cloud session loaded:",
-                cloudUser
-            );
-
-
-        }
-        else{
-
-
-            console.log(
-                "No cloud session."
-            );
-
-
-        }
-
+        return true;
 
     },
 
+    async login(email,password){
 
 
-    login(user){
+        const {
+            data,
+            error
+        } =
+        await supabaseClient.auth.signInWithPassword({
+
+            email:email,
+
+            password:password
+
+        });
 
 
-        cloudUser =
-        user;
+
+        if(error){
+
+            console.error(
+                "Login failed:",
+                error
+            );
+
+            return false;
+
+        }
 
 
 
-        saveData(
-
-            "cloudUser",
-
-            [
-                user
-            ]
-
+        console.log(
+            "AEGIS login successful:",
+            data
         );
 
 
 
-        cloudConnected =
-        true;
+        this.user =
+        data.user;
 
 
 
@@ -175,62 +293,71 @@ Aegis.register("cloud", {
 
 
 
-        console.log(
-            "Cloud login:",
-            user
-        );
+        setTimeout(()=>{
 
+            loadCloudProfile();
+
+        },500);
+
+
+        return true;
 
     },
 
+    async logout(){
 
 
-    logout(){
+        await supabaseClient.auth.signOut();
 
 
-        cloudUser =
+        this.user =
         null;
 
 
-
-        saveData(
-
-            "cloudUser",
-
-            []
-
-        );
-
-
-
-        cloudConnected =
-        false;
-
-
-
         Aegis.broadcast(
             "cloudUpdated"
         );
 
 
+    },
 
-        console.log(
-            "Cloud logout"
-        );
+    async loadSession(){
+
+    const {
+    data
+    } =
+    await supabaseClient.auth.getSession();
+
+
+    if(
+    data.session
+    ){
+
+    this.user =
+    data.session.user;
+
+
+    console.log(
+    "Supabase session restored:",
+    this.user
+    );
+
+    }
 
 
     },
+
+
+
+
 
 
 
     getUser(){
 
-
-        return cloudUser;
-
+        return this.user || null;
 
     },
-
 
 
     isConnected(){

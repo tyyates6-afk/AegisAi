@@ -30,7 +30,7 @@ Dashboard.register("accountWidget", {
         this.refresh();
 
     },
-    
+
     onInit(){
 
         Dashboard.listen(
@@ -85,13 +85,13 @@ Dashboard.register("accountWidget", {
             `
 
             <p>
-            🟢 Local Account
+            🟢 Cloud Connected
             </p>
 
 
             <p>
-            User:
-            ${user.name}
+            Email:
+            ${user.email}
             </p>
 
 
@@ -112,9 +112,29 @@ Dashboard.register("accountWidget", {
             </p>
 
 
+            <input
+            id="accountEmail"
+            placeholder="Email"
+            >
+
+
+            <input
+            id="accountPassword"
+            type="password"
+            placeholder="Password"
+            >
+
+
             <button id="createAccount">
 
-                Create Account
+            Create Account
+
+            </button>
+
+
+            <button id="loginAccount">
+
+            Login
 
             </button>
 
@@ -125,7 +145,7 @@ Dashboard.register("accountWidget", {
 
         `;
 
-
+        
 
         const logout =
         document.getElementById(
@@ -150,8 +170,6 @@ Dashboard.register("accountWidget", {
 
         }
 
-
-
         const create =
         document.getElementById(
             "createAccount"
@@ -160,29 +178,69 @@ Dashboard.register("accountWidget", {
 
         if(create){
 
-
             create.onclick = ()=>{
 
 
-                cloud.login({
-
-                    id:
-                    crypto.randomUUID(),
-
-                    name:
-                    "Ty"
+                const email =
+                document.getElementById(
+                    "accountEmail"
+                ).value;
 
 
-                });
+                const password =
+                document.getElementById(
+                    "accountPassword"
+                ).value;
 
 
-                this.refresh();
+
+                cloud.createAccount(
+                    email,
+                    password
+                );
 
 
             };
 
+        }
+
+
+
+        const login =
+        document.getElementById(
+            "loginAccount"
+        );
+
+
+        if(login){
+
+            login.onclick = ()=>{
+
+
+                const email =
+                document.getElementById(
+                    "accountEmail"
+                ).value;
+
+
+                const password =
+                document.getElementById(
+                    "accountPassword"
+                ).value;
+
+
+
+                cloud.login(
+                    email,
+                    password
+                );
+
+
+            };
 
         }
+
+        
 
 
 
