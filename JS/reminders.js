@@ -154,28 +154,31 @@ function addReminder(){
 
 
 
-function deleteReminder(id){
+async function deleteReminder(id){
 
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
 
+    // Delete from Supabase
+    await cloud.delete(
+        "reminders",
+        id
+    );
+
+    // Delete locally
     reminders =
     reminders.filter(
-    (reminder)=>
-    reminder.id !== id
+        reminder => reminder.id !== id
     );
-
-
 
     saveData(
-    "reminders",
-    reminders
+        "reminders",
+        reminders
     );
 
-
-    syncRemindersToCloud();
-
-
     displayReminders();
-
 
     Aegis.broadcast("remindersUpdated");
 

@@ -281,23 +281,33 @@ Aegis.register("cloud", {
 
     async delete(table, id){
 
-        const { error } =
-        await supabaseClient
-        .from(table)
-        .delete()
-        .eq("id", id);
+    if(!this.user){
 
-        if(error){
+        return false;
 
-            console.error(error);
+    }
 
-            return false;
+    const { error } =
+    await supabaseClient
+    .from(table)
+    .delete()
+    .eq("id", id)
+    .eq("user_id", this.user.id);
 
-        }
+    if(error){
 
-        return true;
+        console.error(
+            `Cloud delete failed (${table})`,
+            error
+        );
 
-    },
+        return false;
+
+    }
+
+    return true;
+
+},
 
     async login(email,password){
 
@@ -462,12 +472,9 @@ Aegis.register("cloud", {
 
         if(error){
 
-            console.error(
-                "Cloud save failed:",
-                JSON.stringify(error, null, 2)
-            );
-
-            return false;
+            console.log(error);
+            console.log(JSON.stringify(error, null, 2));
+                        return false;
 
         }
 
