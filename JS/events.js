@@ -593,7 +593,12 @@ Aegis.register("events", {
         console.log(
             "Events initialized."
         );
+        
+        Aegis.listen("categoriesUpdated", () => {
 
+            updateCategoryMenus();
+
+        });
     },
 
     refresh(){

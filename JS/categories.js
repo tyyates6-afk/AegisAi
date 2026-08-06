@@ -44,6 +44,8 @@ async function loadCategoriesFromCloud(){
 
     displayCategories();
 
+    Aegis.broadcast("categoriesUpdated");
+
     console.log(
         "Categories loaded from cloud."
     );
@@ -335,31 +337,27 @@ Aegis.register("categories", {
 
     version: "1.1.5",
 
-    init() {
+    async init() {
 
         categories = loadData("categories");
-
-        if(categories.length === 0){
-
-            categories = defaultCategories;
-
-            saveData(
-                "categories",
-                categories
-            );
-            
-            
-        }
 
         updateCategoryMenus();
 
         displayCategories();
 
-        loadCategoriesFromCloud();
+        await loadCategoriesFromCloud();
+
+        updateCategoryMenus();
+
+        displayCategories();
+
+        Aegis.broadcast("categoriesUpdated");
 
         console.log("Categories initialized.");
 
     },
+
+    
 
     refresh(){
 
