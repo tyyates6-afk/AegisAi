@@ -112,7 +112,7 @@ function addReminder(){
 
     completed: false,
     
-    completedAt: null
+    completed_at: null
     
     };
 
@@ -268,7 +268,7 @@ function toggleReminderComplete(id){
 
     reminder.completed = !reminder.completed;
 
-    reminder.completedAt =
+    reminder.completed_at =
         reminder.completed
         ? new Date().toISOString()
         : null;
