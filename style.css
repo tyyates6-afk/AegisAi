@@ -2275,3 +2275,59 @@ select{
     touch-action:auto;
 
 }
+
+.reminder-item.completed{
+
+    opacity: 0.6;
+
+    text-decoration: line-through;
+
+}
+
+.reminder-item.just-completed{
+
+    animation:
+    reminderComplete
+    .8s ease;
+
+}
+
+
+@keyframes reminderComplete{
+
+    0%{
+
+        transform: scale(1);
+
+        opacity:1;
+
+    }
+
+
+    30%{
+
+        transform: scale(1.05);
+
+        opacity:1;
+
+    }
+
+
+    60%{
+
+        transform: scale(1);
+
+        opacity:.8;
+
+    }
+
+
+    100%{
+
+        transform: scale(1);
+
+        opacity:.6;
+
+    }
+
+}

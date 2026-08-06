@@ -1,5 +1,71 @@
 let reminders = loadData("reminders") || [];
 
+
+
+async function loadRemindersFromCloud(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+
+    const cloudReminders =
+    await cloud.load(
+        "reminders"
+    );
+
+
+    if(cloudReminders.length === 0){
+
+        return;
+
+    }
+
+
+    reminders =
+    cloudReminders;
+
+
+    saveData(
+        "reminders",
+        reminders
+    );
+
+
+    displayReminders();
+
+
+    console.log(
+        "Reminders loaded from cloud."
+    );
+
+}
+
+async function syncRemindersToCloud(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+
+    for(const reminder of reminders){
+
+        await cloud.save(
+            "reminders",
+            reminder
+        );
+
+    }
+
+
+    console.log(
+        "Reminders synced."
+    );
+
+}
+
 function addReminder(){
 
 
@@ -42,8 +108,12 @@ function addReminder(){
 
     date: date,
 
-    time: time || "00:00"
+    time: time || "00:00",
 
+    completed: false,
+    
+    completedAt: null
+    
     };
 
     const exists =
@@ -72,8 +142,11 @@ function addReminder(){
     );
 
 
-
     displayReminders();
+
+
+    syncRemindersToCloud();
+
 
     Aegis.broadcast("remindersUpdated");
 
@@ -98,9 +171,12 @@ function deleteReminder(id){
     );
 
 
+    syncRemindersToCloud();
+
 
     displayReminders();
-    
+
+
     Aegis.broadcast("remindersUpdated");
 
 }
@@ -125,19 +201,27 @@ function displayReminders(){
     document.createElement(
     "div"
     );
+    div.dataset.id =
+    reminder.id;
 
 
 
     div.className =
-    "reminder-item";
+    reminder.completed
+    ? "reminder-item completed"
+    : "reminder-item";
 
 
 
     div.innerHTML = `
-
     <strong>
-    🔔 ${reminder.task}
+
+    ${reminder.completed ? "✅" : "⬜"}
+
+    ${reminder.task}
+
     </strong>
+    
 
     <br>
 
@@ -148,6 +232,12 @@ function displayReminders(){
     ⏰ ${reminder.time || "No time set"}
 
     <br><br>
+    
+    <button onclick="toggleReminderComplete(${reminder.id})">
+
+    ${reminder.completed ? "Mark Incomplete" : "Mark Complete"}
+
+    </button>
 
     <button onclick="deleteReminder(${reminder.id})">
 
@@ -170,7 +260,55 @@ function displayReminders(){
     
 }
 
+function toggleReminderComplete(id){
 
+    const reminder = reminders.find(r => r.id === id);
+
+    if(!reminder) return;
+
+    reminder.completed = !reminder.completed;
+
+    reminder.completedAt =
+        reminder.completed
+        ? new Date().toISOString()
+        : null;
+
+    saveData(
+        "reminders",
+        reminders
+    );
+
+    syncRemindersToCloud();
+
+    displayReminders();
+
+
+    const completedItem =
+    document.querySelector(
+        `.reminder-item[data-id="${id}"]`
+    );
+
+
+    if(completedItem && reminder.completed){
+
+        completedItem.classList.add(
+            "just-completed"
+        );
+
+        setTimeout(()=>{
+
+            completedItem.classList.remove(
+                "just-completed"
+            );
+
+        },800);
+
+    }
+
+
+    Aegis.broadcast("remindersUpdated");
+
+}
 
 
 Aegis.register("reminders", {
@@ -179,9 +317,11 @@ Aegis.register("reminders", {
 
     init() {
 
-        reminders = loadData("reminders");
+        reminders = loadData("reminders") || [];
 
         displayReminders();
+
+        loadRemindersFromCloud();
 
         console.log("Reminders initialized.");
 
