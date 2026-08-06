@@ -464,7 +464,7 @@ Aegis.register("cloud", {
 
             console.error(
                 "Cloud save failed:",
-                error
+                JSON.stringify(error, null, 2)
             );
 
             return false;
