@@ -333,3 +333,6 @@ Aegis.register("profile", {
     }
 
 });
+
+window.loadCloudProfile =
+loadCloudProfile;

@@ -651,3 +651,6 @@ Aegis.register("events", {
     }
 
 });
+
+window.loadEventsFromCloud =
+loadEventsFromCloud;

@@ -386,3 +386,6 @@ Aegis.register("reminders", {
     }
 
 });
+
+window.loadRemindersFromCloud =
+loadRemindersFromCloud;

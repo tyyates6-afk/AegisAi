@@ -152,12 +152,33 @@ Aegis.register("cloud", {
             "Cloud system initialized."
         );
 
+        await this.loadSession();
 
-        this.loadSession();
+        supabaseClient.auth.onAuthStateChange(
+            async (event, session)=>{
 
+                this.user =
+                session?.user || null;
+
+                console.log(
+                    "Auth State:",
+                    event
+                );
+
+                Aegis.broadcast(
+                    "cloudUpdated"
+                );
+
+                if(this.user){
+
+                    await this.initialSync();
+
+                }
+
+            }
+        );
 
         await this.testConnection();
-
 
     },
     async testConnection(){
@@ -311,58 +332,29 @@ Aegis.register("cloud", {
 
     async login(email,password){
 
-
         const {
             data,
             error
         } =
-        await supabaseClient.auth.signInWithPassword({
+        await supabaseClient
+        .auth
+        .signInWithPassword({
 
-            email:email,
-
-            password:password
+            email,
+            password
 
         });
 
-
-
         if(error){
 
-            console.error(
-                "Login failed:",
-                error
-            );
+            console.error(error);
 
             return false;
 
         }
 
-
-
-        console.log(
-            "AEGIS login successful:",
-            data
-        );
-
-
-
         this.user =
         data.user;
-
-
-
-        Aegis.broadcast(
-            "cloudUpdated"
-        );
-
-
-
-        setTimeout(()=>{
-
-            loadCloudProfile();
-
-        },500);
-
 
         return true;
 
@@ -370,47 +362,97 @@ Aegis.register("cloud", {
 
     async logout(){
 
+        await supabaseClient
+        .auth
+        .signOut();
 
-        await supabaseClient.auth.signOut();
-
-
-        this.user =
-        null;
-
+        this.user = null;
 
         Aegis.broadcast(
             "cloudUpdated"
         );
 
-
     },
 
     async loadSession(){
 
-    const {
-    data
-    } =
-    await supabaseClient.auth.getSession();
+        const {
+            data
+        } =
+        await supabaseClient
+        .auth
+        .getSession();
 
+        if(data.session){
 
-    if(
-    data.session
-    ){
+            this.user =
+            data.session.user;
 
-    this.user =
-    data.session.user;
+            console.log(
+                "Supabase session restored:",
+                this.user
+            );
 
+            Aegis.broadcast(
+                "cloudUpdated"
+            );
 
-    console.log(
-    "Supabase session restored:",
-    this.user
-    );
+            await this.initialSync();
 
-    }
-
+        }
 
     },
+    async initialSync(){
 
+        console.log(
+            "Beginning cloud sync..."
+        );
+
+        try{
+
+            if(window.loadCloudProfile){
+
+                await loadCloudProfile();
+
+            }
+
+            if(window.loadCategoriesFromCloud){
+
+                await loadCategoriesFromCloud();
+
+            }
+
+            if(window.loadEventsFromCloud){
+
+                await loadEventsFromCloud();
+
+            }
+
+            if(window.loadRemindersFromCloud){
+
+                await loadRemindersFromCloud();
+
+            }
+
+            Aegis.broadcast(
+                "cloudSyncComplete"
+            );
+
+            console.log(
+                "Cloud sync complete."
+            );
+
+        }
+        catch(error){
+
+            console.error(
+                "Cloud sync failed:",
+                error
+            );
+
+        }
+
+    },
     async save(table,data){
 
 
@@ -518,29 +560,7 @@ Aegis.register("cloud", {
 
     },
 
-    async remove(table,id){
-
-        const {
-            error
-        } =
-        await supabaseClient
-        .from(table)
-        .delete()
-        .eq("id",id);
-
-        if(error){
-
-            console.error(
-                `Cloud delete failed (${table})`,
-                error
-            );
-
-        }
-
-    },
-
-
-
+    
     getUser(){
 
         return this.user || null;

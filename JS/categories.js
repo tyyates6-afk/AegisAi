@@ -385,3 +385,6 @@ Aegis.register("categories", {
     }
 
 });
+
+window.loadCategoriesFromCloud =
+loadCategoriesFromCloud;
