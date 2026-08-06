@@ -1,5 +1,88 @@
 let events = loadData("events");
 
+async function loadEventsFromCloud(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+    const cloudEvents =
+    await cloud.load(
+        "events"
+    );
+
+    if(cloudEvents.length === 0){
+
+        return;
+
+    }
+
+    events =
+    cloudEvents.map(event=>({
+
+        id:event.id,
+
+        title:event.title,
+
+        categoryId:event.category_id,
+
+        color:event.color,
+
+        date:event.date,
+
+        time:event.time,
+
+        location:event.location,
+
+        notes:event.notes,
+
+        notifications:event.notifications || []
+
+    }));
+
+    saveData(
+        "events",
+        events
+    );
+
+    displayEvents();
+
+    if(window.refreshCalendar){
+
+        window.refreshCalendar();
+
+    }
+
+    console.log(
+        "Events loaded from cloud."
+    );
+
+}
+
+
+
+async function syncEventsToCloud(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+    for(const event of events){
+
+        await cloud.save(
+            "events",
+            event
+        );
+
+    }
+
+    console.log(
+        "Events synced."
+    );
+
+}
 
 let selectedEventDate = "";
 
@@ -34,7 +117,7 @@ function addEvent(){
 
 
 
-    const category =
+    const categoryId =
     document.getElementById(
         "eventCategory"
     ).value;
@@ -97,7 +180,7 @@ function addEvent(){
 
     const categoryInfo =
 categories.find(
-item => item.name === category
+item => item.id === categoryId
 );
 
 
@@ -109,7 +192,7 @@ const newEvent = {
 
     title:title,
 
-    category:category,
+    categoryId:categoryId,
 
     color:
     categoryInfo
@@ -149,6 +232,8 @@ const newEvent = {
 
     clearEventForm();
 
+    syncEventsToCloud();
+
     Aegis.broadcast("eventsUpdated");
     
 
@@ -172,6 +257,7 @@ function deleteEvent(id){
         events
     );
 
+    syncEventsToCloud();
 
     displayEvents();
     
@@ -201,7 +287,13 @@ function displayEvents(){
 
     events.forEach(event => {
 
+        const category =
+        categories.find(
+            c => c.id === event.categoryId
+        );
 
+        const categoryName =
+        category?.name || "Unknown";
 
         let div =
         document.createElement(
@@ -224,7 +316,7 @@ function displayEvents(){
 
         <br>
 
-        ${event.category}
+        ${categoryName}
 
         <br>
 
@@ -331,7 +423,7 @@ function editEvent(id){
     document.getElementById(
         "eventCategory"
     ).value =
-    editingEvent.category;
+    editingEvent.categoryId;
 
 
 
@@ -403,7 +495,7 @@ function saveEventChanges(){
 
 
 
-    editingEvent.category =
+    editingEvent.categoryId =
     document.getElementById(
         "eventCategory"
     ).value;
@@ -459,6 +551,7 @@ function saveEventChanges(){
         events
     );
 
+    syncEventsToCloud();
 
     editingEvent = null;
 
@@ -493,15 +586,21 @@ Aegis.register("events", {
 
     version: "1.1.5",
 
-    init() {
+    init(){
 
-        console.log("Events initialized.");
+        loadEventsFromCloud();
+
+        console.log(
+            "Events initialized."
+        );
 
     },
 
-    refresh() {
+    refresh(){
 
         displayEvents();
+
+        loadEventsFromCloud();
 
     },
 

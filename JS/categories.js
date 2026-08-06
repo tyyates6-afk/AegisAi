@@ -1,33 +1,146 @@
 let categories = loadData("categories");
 
+async function loadCategoriesFromCloud(){
 
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+    const cloudCategories =
+    await cloud.load(
+        "categories"
+    );
+
+
+    if(
+        cloudCategories.length === 0
+    ){
+
+        return;
+
+    }
+
+
+    categories =
+    cloudCategories.map(category=>({
+
+        id:category.id,
+
+        name:category.name,
+
+        color:category.color
+
+    }));
+
+
+    saveData(
+        "categories",
+        categories
+    );
+
+
+    updateCategoryMenus();
+
+    displayCategories();
+
+    console.log(
+        "Categories loaded from cloud."
+    );
+
+}
+
+async function removeCategory(id){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+    await cloud.remove(
+        "categories",
+        id
+    );
+
+    categories =
+    categories.filter(
+        c => c.id !== id
+    );
+
+    saveData(
+        "categories",
+        categories
+    );
+
+    const removed =
+    categories.find(
+        c => c.name === name
+    );
+
+    if(removed){
+
+        await cloud.delete(
+            "categories",
+            removed.id
+        );
+
+    }
+    updateCategoryMenus();
+
+}
+
+async function syncCategoriesToCloud(){
+
+    const cloud =
+    Aegis
+    .getModule("cloud")
+    .api;
+
+    for(const category of categories){
+
+        await cloud.save(
+            "categories",
+            category
+        );
+
+    }
+
+    console.log(
+        "Categories synced."
+    );
+
+}
 const defaultCategories = [
 
 {
-name:"Personal",
-color:"#22c55e"
+    id:"personal",
+    name:"Personal",
+    color:"#22c55e"
 },
 
 {
-name:"Work",
-color:"#ef4444"
+    id:"work",
+    name:"Work",
+    color:"#ef4444"
 },
 
 {
-name:"Church",
-color:"#9333ea"
+    id:"church",
+    name:"Church",
+    color:"#9333ea"
 },
 
 {
-name:"Health",
-color:"#2563eb"
+    id:"health",
+    name:"Health",
+    color:"#2563eb"
 },
 
 {
-name:"Other",
-color:"#6b7280"
+    id:"other",
+    name:"Other",
+    color:"#6b7280"
 }
-
 
 ];
 
@@ -42,6 +155,7 @@ saveData(
 categories
 );
 
+syncCategoriesToCloud();
 }
 
 
@@ -78,9 +192,11 @@ return;
 
 categories.push({
 
-name:name,
+    id:crypto.randomUUID(),
 
-color:color
+    name:name,
+
+    color:color
 
 });
 
@@ -90,6 +206,8 @@ saveData(
 "categories",
 categories
 );
+
+syncCategoriesToCloud();
 
 
 
@@ -106,28 +224,7 @@ document.getElementById(
 
 
 
-function removeCategory(name){
 
-
-categories =
-categories.filter(
-category =>
-category.name !== name
-);
-
-
-
-saveData(
-"categories",
-categories
-);
-
-
-
-updateCategoryMenus();
-
-
-}
 
 
 
@@ -161,12 +258,12 @@ document.createElement(
 
 
 option.value =
-category.name;
+category.id;
 
 
 
 option.textContent =
-"● " + category.name;
+"● " + category.id;
 
 option.style.color =
 category.color;
@@ -216,9 +313,10 @@ list.innerHTML += `
 
     <span>${category.name}</span>
 
-    <button onclick="removeCategory('${category.name}')">
-        Delete
+   <button onclick="removeCategory('${category.id}')">
+    Delete
     </button>
+    
 
 </div>
 
@@ -249,20 +347,24 @@ Aegis.register("categories", {
                 "categories",
                 categories
             );
-
+            
+            
         }
 
         updateCategoryMenus();
 
         displayCategories();
 
+        loadCategoriesFromCloud();
+
         console.log("Categories initialized.");
 
     },
 
-    refresh() {
+    refresh(){
 
-        categories = loadData("categories");
+        categories =
+        loadData("categories");
 
         updateCategoryMenus();
 

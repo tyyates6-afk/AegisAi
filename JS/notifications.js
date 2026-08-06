@@ -382,7 +382,7 @@ Starts in ${minutes} minutes.
 <br><br>
 
 Category:
-${event.category}
+${categoryName}
 
 `;
 

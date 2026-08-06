@@ -245,6 +245,60 @@ Aegis.register("cloud", {
 
     },
 
+
+    async remove(table,id){
+
+        if(!this.user){
+
+            return false;
+
+        }
+
+        const {
+            error
+        } =
+        await supabaseClient
+        .from(table)
+        .delete()
+        .eq("id",id)
+        .eq("user_id",this.user.id);
+
+
+        if(error){
+
+            console.error(
+                `Cloud delete failed (${table})`,
+                error
+            );
+
+            return false;
+
+        }
+
+        return true;
+
+    },
+
+    async delete(table, id){
+
+        const { error } =
+        await supabaseClient
+        .from(table)
+        .delete()
+        .eq("id", id);
+
+        if(error){
+
+            console.error(error);
+
+            return false;
+
+        }
+
+        return true;
+
+    },
+
     async login(email,password){
 
 
@@ -347,9 +401,136 @@ Aegis.register("cloud", {
 
     },
 
+    async save(table,data){
 
 
+        if(!this.user){
 
+            console.error(
+                "No cloud user."
+            );
+
+            return false;
+
+        }
+
+       if(table === "events"){
+
+        if(data.categoryId){
+
+            data.category_id =
+            data.categoryId;
+
+            delete data.categoryId;
+
+        }
+
+
+        if(data.category){
+
+            data.category_id =
+            data.category;
+
+            delete data.category;
+
+        }
+
+    }
+
+        const upload = {
+
+            ...data,
+
+            user_id:
+            this.user.id,
+
+            updated_at:
+            new Date()
+
+        };
+
+
+        const {
+            error
+        } =
+        await supabaseClient
+        .from(table)
+        .upsert(
+            upload
+        );
+
+
+        if(error){
+
+            console.error(
+                "Cloud save failed:",
+                error
+            );
+
+            return false;
+
+        }
+
+
+        return true;
+
+    },
+
+    async load(table){
+
+        if(!this.user){
+
+            return [];
+
+        }
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient
+        .from(table)
+        .select("*")
+        .eq(
+            "user_id",
+            this.user.id
+        );
+
+        if(error){
+
+            console.error(
+                `Cloud load failed (${table})`,
+                error
+            );
+
+            return [];
+
+        }
+
+        return data;
+
+    },
+
+    async remove(table,id){
+
+        const {
+            error
+        } =
+        await supabaseClient
+        .from(table)
+        .delete()
+        .eq("id",id);
+
+        if(error){
+
+            console.error(
+                `Cloud delete failed (${table})`,
+                error
+            );
+
+        }
+
+    },
 
 
 
