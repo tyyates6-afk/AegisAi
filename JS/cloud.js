@@ -374,6 +374,7 @@ Aegis.register("cloud", {
 
     },
 
+    
     async loadSession(){
 
         const {
