@@ -62,9 +62,9 @@ self.addEventListener("push", event => {
 
         message: "You have a new notification.",
 
-        icon: "/icon-192.png",
+        icon: "assets/icon-192.png",
 
-        badge: "/icon-192.png",
+        badge: "assets/icon-192.png",
 
         notificationId: null
 

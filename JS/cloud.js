@@ -347,7 +347,10 @@ Aegis.register("cloud", {
 
         if(error){
 
-            console.error(error);
+            console.error(
+                "AEGIS login failed:",
+                error
+            );
 
             return false;
 
@@ -355,6 +358,22 @@ Aegis.register("cloud", {
 
         this.user =
         data.user;
+
+        console.log(
+            "AEGIS login successful:",
+            this.user
+        );
+
+        // Initialize push notifications after login
+        if(window.AegisPush){
+
+            await AegisPush.init();
+
+        }
+
+        Aegis.broadcast(
+            "cloudUpdated"
+        );
 
         return true;
 
@@ -394,10 +413,15 @@ Aegis.register("cloud", {
                 this.user
             );
 
+            
+
             Aegis.broadcast(
                 "cloudUpdated"
             );
-
+            if(window.AegisPush){
+                await AegisPush.init();
+            }
+                
             await this.initialSync();
 
         }

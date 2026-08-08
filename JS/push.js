@@ -225,3 +225,11 @@ const AegisPush = {
     }
 
 };
+
+window.addEventListener("aegis:authenticated", () => {
+
+    console.log("🔐 AEGIS authenticated — initializing push...");
+
+    AegisPush.init();
+
+});

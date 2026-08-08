@@ -444,57 +444,172 @@ Aegis.register("notifications", {
 
     },
 
-    notify(data){
+    async notify(data){
 
         const notification =
-        createNotification(data);
+            createNotification(data);
+
+
+        /*
+        * Save notification locally
+        */
 
         notifications.unshift(
             notification
         );
-
-        if(notification.speak === true){
-
-            const voice =
-            Aegis.getModule("voice");
-
-
-            if(voice){
-
-                voice.api.speakNotification(
-                    notification
-                );
-
-            }
-
-        }
 
         saveData(
             "notifications",
             notifications
         );
 
+
+        /*
+        * Update the current device
+        */
+
         Dashboard.refresh(
             "notifications"
         );
+
+
         Aegis
-        .getModule("toast")
-        .api
-        .show(notification);
-        
+            .getModule("toast")
+            .api
+            .show(notification);
+
+
+        /*
+        * Optional voice notification
+        */
+
         if(notification.speak !== false){
 
             Aegis
-            .getModule("voice")
-            ?.api
-            .speakNotification(
-                notification
+                .getModule("voice")
+                ?.api
+                .speakNotification(
+                    notification
+                );
+
+        }
+
+
+        /*
+        * Send TRUE PUSH notification
+        * to every registered device.
+        */
+
+        try{
+
+            const cloud =
+                Aegis
+                    .getModule("cloud")
+                    ?.api;
+
+
+            const user =
+                cloud?.getUser();
+
+
+            if(user){
+
+                const response =
+                    await fetch(
+                        "https://tgsrvnbzxufwsskuerhv.supabase.co/functions/v1/send-push",
+                        {
+
+                            method: "POST",
+
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json",
+
+                                "Authorization":
+                                    `Bearer ${SUPABASE_KEY}`
+
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    userId:
+                                        user.id,
+
+                                    notification: {
+
+                                        id:
+                                            notification.id,
+
+                                        title:
+                                            notification.title,
+
+                                        message:
+                                            notification.message,
+
+                                        icon:
+                                            notification.icon ||
+                                            "🔔",
+
+                                        badge:
+                                            notification.badge ||
+                                            "🔔",
+
+                                        priority:
+                                            notification.priority ||
+                                            "normal"
+
+                                    }
+
+                                })
+
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if(!response.ok){
+
+                    console.error(
+                        "Push notification failed:",
+                        result
+                    );
+
+                }else{
+
+                    console.log(
+                        "📲 Push notification sent:",
+                        result
+                    );
+
+                }
+
+            }else{
+
+                console.log(
+                    "No authenticated cloud user; push skipped."
+                );
+
+            }
+
+        }catch(error){
+
+            console.error(
+                "Push notification request failed:",
+                error
             );
 
         }
+
+
         Aegis.broadcast(
             "notificationsUpdated"
         );
+
 
         return notification;
 
