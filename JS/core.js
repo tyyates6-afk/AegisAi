@@ -215,7 +215,7 @@ const Aegis = {
 };
 
 console.log("AEGIS CORE ONLINE");
-
+AegisPush.init();
 window.addEventListener(
 
     "DOMContentLoaded",
