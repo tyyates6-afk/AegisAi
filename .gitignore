@@ -1,7 +1,7 @@
 node_modules/.bin/supabase
+*.json
 node_modules/.bin/supabase.cmd
 node_modules/.bin/supabase.ps1
-node_modules/.package-lock.json
 node_modules/@ecies/ciphers/dist/_node/compat.d.ts
 node_modules/@ecies/ciphers/dist/_node/compat.js
 node_modules/@ecies/ciphers/dist/_node/hchacha.d.ts
@@ -17,7 +17,6 @@ node_modules/@ecies/ciphers/dist/chacha/node.js
 node_modules/@ecies/ciphers/dist/index.d.ts
 node_modules/@ecies/ciphers/dist/index.js
 node_modules/@ecies/ciphers/LICENSE
-node_modules/@ecies/ciphers/package.json
 node_modules/@ecies/ciphers/README.md
 node_modules/@noble/ciphers/_arx.d.ts
 node_modules/@noble/ciphers/_arx.d.ts.map
@@ -99,7 +98,6 @@ node_modules/@noble/ciphers/esm/index.d.ts
 node_modules/@noble/ciphers/esm/index.d.ts.map
 node_modules/@noble/ciphers/esm/index.js
 node_modules/@noble/ciphers/esm/index.js.map
-node_modules/@noble/ciphers/esm/package.json
 node_modules/@noble/ciphers/esm/salsa.d.ts
 node_modules/@noble/ciphers/esm/salsa.d.ts.map
 node_modules/@noble/ciphers/esm/salsa.js
@@ -121,7 +119,6 @@ node_modules/@noble/ciphers/index.d.ts.map
 node_modules/@noble/ciphers/index.js
 node_modules/@noble/ciphers/index.js.map
 node_modules/@noble/ciphers/LICENSE
-node_modules/@noble/ciphers/package.json
 node_modules/@noble/ciphers/README.md
 node_modules/@noble/ciphers/salsa.d.ts
 node_modules/@noble/ciphers/salsa.d.ts.map
@@ -138,7 +135,6 @@ node_modules/@noble/ciphers/src/crypto.ts
 node_modules/@noble/ciphers/src/cryptoNode.ts
 node_modules/@noble/ciphers/src/ff1.ts
 node_modules/@noble/ciphers/src/index.ts
-node_modules/@noble/ciphers/src/package.json
 node_modules/@noble/ciphers/src/salsa.ts
 node_modules/@noble/ciphers/src/utils.ts
 node_modules/@noble/ciphers/src/webcrypto.ts
@@ -306,7 +302,6 @@ node_modules/@noble/curves/esm/p521.d.ts
 node_modules/@noble/curves/esm/p521.d.ts.map
 node_modules/@noble/curves/esm/p521.js
 node_modules/@noble/curves/esm/p521.js.map
-node_modules/@noble/curves/esm/package.json
 node_modules/@noble/curves/esm/pasta.d.ts
 node_modules/@noble/curves/esm/pasta.d.ts.map
 node_modules/@noble/curves/esm/pasta.js
@@ -348,7 +343,6 @@ node_modules/@noble/curves/p521.d.ts
 node_modules/@noble/curves/p521.d.ts.map
 node_modules/@noble/curves/p521.js
 node_modules/@noble/curves/p521.js.map
-node_modules/@noble/curves/package.json
 node_modules/@noble/curves/pasta.d.ts
 node_modules/@noble/curves/pasta.d.ts.map
 node_modules/@noble/curves/pasta.js
@@ -381,7 +375,6 @@ node_modules/@noble/curves/src/nist.ts
 node_modules/@noble/curves/src/p256.ts
 node_modules/@noble/curves/src/p384.ts
 node_modules/@noble/curves/src/p521.ts
-node_modules/@noble/curves/src/package.json
 node_modules/@noble/curves/src/pasta.ts
 node_modules/@noble/curves/src/secp256k1.ts
 node_modules/@noble/curves/src/utils.ts
@@ -509,7 +502,6 @@ node_modules/@noble/hashes/esm/legacy.d.ts
 node_modules/@noble/hashes/esm/legacy.d.ts.map
 node_modules/@noble/hashes/esm/legacy.js
 node_modules/@noble/hashes/esm/legacy.js.map
-node_modules/@noble/hashes/esm/package.json
 node_modules/@noble/hashes/esm/pbkdf2.d.ts
 node_modules/@noble/hashes/esm/pbkdf2.d.ts.map
 node_modules/@noble/hashes/esm/pbkdf2.js
@@ -567,7 +559,6 @@ node_modules/@noble/hashes/legacy.d.ts.map
 node_modules/@noble/hashes/legacy.js
 node_modules/@noble/hashes/legacy.js.map
 node_modules/@noble/hashes/LICENSE
-node_modules/@noble/hashes/package.json
 node_modules/@noble/hashes/pbkdf2.d.ts
 node_modules/@noble/hashes/pbkdf2.d.ts.map
 node_modules/@noble/hashes/pbkdf2.js
@@ -638,7 +629,6 @@ node_modules/@noble/hashes/utils.js
 node_modules/@noble/hashes/utils.js.map
 node_modules/@supabase/cli-windows-x64/bin/supabase-go.exe
 node_modules/@supabase/cli-windows-x64/bin/supabase.exe
-node_modules/@supabase/cli-windows-x64/package.json
 node_modules/eciesjs/dist/config.d.ts
 node_modules/eciesjs/dist/config.js
 node_modules/eciesjs/dist/consts.d.ts
@@ -662,7 +652,6 @@ node_modules/eciesjs/dist/utils/index.js
 node_modules/eciesjs/dist/utils/symmetric.d.ts
 node_modules/eciesjs/dist/utils/symmetric.js
 node_modules/eciesjs/LICENSE
-node_modules/eciesjs/package.json
 node_modules/eciesjs/README.md
 node_modules/jose/dist/types/index.d.ts
 node_modules/jose/dist/types/jwe/compact/decrypt.d.ts
@@ -750,9 +739,7 @@ node_modules/jose/dist/webapi/util/decode_jwt.js
 node_modules/jose/dist/webapi/util/decode_protected_header.js
 node_modules/jose/dist/webapi/util/errors.js
 node_modules/jose/LICENSE.md
-node_modules/jose/package.json
 node_modules/jose/README.md
 node_modules/supabase/dist/supabase.js
-node_modules/supabase/package.json
 node_modules/supabase/README.md
 supabase/config.toml
