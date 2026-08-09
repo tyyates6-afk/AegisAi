@@ -18,7 +18,32 @@ self.addEventListener("install", event => {
     event.waitUntil(
 
         caches.open(CACHE_NAME)
-        .then(cache => cache.addAll(FILES))
+            .then(async cache => {
+
+                for (const file of FILES) {
+
+                    try {
+
+                        await cache.add(file);
+
+                        console.log(
+                            "Cached:",
+                            file
+                        );
+
+                    } catch (error) {
+
+                        console.warn(
+                            "Could not cache:",
+                            file,
+                            error
+                        );
+
+                    }
+
+                }
+
+            })
 
     );
 
