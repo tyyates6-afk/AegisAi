@@ -1,3 +1,4 @@
+console.log("🚀 push.js LOADED");
 const AegisPush = {
 
     vapidPublicKey: "BNqMF3Z9YHWak_nkv7Bv1ncWuopJvae6ASJEZk1gyaMgK8tONuTFeB4w3VQiflXGLmHyv_YyTWXVWFuq0ccyh5A",
