@@ -80,112 +80,92 @@ const AegisPush = {
 
     async saveSubscription(subscription) {
 
-        const cloud =
-            Aegis
-                .getModule("cloud")
-                ?.api;
+    const cloud =
+        Aegis.getModule("cloud");
 
-        if (!cloud) {
+    if (!cloud) {
 
-            console.warn(
-                "Cloud module unavailable."
-            );
-
-            return;
-
-        }
-
-        const session =
-            await cloud.getSession?.();
-
-        if (!session?.user) {
-
-            console.warn(
-                "No authenticated user."
-            );
-
-            return;
-
-        }
-
-        const keys =
-            subscription.getKey
-                ? {
-
-                    p256dh:
-                        this.arrayBufferToBase64(
-                            subscription.getKey("p256dh")
-                        ),
-
-                    auth:
-                        this.arrayBufferToBase64(
-                            subscription.getKey("auth")
-                        )
-
-                }
-                : null;
-
-        if (!keys) {
-
-            console.warn(
-                "Could not read push subscription keys."
-            );
-
-            return;
-
-        }
-
-        const data = {
-
-            user_id:
-                session.user.id,
-
-            endpoint:
-                subscription.endpoint,
-
-            p256dh:
-                keys.p256dh,
-
-            auth:
-                keys.auth,
-
-            updated_at:
-                new Date().toISOString()
-
-        };
-
-
-        const { error } =
-            await supabaseClient
-                .from("push_subscriptions")
-                .upsert(
-
-                    data,
-
-                    {
-                        onConflict:
-                            "user_id,endpoint"
-                    }
-
-                );
-
-
-        if (error) {
-
-            console.error(
-                "Failed to save push subscription:",
-                error
-            );
-
-            return;
-
-        }
-
-        console.log(
-            "☁️ Push subscription synced."
+        console.warn(
+            "Cloud module unavailable."
         );
 
-    },
+        return;
+
+    }
+
+    const user =
+        cloud.getUser?.();
+
+    if (!user) {
+
+        console.warn(
+            "No authenticated user."
+        );
+
+        return;
+
+    }
+
+    const keys = {
+
+        p256dh:
+            this.arrayBufferToBase64(
+                subscription.getKey("p256dh")
+            ),
+
+        auth:
+            this.arrayBufferToBase64(
+                subscription.getKey("auth")
+            )
+
+    };
+
+    const data = {
+
+        user_id:
+            user.id,
+
+        endpoint:
+            subscription.endpoint,
+
+        p256dh:
+            keys.p256dh,
+
+        auth:
+            keys.auth,
+
+        updated_at:
+            new Date().toISOString()
+
+    };
+
+    const { error } =
+        await supabaseClient
+            .from("push_subscriptions")
+            .upsert(
+                data,
+                {
+                    onConflict:
+                        "user_id,endpoint"
+                }
+            );
+
+    if (error) {
+
+        console.error(
+            "Failed to save push subscription:",
+            error
+        );
+
+        return;
+
+    }
+
+    console.log(
+        "☁️ Push subscription synced."
+    );
+
+},
 
 
     urlBase64ToUint8Array(base64String) {
@@ -229,8 +209,31 @@ const AegisPush = {
 
 window.addEventListener("aegis:authenticated", () => {
 
-    console.log("🔐 AEGIS authenticated — initializing push...");
+    console.log(
+        "🔐 AEGIS authenticated — initializing push..."
+    );
 
     AegisPush.init();
 
 });
+
+
+setTimeout(() => {
+
+    const cloud =
+        Aegis.getModule("cloud");
+
+    const user =
+        cloud?.getUser?.();
+
+    if (user) {
+
+        console.log(
+            "🔐 Existing AEGIS session found — initializing push..."
+        );
+
+        AegisPush.init();
+
+    }
+
+}, 1000);
