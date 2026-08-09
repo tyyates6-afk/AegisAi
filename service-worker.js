@@ -8,9 +8,9 @@ const FILES = [
     `${BASE}/index.html`,
     `${BASE}/style.css`,
     `${BASE}/manifest.json`,
-    `${BASE}/js/core.js`,
-    `${BASE}/js/storage.js`,
-    `${BASE}/js/app.js`
+    `${BASE}/JS/core.js`,
+    `${BASE}/JS/storage.js`,
+    `${BASE}/JS/app.js`
 ];
 
 self.addEventListener("install", event => {
