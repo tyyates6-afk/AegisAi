@@ -534,33 +534,18 @@ Aegis.register("notifications", {
                             body:
                                 JSON.stringify({
 
-                                    userId:
+                                    user_id:
                                         user.id,
 
-                                    notification: {
+                                    title:
+                                        notification.title,
 
-                                        id:
-                                            notification.id,
+                                    message:
+                                        notification.message,
 
-                                        title:
-                                            notification.title,
-
-                                        message:
-                                            notification.message,
-
-                                        icon:
-                                            notification.icon ||
-                                            "🔔",
-
-                                        badge:
-                                            notification.badge ||
-                                            "🔔",
-
-                                        priority:
-                                            notification.priority ||
-                                            "normal"
-
-                                    }
+                                    priority:
+                                        notification.priority ||
+                                        "normal"
 
                                 })
 
