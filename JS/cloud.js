@@ -459,6 +459,12 @@ Aegis.register("cloud", {
 
             }
 
+            if(window.loadNotificationStates){
+
+                await loadNotificationStates();
+
+            }
+
             Aegis.broadcast(
                 "cloudSyncComplete"
             );
@@ -585,7 +591,104 @@ Aegis.register("cloud", {
 
     },
 
-    
+    async saveNotificationState(notificationId, changes){
+
+        if(!this.user){
+
+            console.log(
+                "No cloud user. Notification state not synced."
+            );
+
+            return false;
+
+        }
+
+
+        const upload = {
+
+            user_id:
+                this.user.id,
+
+            notification_id:
+                notificationId,
+
+            ...changes,
+
+            updated_at:
+                new Date().toISOString()
+
+        };
+
+
+        const {
+            error
+        } =
+        await supabaseClient
+            .from("notification_states")
+            .upsert(
+                upload,
+                {
+                    onConflict:
+                        "user_id,notification_id"
+                }
+            );
+
+
+        if(error){
+
+            console.error(
+                "Notification state sync failed:",
+                error
+            );
+
+            return false;
+
+        }
+
+
+        return true;
+
+    },
+
+
+    async loadNotificationStates(){
+
+        if(!this.user){
+
+            return [];
+
+        }
+
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient
+            .from("notification_states")
+            .select("*")
+            .eq(
+                "user_id",
+                this.user.id
+            );
+
+
+        if(error){
+
+            console.error(
+                "Notification states load failed:",
+                error
+            );
+
+            return [];
+
+        }
+
+
+        return data || [];
+
+    },
+
     getUser(){
 
         return this.user || null;

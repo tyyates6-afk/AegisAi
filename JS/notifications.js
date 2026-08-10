@@ -429,6 +429,160 @@ function saveNotifications(){
 
 }
 
+async function syncNotificationState(notificationId, changes) {
+
+    try {
+
+        const cloud =
+            Aegis
+                .getModule("cloud")
+                ?.api;
+
+        const user =
+            cloud?.getUser();
+
+        if (!user) {
+            return;
+        }
+
+        const { data, error } =
+            await cloud.supabase
+                .from("notification_states")
+                .upsert({
+
+                    user_id: user.id,
+
+                    notification_id:
+                        notificationId,
+
+                    ...changes,
+
+                    updated_at:
+                        new Date().toISOString()
+
+                }, {
+
+                    onConflict:
+                        "user_id,notification_id"
+
+                });
+
+        if (error) {
+
+            console.error(
+                "Notification state sync failed:",
+                error
+            );
+
+        }
+
+    } catch(error) {
+
+        console.error(
+            "Notification state sync error:",
+            error
+        );
+
+    }
+
+}
+
+async function syncNotificationState(
+    notificationId,
+    changes
+){
+
+    const cloud =
+        Aegis
+            .getModule("cloud")
+            ?.api;
+
+
+    if(!cloud){
+
+        console.warn(
+            "Cloud module unavailable."
+        );
+
+        return;
+
+    }
+
+
+    await cloud.saveNotificationState(
+        notificationId,
+        changes
+    );
+
+}
+
+async function loadNotificationStates(){
+
+    const cloud =
+        Aegis
+            .getModule("cloud")
+            ?.api;
+
+
+    if(!cloud){
+
+        return;
+
+    }
+
+
+    const states =
+        await cloud.loadNotificationStates();
+
+
+    if(!states.length){
+
+        return;
+
+    }
+
+
+    states.forEach(state => {
+
+        const notification =
+            notifications.find(
+                n =>
+                    n.id ===
+                    state.notification_id
+            );
+
+
+        if(!notification){
+
+            return;
+
+        }
+
+
+        if(state.read){
+
+            notification.read = true;
+
+        }
+
+
+        if(state.dismissed){
+
+            notification.dismissed = true;
+
+        }
+
+    });
+
+
+    saveNotifications();
+
+
+    Aegis.broadcast(
+        "notificationsUpdated"
+    );
+
+}
 
 Aegis.register("notifications", {
 
@@ -436,20 +590,30 @@ Aegis.register("notifications", {
 
     timer: null,
 
-    init() {
+    async init() {
 
-        console.log("Notifications initialized.");
-        cleanupNotifications();
-        checkNotifications();
-        
-        this.timer = setInterval(() => {
-        checkNotifications();
+    console.log(
+        "Notifications initialized."
+    );
+
+
+    cleanupNotifications();
+
+
+    checkNotifications();
+
+
+    await loadNotificationStates();
+
+
+    this.timer =
+        setInterval(() => {
+
+            checkNotifications();
 
         }, 1000);
 
-        
-
-    },
+},
 
     async notify(data){
 
@@ -612,54 +776,73 @@ Aegis.register("notifications", {
             return notifications;
 
         },
-    markRead(id){
+   
 
-        const n =
+async markRead(id){
+
+    const n =
         notifications.find(
             n => n.id === id
         );
 
-        if(n){
+    if(!n) return;
 
-            n.read = true;
+    n.read = true;
 
-            saveNotifications();
+    saveNotifications();
 
+    await syncNotificationState(
+        id,
+        {
+            read: true
         }
+    );
 
-        Aegis.broadcast(
-            "notificationsUpdated"
-        );
+    Aegis.broadcast(
+        "notificationsUpdated"
+    );
 
-    },
+},
 
-    dismiss(id){
+    async dismiss(id){
 
-        const n =
+    const notification =
         notifications.find(
             n => n.id === id
         );
 
 
-        if(n){
+    if(!notification){
 
-            n.dismissed = true;
+        return;
 
-            saveNotifications();
+    }
 
+
+    notification.dismissed = true;
+
+
+    saveNotifications();
+
+
+    await syncNotificationState(
+        id,
+        {
+            dismissed: true
         }
+    );
 
 
-        Dashboard.refresh(
-            "notifications"
-        );
+    Dashboard.refresh(
+        "notifications"
+    );
 
 
-        Aegis.broadcast(
-            "notificationsUpdated"
-        );
+    Aegis.broadcast(
+        "notificationsUpdated"
+    );
 
-    },
+},
 
 
     clearAll(){
