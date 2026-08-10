@@ -372,45 +372,48 @@ function displayEvents(){
 
         div.innerHTML = `
 
-
         <strong>
         📅 ${event.title}
         </strong>
 
         <br>
 
+        🏷️ Category:
         ${categoryName}
 
         <br>
 
+        📆 Date:
         ${event.date}
-
-        ${event.time || ""}
-
 
         <br>
 
-        ${event.location || ""}
+        ⏰ Time:
+        ${event.time || "No time set"}
 
+        ${event.location ? `
+        <br>
+        📍 Location:
+        ${event.location}
+        ` : ""}
+
+        ${event.notes ? `
+        <br>
+        📝 Notes:
+        ${event.notes}
+        ` : ""}
 
         <br><br>
 
-
         <button onclick="editEvent(${event.id})">
-
         Edit
-
         </button>
 
-
         <button onclick="deleteEvent(${event.id})">
-
         Delete
-
         </button>
 
         <hr>
-
 
         `;
 
