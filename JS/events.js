@@ -241,15 +241,43 @@ const newEvent = {
 
 
 
-function deleteEvent(id){
+async function deleteEvent(id){
+
+    const cloud =
+        Aegis
+            .getModule("cloud")
+            .api;
 
 
+    // Delete from Supabase first
+    const deleted =
+        await cloud.delete(
+            "events",
+            id
+        );
+
+
+    if(!deleted){
+
+        console.error(
+            "Failed to delete event from cloud."
+        );
+
+        alert(
+            "Could not delete the event from the cloud."
+        );
+
+        return;
+
+    }
+
+
+    // Delete locally
     events =
-    events.filter(
-        event =>
-        event.id !== id
-    );
-
+        events.filter(
+            event =>
+                event.id !== id
+        );
 
 
     saveData(
@@ -257,11 +285,46 @@ function deleteEvent(id){
         events
     );
 
-    syncEventsToCloud();
+
+    // Remove any pending notification IDs
+    notifiedItems =
+        loadData("notifiedItems") || [];
+
+
+    notifiedItems =
+        notifiedItems.filter(
+            notificationID =>
+                !notificationID.startsWith(
+                    `${id}-`
+                )
+        );
+
+
+    saveData(
+        "notifiedItems",
+        notifiedItems
+    );
+
 
     displayEvents();
-    
-    Aegis.broadcast("eventsUpdated");
+
+
+    if(window.refreshCalendar){
+
+        window.refreshCalendar();
+
+    }
+
+
+    Aegis.broadcast(
+        "eventsUpdated"
+    );
+
+
+    console.log(
+        "Event deleted:",
+        id
+    );
 
 }
 
