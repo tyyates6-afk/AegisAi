@@ -265,7 +265,7 @@ category.id;
 
 
 option.textContent =
-"● " + category.id;
+    "● " + category.name;
 
 option.style.color =
 category.color;
