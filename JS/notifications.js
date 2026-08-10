@@ -330,6 +330,13 @@ event,
 minutes
 ){
 
+    const category =
+        categories.find(
+            c => c.id === event.categoryId
+        );
+
+    const categoryName =
+        category?.name || "Unknown";
 
 Aegis
 .getModule("notifications")
