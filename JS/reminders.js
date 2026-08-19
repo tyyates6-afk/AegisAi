@@ -134,7 +134,7 @@ function addReminder(){
 
     reminders.push(reminder);
 
-
+    sortReminders();
 
     saveData(
     "reminders",

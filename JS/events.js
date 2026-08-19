@@ -219,7 +219,7 @@ const newEvent = {
 
     events.push(newEvent);
 
-
+    sortEvents();
 
     saveData(
         "events",
@@ -328,25 +328,35 @@ async function deleteEvent(id){
 
 }
 
+function sortEvents(){
 
+    events.sort((a, b) => {
+
+        const aDateTime =
+            `${a.date || "9999-12-31"}T${a.time || "00:00"}`;
+
+        const bDateTime =
+            `${b.date || "9999-12-31"}T${b.time || "00:00"}`;
+
+        return aDateTime.localeCompare(bDateTime);
+
+    });
+
+}
 
 
 function displayEvents(){
 
+    sortEvents();
 
     const list =
     document.getElementById(
         "eventList"
     );
 
-
     if(!list) return;
 
-
-
     list.innerHTML = "";
-
-
 
     events.forEach(event => {
 
