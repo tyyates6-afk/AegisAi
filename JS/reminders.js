@@ -188,6 +188,15 @@ function sortReminders(){
 
     reminders.sort((a, b) => {
 
+        // Put incomplete reminders before completed reminders
+        if(a.completed !== b.completed){
+
+            return a.completed ? 1 : -1;
+
+        }
+
+        // If both have the same completion status,
+        // sort by date and then time
         const aDateTime =
             `${a.date || "9999-12-31"}T${a.time || "00:00"}`;
 
