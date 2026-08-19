@@ -184,7 +184,21 @@ async function deleteReminder(id){
 
 }
 
+function sortReminders(){
 
+    reminders.sort((a, b) => {
+
+        const aDateTime =
+            `${a.date || "9999-12-31"}T${a.time || "00:00"}`;
+
+        const bDateTime =
+            `${b.date || "9999-12-31"}T${b.time || "00:00"}`;
+
+        return aDateTime.localeCompare(bDateTime);
+
+    });
+
+}
 
 function displayReminders(){
 
@@ -193,6 +207,8 @@ function displayReminders(){
     document.getElementById("reminderList");
 
     if (!list) return;
+
+    sortReminders();
 
     list.innerHTML = "";
 
