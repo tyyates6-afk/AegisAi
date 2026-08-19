@@ -1,5 +1,5 @@
 let reminders = loadData("reminders") || [];
-
+let editingReminder = null;
 
 
 async function loadRemindersFromCloud(){
@@ -67,6 +67,14 @@ async function syncRemindersToCloud(){
 }
 
 function addReminder(){
+
+    if(editingReminder){
+
+        saveReminderChanges();
+
+        return;
+
+    }
 
 
     const task =
@@ -152,7 +160,102 @@ function addReminder(){
 
 }
 
+function editReminder(id){
 
+    editingReminder =
+        reminders.find(
+            reminder => reminder.id === id
+        );
+
+    if(!editingReminder){
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "reminderInput"
+    ).value =
+        editingReminder.task;
+
+
+    document.getElementById(
+        "reminderDate"
+    ).value =
+        editingReminder.date;
+
+
+    document.getElementById(
+        "reminderTime"
+    ).value =
+        editingReminder.time || "";
+
+
+    document.getElementById(
+        "addReminderButton"
+    ).innerText =
+        "Save Changes";
+
+}
+
+
+function saveReminderChanges(){
+
+    if(!editingReminder){
+
+        return;
+
+    }
+
+
+    editingReminder.task =
+        document.getElementById(
+            "reminderInput"
+        ).value;
+
+
+    editingReminder.date =
+        document.getElementById(
+            "reminderDate"
+        ).value;
+
+
+    editingReminder.time =
+        document.getElementById(
+            "reminderTime"
+        ).value || "00:00";
+
+
+    sortReminders();
+
+
+    saveData(
+        "reminders",
+        reminders
+    );
+
+
+    syncRemindersToCloud();
+
+
+    editingReminder = null;
+
+
+    document.getElementById(
+        "addReminderButton"
+    ).innerText =
+        "Add Reminder";
+
+
+    displayReminders();
+
+
+    Aegis.broadcast(
+        "remindersUpdated"
+    );
+
+}
 
 async function deleteReminder(id){
 
@@ -209,6 +312,8 @@ function sortReminders(){
 
 }
 
+
+
 function displayReminders(){
 
 
@@ -261,9 +366,17 @@ function displayReminders(){
 
     <br><br>
     
+    
+
     <button onclick="toggleReminderComplete(${reminder.id})">
 
     ${reminder.completed ? "Mark Incomplete" : "Mark Complete"}
+
+    </button>
+
+    <button onclick="editReminder(${reminder.id})">
+
+    Edit
 
     </button>
 
