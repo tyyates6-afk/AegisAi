@@ -478,7 +478,9 @@ Aegis.register("reminders", {
 
     getTodaysReminders() {
 
-        reminders = loadData("reminders");
+        reminders = loadData("reminders") || [];
+
+        sortReminders();
 
         const now = new Date();
 
@@ -496,12 +498,13 @@ Aegis.register("reminders", {
         const today =
             `${year}-${month}-${day}`;
 
-
         return reminders.filter(reminder => {
 
             return reminder.date === today;
 
         });
+
+    },
 
     },
 
