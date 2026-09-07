@@ -152,9 +152,6 @@
 
     global.Navigation = Navigation;
 
-if (global.Aegis?.register) {
-    global.Aegis.register(Navigation);
-}
 
 document.addEventListener("DOMContentLoaded", () => {
     Navigation.init();
