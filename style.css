@@ -2595,3 +2595,61 @@ select{
         display: none !important;
     }
 }
+
+/* AEGIS MOBILE NAV - FORCE DISPLAY */
+.aegis-bottom-nav {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+
+    width: 100vw !important;
+    height: 70px !important;
+
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+
+    background: #111 !important;
+    color: white !important;
+
+    border-top: 2px solid white !important;
+
+    z-index: 2147483647 !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+}
+
+.aegis-bottom-nav .aegis-nav-item {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+
+    background: transparent !important;
+    color: white !important;
+
+    border: 0 !important;
+    padding: 5px !important;
+    margin: 0 !important;
+}
+
+.aegis-bottom-nav .aegis-nav-icon {
+    display: block !important;
+    font-size: 22px !important;
+    line-height: 24px !important;
+}
+
+.aegis-bottom-nav .aegis-nav-label {
+    display: block !important;
+    font-size: 12px !important;
+    line-height: 16px !important;
+}
