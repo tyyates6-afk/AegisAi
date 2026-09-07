@@ -428,412 +428,12 @@ initialized automatically by Aegis.initModules().
             );
 
 
-            this._injectStyles();
+            
 
         },
 
 
-        _injectStyles() {
-
-            if (
-                document.getElementById(
-                    "aegis-commandbar-styles"
-                )
-            ) {
-                return;
-            }
-
-
-            const style =
-                document.createElement("style");
-
-            style.id =
-                "aegis-commandbar-styles";
-
-
-            style.textContent = `
-
-                .cmdbar-overlay {
-
-                    position: fixed;
-
-                    inset: 0;
-
-                    display: none;
-
-                    align-items: flex-start;
-
-                    justify-content: center;
-
-                    padding-top: 12vh;
-
-                    background:
-                        rgba(0, 0, 0, 0.50);
-
-                    backdrop-filter:
-                        blur(4px);
-
-                    z-index: 9999;
-
-                }
-
-
-                .cmdbar-overlay.cmdbar-open {
-
-                    display: flex;
-
-                }
-
-
-                .cmdbar-panel {
-
-                    width:
-                        min(700px, 92vw);
-
-                    background:
-                        #171a21;
-
-                    color:
-                        #e6e9ef;
-
-                    border:
-                        1px solid
-                        rgba(255,255,255,0.10);
-
-                    border-radius:
-                        12px;
-
-                    box-shadow:
-                        0 20px 60px
-                        rgba(0,0,0,0.55);
-
-                    overflow:
-                        hidden;
-
-                    font-family:
-                        system-ui,
-                        sans-serif;
-
-                }
-
-
-                .cmdbar-inputRow {
-
-                    display:
-                        flex;
-
-                    align-items:
-                        center;
-
-                    gap:
-                        12px;
-
-                    padding:
-                        16px 18px;
-
-                    border-bottom:
-                        1px solid
-                        rgba(255,255,255,0.08);
-
-                }
-
-
-                .cmdbar-prompt {
-
-                    color:
-                        #7dd3fc;
-
-                    font-weight:
-                        700;
-
-                    font-size:
-                        18px;
-
-                }
-
-
-                .cmdbar-input {
-
-                    flex:
-                        1;
-
-                    background:
-                        transparent;
-
-                    border:
-                        none;
-
-                    outline:
-                        none;
-
-                    color:
-                        inherit;
-
-                    font-size:
-                        16px;
-
-                }
-
-
-                .cmdbar-input::placeholder {
-
-                    color:
-                        #777f8d;
-
-                }
-
-
-                .cmdbar-suggestions {
-
-                    max-height:
-                        220px;
-
-                    overflow-y:
-                        auto;
-
-                }
-
-
-                .cmdbar-suggestion {
-
-                    padding:
-                        14px 18px;
-
-                    min-height:
-                        44px;
-
-                    box-sizing:
-                        border-box;
-
-                    touch-action:
-                        manipulation;
-
-                    -webkit-tap-highlight-color:
-                        transparent;
-
-                    display:
-                        flex;
-
-                    justify-content:
-                        space-between;
-
-                    gap:
-                        16px;
-
-                    cursor:
-                        pointer;
-
-                    font-size:
-                        13px;
-
-                }
-
-
-                .cmdbar-suggestion:hover {
-
-                    background:
-                        rgba(255,255,255,0.06);
-
-                }
-
-
-                .cmdbar-suggestion .kw {
-
-                    color:
-                        #7dd3fc;
-
-                    font-weight:
-                        600;
-
-                }
-
-
-                .cmdbar-suggestion .desc {
-
-                    color:
-                        #8b93a1;
-
-                }
-
-
-                .cmdbar-output {
-
-                    padding:
-                        12px 18px;
-
-                    max-height:
-                        300px;
-
-                    overflow-y:
-                        auto;
-
-                    border-top:
-                        1px solid
-                        rgba(255,255,255,0.06);
-
-                }
-
-
-                .cmdbar-output:empty {
-
-                    display:
-                        none;
-
-                }
-
-
-                .cmdbar-line {
-
-                    padding:
-                        5px 0;
-
-                    white-space:
-                        pre-wrap;
-
-                    line-height:
-                        1.5;
-
-                }
-
-
-                .cmdbar-line.error {
-
-                    color:
-                        #f87171;
-
-                }
-
-
-                .cmdbar-line.ai {
-
-                    color:
-                        #a5b4fc;
-
-                }
-
-
-                .cmdbar-line.success {
-
-                    color:
-                        #86efac;
-
-                }
-
-
-                .cmdbar-fab {
-
-                    position:
-                        fixed;
-
-                    right:
-                        20px;
-
-                    bottom:
-                        20px;
-
-                    width:
-                        52px;
-
-                    height:
-                        52px;
-
-                    border-radius:
-                        50%;
-
-                    border:
-                        1px solid
-                        rgba(255,255,255,0.12);
-
-                    background:
-                        #171a21;
-
-                    color:
-                        #7dd3fc;
-
-                    font-size:
-                        16px;
-
-                    font-weight:
-                        700;
-
-                    cursor:
-                        pointer;
-
-                    z-index:
-                        9998;
-
-                    box-shadow:
-                        0 6px 20px
-                        rgba(0,0,0,0.40);
-                    touch-action:
-                        manipulation;
-
-                    -webkit-tap-highlight-color:
-                        transparent;
-                }
-
-
-                .cmdbar-fab:active {
-
-                    transform:
-                        scale(0.94);
-
-                }
-
-
-                @media (max-width: 640px) {
-
-                    .cmdbar-overlay {
-
-                        padding-top:
-                            0;
-
-                        align-items:
-                            flex-end;
-
-                    }
-
-
-                    .cmdbar-panel {
-
-                        width:
-                            100%;
-
-                        border-radius:
-                            14px 14px 0 0;
-
-                        max-height:
-                            80dvh;
-
-                    }
-
-
-                    .cmdbar-input {
-
-                        font-size:
-                            16px;
-
-                    }
-
-
-                    .cmdbar-fab {
-
-                        width:
-                            56px;
-
-                        height:
-                            56px;
-
-                    }
-
-                }
-
-            `;
-
-
-            document.head.appendChild(style);
-
-        },
+       
 
 
         // ==================================
@@ -970,103 +570,70 @@ initialized automatically by Aegis.initModules().
 
         _renderSuggestions(value) {
 
-            const box =
-                this._els.suggestions;
+    const box = this._els.suggestions;
 
+    box.innerHTML = "";
 
-            box.innerHTML =
-                "";
+    if (!value.startsWith("/")) {
+        return;
+    }
 
+    const partial = value
+        .slice(1)
+        .toLowerCase()
+        .trim();
 
-            if (
-                !value.startsWith("/")
-            ) {
+    const matches = [...this._commands.entries()]
+        .filter(([keyword]) =>
+            keyword.startsWith(partial)
+        );
 
-                return;
+    matches
+        .slice(0, 8)
+        .forEach(([keyword, command]) => {
 
-            }
+            const row = document.createElement("div");
 
+            row.className = "cmdbar-suggestion";
 
-            const partial =
-                value
-                    .slice(1)
-                    .toLowerCase();
+            const keywordSpan =
+                document.createElement("span");
 
+            keywordSpan.className = "kw";
+            keywordSpan.textContent = `/${keyword}`;
 
-            const matches =
-                [...this._commands.entries()]
-                    .filter(
-                        ([keyword]) =>
-                            keyword.startsWith(partial)
+            const descSpan =
+                document.createElement("span");
+
+            descSpan.className = "desc";
+            descSpan.textContent = command.desc;
+
+            row.appendChild(keywordSpan);
+            row.appendChild(descSpan);
+
+            row.addEventListener(
+                "pointerup",
+                (event) => {
+
+                    event.preventDefault();
+
+                    this._els.input.value =
+                        `/${keyword} `;
+
+                    this._renderSuggestions(
+                        this._els.input.value
                     );
 
+                    this._els.input.focus();
 
-            matches
-                .slice(0, 8)
-                .forEach(
-                    ([keyword, command]) => {
+                }
+            );
 
-                        const row =
-                            document.createElement(
-                                "div"
-                            );
+            box.appendChild(row);
 
+        });
 
-                        row.className =
-                            "cmdbar-suggestion";
-
-
-                        const keywordSpan =
-                            document.createElement(
-                                "span"
-                            );
-
-                        keywordSpan.className =
-                            "kw";
-
-                        keywordSpan.textContent =
-                            `/${keyword}`;
-
-
-                        const descSpan =
-                            document.createElement(
-                                "span"
-                            );
-
-                        descSpan.className =
-                            "desc";
-
-                        descSpan.textContent =
-                            command.desc;
-
-
-                        row.appendChild(
-                            keywordSpan
-                        );
-
-                        row.appendChild(
-                            descSpan
-                        );
-
-
-                row.addEventListener(
-                    "pointerup",
-                    (event) => {
-
-                        event.preventDefault();
-
-                        this._els.input.value =
-                            `/${keyword} `;
-
-                        this._els.input.focus();
-
-                    }
-                );
-
-                    }
-                );
-
-        },
+},
 
 
         // ==================================
