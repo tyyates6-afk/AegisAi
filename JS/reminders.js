@@ -503,9 +503,6 @@ Aegis.register("reminders", {
             return reminder.date === today;
 
         });
-
-    },
-
     },
 
     shutdown() {

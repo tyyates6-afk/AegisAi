@@ -214,6 +214,8 @@ const Aegis = {
     
 };
 
+window.Aegis = Aegis;
+
 console.log("AEGIS CORE ONLINE");
 
 window.addEventListener(
