@@ -2514,3 +2514,84 @@ select{
         height: 56px;
     }
 }
+
+/* =========================================
+   AEGIS MOBILE BOTTOM NAVIGATION
+   ========================================= */
+
+.aegis-bottom-nav {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .aegis-bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 64px;
+
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+
+        background: rgba(15, 15, 18, 0.96);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+        z-index: 10000;
+
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .aegis-nav-item {
+        appearance: none;
+        border: 0;
+        background: transparent;
+
+        color: rgba(255, 255, 255, 0.55);
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        gap: 4px;
+
+        min-width: 0;
+        padding: 6px 4px;
+
+        font: inherit;
+
+        cursor: pointer;
+
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .aegis-nav-item.active {
+        color: white;
+    }
+
+    .aegis-nav-icon {
+        font-size: 20px;
+        line-height: 1;
+        font-weight: 600;
+    }
+
+    .aegis-nav-label {
+        font-size: 11px;
+        line-height: 1;
+    }
+
+    .aegis-nav-item:active {
+        transform: scale(0.94);
+    }
+
+    /* Give the app content room above the navigation */
+    body {
+        padding-bottom: 64px;
+    }
+
+    /* Command Bar desktop launcher is replaced by bottom nav */
+    .cmdbar-fab {
+        display: none !important;
+    }
+}
