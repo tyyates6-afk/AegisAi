@@ -2653,3 +2653,22 @@ select{
     font-size: 12px !important;
     line-height: 16px !important;
 }
+
+.aegis-bottom-nav {
+    position: fixed !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 70px !important;
+
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+
+    background: #111 !important;
+    color: white !important;
+
+    z-index: 999999 !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+}
