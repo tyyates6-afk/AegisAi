@@ -393,8 +393,14 @@ initialized automatically by Aegis.initModules().
 
 
             fab.addEventListener(
-                "click",
-                () => this.toggle()
+                "pointerup",
+                (event) => {
+
+                    event.preventDefault();
+
+                    this.toggle();
+
+                }
             );
 
 
@@ -591,7 +597,19 @@ initialized automatically by Aegis.initModules().
                 .cmdbar-suggestion {
 
                     padding:
-                        10px 18px;
+                        14px 18px;
+
+                    min-height:
+                        44px;
+
+                    box-sizing:
+                        border-box;
+
+                    touch-action:
+                        manipulation;
+
+                    -webkit-tap-highlight-color:
+                        transparent;
 
                     display:
                         flex;
@@ -747,7 +765,11 @@ initialized automatically by Aegis.initModules().
                     box-shadow:
                         0 6px 20px
                         rgba(0,0,0,0.40);
+                    touch-action:
+                        manipulation;
 
+                    -webkit-tap-highlight-color:
+                        transparent;
                 }
 
 
@@ -1027,20 +1049,19 @@ initialized automatically by Aegis.initModules().
                         );
 
 
-                        row.addEventListener(
-                            "click",
-                            () => {
+                row.addEventListener(
+                    "pointerup",
+                    (event) => {
 
-                                this._els.input.value =
-                                    `/${keyword} `;
+                        event.preventDefault();
 
-                                this._els.input.focus();
+                        this._els.input.value =
+                            `/${keyword} `;
 
-                            }
-                        );
+                        this._els.input.focus();
 
-
-                        box.appendChild(row);
+                    }
+                );
 
                     }
                 );
