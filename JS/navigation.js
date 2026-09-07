@@ -1,5 +1,5 @@
-// AEGIS Navigation Module
-// Version: 1.0.0
+// AEGIS Navigation
+// Version 1.0.0
 
 (function (global) {
     "use strict";
@@ -17,13 +17,10 @@
 
             this._buildDOM();
             this._bindEvents();
+
             this._initialized = true;
 
-            console.log("[Navigation] Initialized");
-
-            global.Aegis?.broadcast("navigation:ready", {
-                module: this.name
-            });
+            console.log("✓ Navigation v1.0.0 initialized");
         },
 
         refresh() {
@@ -31,7 +28,10 @@
         },
 
         shutdown() {
-            this._els.nav?.remove();
+            if (this._els.nav) {
+                this._els.nav.remove();
+            }
+
             this._els = {};
             this._initialized = false;
         },
@@ -47,47 +47,27 @@
             if (document.querySelector(".aegis-bottom-nav")) return;
 
             const nav = document.createElement("nav");
+
             nav.className = "aegis-bottom-nav";
             nav.setAttribute("aria-label", "AEGIS Navigation");
 
             nav.innerHTML = `
-                <button
-                    class="aegis-nav-item active"
-                    data-tab="home"
-                    type="button"
-                    aria-label="Home"
-                    aria-current="page"
-                >
+                <button class="aegis-nav-item active" data-tab="home" type="button">
                     <span class="aegis-nav-icon">⌂</span>
                     <span class="aegis-nav-label">Home</span>
                 </button>
 
-                <button
-                    class="aegis-nav-item"
-                    data-tab="command"
-                    type="button"
-                    aria-label="Command"
-                >
+                <button class="aegis-nav-item" data-tab="command" type="button">
                     <span class="aegis-nav-icon">&gt;_</span>
                     <span class="aegis-nav-label">Command</span>
                 </button>
 
-                <button
-                    class="aegis-nav-item"
-                    data-tab="modules"
-                    type="button"
-                    aria-label="Modules"
-                >
+                <button class="aegis-nav-item" data-tab="modules" type="button">
                     <span class="aegis-nav-icon">▦</span>
                     <span class="aegis-nav-label">Modules</span>
                 </button>
 
-                <button
-                    class="aegis-nav-item"
-                    data-tab="more"
-                    type="button"
-                    aria-label="More"
-                >
+                <button class="aegis-nav-item" data-tab="more" type="button">
                     <span class="aegis-nav-icon">•••</span>
                     <span class="aegis-nav-label">More</span>
                 </button>
@@ -103,11 +83,8 @@
 
         _bindEvents() {
             this._els.items.forEach((item) => {
-                item.addEventListener("pointerup", (event) => {
-                    event.preventDefault();
-
-                    const tab = item.dataset.tab;
-                    this._selectTab(tab);
+                item.addEventListener("click", () => {
+                    this._selectTab(item.dataset.tab);
                 });
             });
         },
@@ -116,27 +93,31 @@
             this._activeTab = tab;
             this._updateActiveTab();
 
-            switch (tab) {
-                case "home":
-                    global.Aegis?.broadcast("navigation:home");
-                    break;
+            if (tab === "command") {
+                if (global.Aegis?.run) {
+                    global.Aegis.run("commandBar", "toggle");
+                } else if (global.CommandBar?.toggle) {
+                    global.CommandBar.toggle();
+                }
 
-                case "command":
-                    global.Aegis?.run("commandBar", "toggle");
-                    break;
-
-                case "modules":
-                    global.Aegis?.broadcast("navigation:modules");
-                    break;
-
-                case "more":
-                    global.Aegis?.broadcast("navigation:more");
-                    break;
+                return;
             }
+
+            document.dispatchEvent(
+                new CustomEvent("aegis:navigate", {
+                    detail: {
+                        page: tab
+                    }
+                })
+            );
+
+            global.Aegis?.broadcast(`navigation:${tab}`);
         },
 
         _updateActiveTab() {
-            this._els.items?.forEach((item) => {
+            if (!this._els.items) return;
+
+            this._els.items.forEach((item) => {
                 const active = item.dataset.tab === this._activeTab;
 
                 item.classList.toggle("active", active);
@@ -152,9 +133,8 @@
 
     global.Navigation = Navigation;
 
-
-document.addEventListener("DOMContentLoaded", () => {
-    Navigation.init();
-});
+    document.addEventListener("DOMContentLoaded", () => {
+        Navigation.init();
+    });
 
 })(window);
