@@ -1475,30 +1475,47 @@ initialized automatically by Aegis.initModules().
 
             this.registerCommand(
                 "status",
-                "Show AEGIS system status",
+                "Show AEGIS system health",
                 () => {
 
-                    if (
-                        !global.Aegis
-                    ) {
-
+                    if (!global.Aegis) {
                         return "AEGIS Core unavailable.";
-
                     }
 
-
                     const modules =
-                        Object.values(
-                            global.Aegis.modules
-                        );
+                        Object.values(global.Aegis.modules);
 
+                    const online =
+                        modules.filter(
+                            module => module.status === "ONLINE"
+                        ).length;
 
-                    return modules
-                        .map(
-                            module =>
-                                `${module.name}: ${module.status}`
-                        )
-                        .join("\n");
+                    const errors =
+                        modules.filter(
+                            module => module.status === "ERROR"
+                        ).length;
+
+                    const initializing =
+                        modules.filter(
+                            module => module.status === "INITIALIZING"
+                        ).length;
+
+                    const registered =
+                        modules.length;
+
+                    return [
+                        "AEGIS SYSTEM STATUS",
+                        "",
+                        `Core: ONLINE`,
+                        `Registered Modules: ${registered}`,
+                        `Online: ${online}`,
+                        `Errors: ${errors}`,
+                        `Initializing: ${initializing}`,
+                        "",
+                        errors === 0
+                            ? "System Health: HEALTHY"
+                            : "System Health: ATTENTION REQUIRED"
+                    ].join("\n");
 
                 }
             );
