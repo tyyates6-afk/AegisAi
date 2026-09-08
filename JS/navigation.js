@@ -1,12 +1,12 @@
 // AEGIS Navigation
-// Version 1.0.0
+// Version 1.0.1
 
 (function (global) {
     "use strict";
 
     const Navigation = {
         name: "navigation",
-        version: "1.0.0",
+        version: "1.0.1",
 
         _initialized: false,
         _els: {},
@@ -20,7 +20,7 @@
 
             this._initialized = true;
 
-            console.log("✓ Navigation v1.0.0 initialized");
+            console.log("✓ Navigation v1.0.1 initialized");
         },
 
         refresh() {
@@ -44,36 +44,38 @@
         },
 
         _buildDOM() {
-            if (document.querySelector(".aegis-bottom-nav")) return;
+            let nav = document.querySelector(".aegis-bottom-nav");
 
-            const nav = document.createElement("nav");
+            if (!nav) {
+                nav = document.createElement("nav");
 
-            nav.className = "aegis-bottom-nav";
-            nav.setAttribute("aria-label", "AEGIS Navigation");
+                nav.className = "aegis-bottom-nav";
+                nav.setAttribute("aria-label", "AEGIS Navigation");
 
-            nav.innerHTML = `
-                <button class="aegis-nav-item active" data-tab="home" type="button">
-                    <span class="aegis-nav-icon">⌂</span>
-                    <span class="aegis-nav-label">Home</span>
-                </button>
+                nav.innerHTML = `
+                    <button class="aegis-nav-item active" data-tab="home" type="button">
+                        <span class="aegis-nav-icon">⌂</span>
+                        <span class="aegis-nav-label">Home</span>
+                    </button>
 
-                <button class="aegis-nav-item" data-tab="command" type="button">
-                    <span class="aegis-nav-icon">&gt;_</span>
-                    <span class="aegis-nav-label">Command</span>
-                </button>
+                    <button class="aegis-nav-item" data-tab="command" type="button">
+                        <span class="aegis-nav-icon">&gt;_</span>
+                        <span class="aegis-nav-label">Command</span>
+                    </button>
 
-                <button class="aegis-nav-item" data-tab="modules" type="button">
-                    <span class="aegis-nav-icon">▦</span>
-                    <span class="aegis-nav-label">Modules</span>
-                </button>
+                    <button class="aegis-nav-item" data-tab="modules" type="button">
+                        <span class="aegis-nav-icon">▦</span>
+                        <span class="aegis-nav-label">Modules</span>
+                    </button>
 
-                <button class="aegis-nav-item" data-tab="more" type="button">
-                    <span class="aegis-nav-icon">•••</span>
-                    <span class="aegis-nav-label">More</span>
-                </button>
-            `;
+                    <button class="aegis-nav-item" data-tab="more" type="button">
+                        <span class="aegis-nav-icon">•••</span>
+                        <span class="aegis-nav-label">More</span>
+                    </button>
+                `;
 
-            document.body.appendChild(nav);
+                document.body.appendChild(nav);
+            }
 
             this._els.nav = nav;
             this._els.items = [
@@ -82,6 +84,8 @@
         },
 
         _bindEvents() {
+            if (!this._els.items) return;
+
             this._els.items.forEach((item) => {
                 item.addEventListener("click", () => {
                     this._selectTab(item.dataset.tab);
