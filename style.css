@@ -2596,3 +2596,24 @@ select{
     }
 }
 
+/* ======================================
+   AEGIS BOTTOM NAV — FINAL VISIBILITY FIX
+====================================== */
+
+/* Desktop / Laptop — NEVER show mobile navigation */
+@media (min-width: 641px) {
+
+    .aegis-bottom-nav {
+        display: none !important;
+    }
+
+}
+
+/* Phone — show bottom navigation */
+@media (max-width: 640px) {
+
+    .aegis-bottom-nav {
+        display: grid !important;
+    }
+
+}
