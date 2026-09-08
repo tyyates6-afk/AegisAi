@@ -2517,21 +2517,25 @@ select{
 
 /* =========================================
    AEGIS MOBILE BOTTOM NAVIGATION
+   DESKTOP: COMPLETELY HIDDEN
    ========================================= */
 
 .aegis-bottom-nav {
-    display: none;
+    display: none !important;
 }
 
-@media (max-width: 640px) {
+/* MOBILE / TABLET ONLY */
+@media screen and (max-width: 640px) {
+
     .aegis-bottom-nav {
         position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
+
         height: 64px;
 
-        display: grid;
+        display: grid !important;
         grid-template-columns: repeat(4, 1fr);
 
         background: rgba(15, 15, 18, 0.96);
@@ -2560,7 +2564,6 @@ select{
         padding: 6px 4px;
 
         font: inherit;
-
         cursor: pointer;
 
         -webkit-tap-highlight-color: transparent;
@@ -2585,35 +2588,18 @@ select{
         transform: scale(0.94);
     }
 
-    /* Give the app content room above the navigation */
     body {
         padding-bottom: 64px;
     }
 
-    /* Command Bar desktop launcher is replaced by bottom nav */
     .cmdbar-fab {
         display: none !important;
     }
 }
 
-/* ======================================
-   AEGIS BOTTOM NAV — FINAL VISIBILITY FIX
-====================================== */
-
-/* Desktop / Laptop — NEVER show mobile navigation */
-@media (min-width: 641px) {
-
+/* DESKTOP SAFETY */
+@media screen and (min-width: 641px) {
     .aegis-bottom-nav {
         display: none !important;
     }
-
-}
-
-/* Phone — show bottom navigation */
-@media (max-width: 640px) {
-
-    .aegis-bottom-nav {
-        display: grid !important;
-    }
-
 }
