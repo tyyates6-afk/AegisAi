@@ -58,7 +58,7 @@ const Aegis = {
 
     }
 
-    return fn(...args);
+    return fn.apply(module.api, args);
 
 },
 

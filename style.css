@@ -2691,3 +2691,13 @@ body {
         font-size: 10px;
     }
 }
+
+/* ======================================
+   AEGIS COMMAND BAR — FAB REMOVED
+   The bottom nav's "Command" tab now
+   handles this on every screen size.
+====================================== */
+
+.cmdbar-fab {
+    display: none !important;
+}

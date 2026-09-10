@@ -1,12 +1,12 @@
 // AEGIS Navigation
-// Version 1.2.0
+// Version 1.2.1
 
 (function (global) {
     "use strict";
 
     const Navigation = {
         name: "navigation",
-        version: "1.2.0",
+        version: "1.2.1",
 
         _initialized: false,
         _els: {},
@@ -21,11 +21,11 @@
             this._bindLifecycleListeners();
             this._bindBackButtons();
 
-            this.showPage("home");
+            this.showPage("home", { force: true });
 
             this._initialized = true;
 
-            console.log("✓ Navigation v1.2.0 initialized");
+            console.log("✓ Navigation v1.2.1 initialized");
         },
 
         refresh() {
@@ -98,19 +98,33 @@
         // PAGE SWITCHING
         // ==================================
 
-        showPage(pageName) {
+        showPage(pageName, options = {}) {
             if (!this._els.pages) return;
 
+            const changingPage =
+                this._activePage !== pageName;
+
+            if (!changingPage && !options.force) {
+                // Already on this page — nothing to do,
+                // and definitely don't scroll.
+                return;
+            }
+
             this._els.pages.forEach((page) => {
-                page.classList.toggle("active", page.dataset.page === pageName);
+                page.classList.toggle(
+                    "active",
+                    page.dataset.page === pageName
+                );
             });
 
             this._activePage = pageName;
 
-            window.scrollTo({ top: 0, behavior: "smooth" });
-
             if (pageName === "modules") {
                 this._renderModulesList();
+            }
+
+            if (changingPage && window.scrollY > 40) {
+                window.scrollTo({ top: 0, behavior: "smooth" });
             }
 
             document.dispatchEvent(
@@ -167,14 +181,19 @@
         },
 
         // ==================================
-        // "MORE" HUB → SUBPAGE BACK BUTTONS
+        // "MORE" HUB → SUBPAGE NAV
         // ==================================
 
         _bindBackButtons() {
             document.querySelectorAll("[data-back-to]").forEach((button) => {
                 button.addEventListener("click", () => {
-                    this.showPage(button.dataset.backTo);
-                    this._activeTab = button.dataset.backTo === "more" ? "more" : "home";
+                    const target = button.dataset.backTo;
+
+                    this.showPage(target);
+
+                    this._activeTab =
+                        target === "more" ? "more" : "home";
+
                     this._updateActiveTab();
                 });
             });
@@ -182,7 +201,9 @@
             document.querySelectorAll("[data-goto-page]").forEach((button) => {
                 button.addEventListener("click", () => {
                     this.showPage(button.dataset.gotoPage);
+
                     this._activeTab = "more";
+
                     this._updateActiveTab();
                 });
             });
@@ -205,7 +226,6 @@
         _bindLifecycleListeners() {
             if (!global.Aegis || typeof global.Aegis.listen !== "function") return;
 
-            // Restore whatever tab/page we were on before Command opened
             global.Aegis.listen("commandBar:opened", () => {
                 this._activeTab = "command";
                 this._updateActiveTab();
@@ -224,11 +244,30 @@
         },
 
         _selectTab(tab) {
+
             if (tab === "command") {
-                if (global.Aegis?.run) {
-                    global.Aegis.run("commandBar", "toggle");
+
+                // Call the module directly, as a proper method call,
+                // so `this` inside CommandBar.toggle() stays correct
+                // even if Aegis.run() ever regresses.
+
+                const commandBarModule =
+                    global.Aegis?.getModule("commandBar");
+
+                if (commandBarModule?.api?.toggle) {
+
+                    commandBarModule.api.toggle();
+
                 } else if (global.CommandBar?.toggle) {
+
                     global.CommandBar.toggle();
+
+                } else {
+
+                    console.error(
+                        "Command Bar is unavailable."
+                    );
+
                 }
 
                 return;
