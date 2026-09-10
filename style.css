@@ -2515,91 +2515,179 @@ select{
     }
 }
 
-/* =========================================
-   AEGIS MOBILE BOTTOM NAVIGATION
-   DESKTOP: COMPLETELY HIDDEN
-   ========================================= */
+/* ======================================
+   AEGIS PAGES
+====================================== */
 
-.aegis-bottom-nav {
-    display: none !important;
+.aegis-page {
+    display: none;
 }
 
-/* MOBILE / TABLET ONLY */
-@media screen and (max-width: 640px) {
+.aegis-page.active {
+    display: block;
+}
+
+.aegis-page-back {
+    background: transparent;
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    color: #7ee6ff;
+    padding: 10px 16px;
+    border-radius: 30px;
+    margin-bottom: 20px;
+    width: auto;
+    cursor: pointer;
+}
+
+.aegis-page-back:hover {
+    background: rgba(0, 217, 255, 0.12);
+    transform: none;
+    color: #7ee6ff;
+}
+
+/* ======================================
+   AEGIS MODULES PAGE
+====================================== */
+
+.aegis-modules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.aegis-module-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+.aegis-module-status {
+    font-size: 16px;
+}
+
+.aegis-module-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.aegis-module-info small {
+    opacity: 0.65;
+}
+
+/* ======================================
+   AEGIS MORE HUB PAGE
+====================================== */
+
+.aegis-more-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.aegis-more-item {
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 12px;
+}
+
+/* ======================================
+   AEGIS BOTTOM NAV — ALL SCREEN SIZES
+====================================== */
+
+.aegis-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 64px;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+
+    background: rgba(15, 15, 18, 0.96);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+    z-index: 10000;
+
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.aegis-nav-item {
+    appearance: none;
+    border: 0;
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.55);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 4px;
+
+    min-width: 0;
+    padding: 6px 4px;
+
+    font: inherit;
+    cursor: pointer;
+
+    -webkit-tap-highlight-color: transparent;
+}
+
+.aegis-nav-item.active {
+    color: white;
+}
+
+.aegis-nav-icon {
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.aegis-nav-label {
+    font-size: 11px;
+    line-height: 1;
+}
+
+.aegis-nav-item:active {
+    transform: scale(0.94);
+}
+
+body {
+    padding-bottom: 80px;
+}
+
+/* Desktop: float the nav as a centered dock instead of a full-width bar */
+
+@media screen and (min-width: 641px) {
 
     .aegis-bottom-nav {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        left: 50%;
+        right: auto;
+        bottom: 24px;
+        transform: translateX(-50%);
 
-        height: 64px;
+        width: 360px;
+        height: 60px;
 
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr);
-
-        background: rgba(15, 15, 18, 0.96);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-
-        z-index: 10000;
-
-        padding-bottom: env(safe-area-inset-bottom);
-    }
-
-    .aegis-nav-item {
-        appearance: none;
-        border: 0;
-        background: transparent;
-
-        color: rgba(255, 255, 255, 0.55);
-
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-
-        gap: 4px;
-
-        min-width: 0;
-        padding: 6px 4px;
-
-        font: inherit;
-        cursor: pointer;
-
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .aegis-nav-item.active {
-        color: white;
+        border-radius: 20px;
+        border: 1px solid rgba(0, 217, 255, 0.25);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 217, 255, 0.15);
     }
 
     .aegis-nav-icon {
-        font-size: 20px;
-        line-height: 1;
-        font-weight: 600;
+        font-size: 18px;
     }
 
     .aegis-nav-label {
-        font-size: 11px;
-        line-height: 1;
-    }
-
-    .aegis-nav-item:active {
-        transform: scale(0.94);
-    }
-
-    body {
-        padding-bottom: 64px;
-    }
-
-    .cmdbar-fab {
-        display: none !important;
-    }
-}
-
-/* DESKTOP SAFETY */
-@media screen and (min-width: 641px) {
-    .aegis-bottom-nav {
-        display: none !important;
+        font-size: 10px;
     }
 }

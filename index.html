@@ -78,7 +78,7 @@ rel="stylesheet">
         DASHBOARD
 ========================= -->
 
-
+<div class="aegis-page active" data-page="home"></div>
 <section id="dashboard" class="panel">
 
 <button onclick="Dashboard.toggleEditMode()">
@@ -168,7 +168,7 @@ data-widget="accountWidget">
 
 
 </section>
-
+</div>
 
 
 
@@ -179,8 +179,9 @@ data-widget="accountWidget">
         PLANNER
 ========================= -->
 
-
-<section class="card">
+<div class="aegis-page" data-page="planner">
+    <button class="aegis-page-back" data-back-to="more">← Back to More</button>
+<section class="card" id="planner">
 
 
 <h2>
@@ -340,14 +341,16 @@ Save Event
 
 </section>
 
+</div>
 
 
 
 
 
+<div class="aegis-page" data-page="reminders">
+    <button class="aegis-page-back" data-back-to="more">← Back to More</button>
 
-
-<section class="card">
+<section class="card" id="reminders">
 
 
 <h2>
@@ -410,7 +413,7 @@ Save Reminder
 
 </section>
 
-
+</div>
 
 
 
@@ -423,7 +426,10 @@ Save Reminder
 ========================= -->
 
 
-<section class="card">
+
+<div class="aegis-page" data-page="settings">
+    <button class="aegis-page-back" data-back-to="more">← Back to More</button>
+<section class="card" id="profileSettings">
 
 
 <h2>
@@ -594,7 +600,7 @@ Save Profile
 
 
 
-<section class="card">
+<section class="card" id="categoriesSettings">
 
 
 <h2>
@@ -671,13 +677,73 @@ Add Category
 
 </section>
 
+</div>
 
 
 
 
 </div>
 
+<!-- =========================
+        MODULES PAGE
+========================= -->
 
+<div class="aegis-page" data-page="modules">
+
+    <section class="card">
+
+        <h2>▦ AEGIS Modules</h2>
+
+        <p class="empty-state">
+            Live status of every registered AEGIS module.
+        </p>
+
+        <div id="modulesList" class="aegis-modules-list"></div>
+
+    </section>
+
+</div>
+
+
+<!-- =========================
+        MORE HUB PAGE
+========================= -->
+
+<div class="aegis-page" data-page="more">
+
+    <section class="card">
+
+        <h2>••• More</h2>
+
+        <div class="aegis-more-list">
+
+            <button class="aegis-more-item" data-goto-page="planner">
+                📅 Planner
+            </button>
+
+            <button class="aegis-more-item" data-goto-page="reminders">
+                🔔 Reminders
+            </button>
+
+            <button class="aegis-more-item" data-goto-page="settings">
+                ⚙️ Profile &amp; Categories
+            </button>
+
+            <hr>
+
+            <button class="aegis-more-item" onclick="Dashboard.toggleEditMode()">
+                🛠 Edit Dashboard
+            </button>
+
+            <button class="aegis-more-item" onclick="Dashboard.openWidgetGallery()">
+                ➕ Add Widget
+            </button>
+
+        </div>
+
+    </section>
+
+</div>
 
 
 

@@ -1,44 +1,43 @@
 // AEGIS Navigation
-// Version 1.1.0
+// Version 1.2.0
 
 (function (global) {
     "use strict";
 
     const Navigation = {
         name: "navigation",
-        version: "1.1.0",
+        version: "1.2.0",
 
         _initialized: false,
         _els: {},
         _activeTab: "home",
-        _previousTab: "home",
+        _activePage: "home",
 
         init() {
             if (this._initialized) return;
 
             this._buildDOM();
-            this._buildModulesPanel();
-            this._buildMorePanel();
             this._bindEvents();
             this._bindLifecycleListeners();
+            this._bindBackButtons();
+
+            this.showPage("home");
 
             this._initialized = true;
 
-            console.log("✓ Navigation v1.1.0 initialized");
+            console.log("✓ Navigation v1.2.0 initialized");
         },
 
         refresh() {
             this._updateActiveTab();
 
-            if (this._els.modulesList && this._els.modulesPanel.classList.contains("open")) {
+            if (this._activePage === "modules") {
                 this._renderModulesList();
             }
         },
 
         shutdown() {
             if (this._els.nav) this._els.nav.remove();
-            if (this._els.modulesPanel) this._els.modulesPanel.remove();
-            if (this._els.morePanel) this._els.morePanel.remove();
 
             this._els = {};
             this._initialized = false;
@@ -47,7 +46,8 @@
         status() {
             return {
                 initialized: this._initialized,
-                activeTab: this._activeTab
+                activeTab: this._activeTab,
+                activePage: this._activePage
             };
         },
 
@@ -90,58 +90,56 @@
             }
 
             this._els.nav = nav;
-            this._els.items = [
-                ...nav.querySelectorAll(".aegis-nav-item")
-            ];
+            this._els.items = [...nav.querySelectorAll(".aegis-nav-item")];
+            this._els.pages = [...document.querySelectorAll(".aegis-page")];
         },
 
         // ==================================
-        // MODULES PANEL
+        // PAGE SWITCHING
         // ==================================
 
-        _buildModulesPanel() {
-            let panel = document.querySelector(".aegis-nav-overlay.modules-panel");
+        showPage(pageName) {
+            if (!this._els.pages) return;
 
-            if (!panel) {
-                panel = document.createElement("div");
-
-                panel.className = "aegis-nav-overlay modules-panel";
-
-                panel.innerHTML = `
-                    <div class="aegis-nav-sheet" role="dialog" aria-label="AEGIS Modules">
-                        <div class="aegis-nav-sheet-header">
-                            <h3>▦ AEGIS Modules</h3>
-                            <button class="aegis-nav-close" type="button" aria-label="Close">✕</button>
-                        </div>
-
-                        <div class="aegis-modules-list"></div>
-                    </div>
-                `;
-
-                document.body.appendChild(panel);
-            }
-
-            this._els.modulesPanel = panel;
-            this._els.modulesList = panel.querySelector(".aegis-modules-list");
-
-            panel.addEventListener("mousedown", (event) => {
-                if (event.target === panel) this._closePanels();
+            this._els.pages.forEach((page) => {
+                page.classList.toggle("active", page.dataset.page === pageName);
             });
 
-            panel.querySelector(".aegis-nav-close")
-                .addEventListener("click", () => this._closePanels());
+            this._activePage = pageName;
+
+            window.scrollTo({ top: 0, behavior: "smooth" });
+
+            if (pageName === "modules") {
+                this._renderModulesList();
+            }
+
+            document.dispatchEvent(
+                new CustomEvent("aegis:navigate", {
+                    detail: { page: pageName }
+                })
+            );
+
+            global.Aegis?.broadcast(`navigation:${pageName}`);
         },
 
+        // ==================================
+        // MODULES PAGE CONTENT
+        // ==================================
+
         _renderModulesList() {
+            const list = document.getElementById("modulesList");
+
+            if (!list) return;
+
             if (!global.Aegis) {
-                this._els.modulesList.innerHTML = `<p class="empty-state">AEGIS Core unavailable.</p>`;
+                list.innerHTML = `<p class="empty-state">AEGIS Core unavailable.</p>`;
                 return;
             }
 
             const modules = Object.values(global.Aegis.modules);
 
             if (!modules.length) {
-                this._els.modulesList.innerHTML = `<p class="empty-state">No modules registered.</p>`;
+                list.innerHTML = `<p class="empty-state">No modules registered.</p>`;
                 return;
             }
 
@@ -152,7 +150,7 @@
                 REGISTERED: "⚪"
             };
 
-            this._els.modulesList.innerHTML = modules
+            list.innerHTML = modules
                 .map(module => `
                     <div class="aegis-module-row">
                         <span class="aegis-module-status">
@@ -168,116 +166,26 @@
                 .join("");
         },
 
-        _openModulesPanel() {
-            this._renderModulesList();
-            this._els.modulesPanel.classList.add("open");
-        },
-
         // ==================================
-        // MORE PANEL
+        // "MORE" HUB → SUBPAGE BACK BUTTONS
         // ==================================
 
-        _buildMorePanel() {
-            let panel = document.querySelector(".aegis-nav-overlay.more-panel");
-
-            if (!panel) {
-                panel = document.createElement("div");
-
-                panel.className = "aegis-nav-overlay more-panel";
-
-                panel.innerHTML = `
-                    <div class="aegis-nav-sheet" role="dialog" aria-label="More">
-                        <div class="aegis-nav-sheet-header">
-                            <h3>••• More</h3>
-                            <button class="aegis-nav-close" type="button" aria-label="Close">✕</button>
-                        </div>
-
-                        <div class="aegis-more-list">
-
-                            <button class="aegis-more-item" data-target="#calendar">
-                                📅 Planner
-                            </button>
-
-                            <button class="aegis-more-item" data-target="#reminderList">
-                                🔔 Reminders
-                            </button>
-
-                            <button class="aegis-more-item" data-target="#userName">
-                                ⚙️ Profile Settings
-                            </button>
-
-                            <button class="aegis-more-item" data-target="#categoryList">
-                                🏷️ Categories
-                            </button>
-
-                            <hr>
-
-                            <button class="aegis-more-item" data-action="editDashboard">
-                                🛠 Edit Dashboard
-                            </button>
-
-                            <button class="aegis-more-item" data-action="addWidget">
-                                ➕ Add Widget
-                            </button>
-
-                        </div>
-                    </div>
-                `;
-
-                document.body.appendChild(panel);
-            }
-
-            this._els.morePanel = panel;
-
-            panel.addEventListener("mousedown", (event) => {
-                if (event.target === panel) this._closePanels();
+        _bindBackButtons() {
+            document.querySelectorAll("[data-back-to]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    this.showPage(button.dataset.backTo);
+                    this._activeTab = button.dataset.backTo === "more" ? "more" : "home";
+                    this._updateActiveTab();
+                });
             });
 
-            panel.querySelector(".aegis-nav-close")
-                .addEventListener("click", () => this._closePanels());
-
-            panel.querySelectorAll(".aegis-more-item[data-target]")
-                .forEach(button => {
-                    button.addEventListener("click", () => {
-                        const target = document.querySelector(button.dataset.target);
-
-                        this._closePanels();
-
-                        if (target) {
-                            setTimeout(() => {
-                                target.scrollIntoView({ behavior: "smooth", block: "start" });
-                            }, 150);
-                        }
-                    });
+            document.querySelectorAll("[data-goto-page]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    this.showPage(button.dataset.gotoPage);
+                    this._activeTab = "more";
+                    this._updateActiveTab();
                 });
-
-            panel.querySelector('[data-action="editDashboard"]')
-                .addEventListener("click", () => {
-                    this._closePanels();
-                    global.Dashboard?.toggleEditMode();
-                    document.getElementById("dashboard")
-                        ?.scrollIntoView({ behavior: "smooth" });
-                });
-
-            panel.querySelector('[data-action="addWidget"]')
-                .addEventListener("click", () => {
-                    this._closePanels();
-                    global.Dashboard?.openWidgetGallery();
-                    document.getElementById("dashboard")
-                        ?.scrollIntoView({ behavior: "smooth" });
-                });
-        },
-
-        _openMorePanel() {
-            this._els.morePanel.classList.add("open");
-        },
-
-        _closePanels() {
-            this._els.modulesPanel?.classList.remove("open");
-            this._els.morePanel?.classList.remove("open");
-
-            this._activeTab = this._previousTab || "home";
-            this._updateActiveTab();
+            });
         },
 
         // ==================================
@@ -292,34 +200,31 @@
                     this._selectTab(item.dataset.tab);
                 });
             });
-
-            document.addEventListener("keydown", (event) => {
-                if (event.key === "Escape") this._closePanels();
-            });
         },
 
         _bindLifecycleListeners() {
-            if (!global.Aegis || typeof global.Aegis.listen !== "function") {
-                return;
-            }
+            if (!global.Aegis || typeof global.Aegis.listen !== "function") return;
+
+            // Restore whatever tab/page we were on before Command opened
+            global.Aegis.listen("commandBar:opened", () => {
+                this._activeTab = "command";
+                this._updateActiveTab();
+            });
 
             global.Aegis.listen("commandBar:closed", () => {
-                this._activeTab = this._previousTab || "home";
+                this._activeTab = this._tabForPage(this._activePage);
                 this._updateActiveTab();
             });
         },
 
+        _tabForPage(page) {
+            if (page === "home") return "home";
+            if (page === "modules") return "modules";
+            return "more";
+        },
+
         _selectTab(tab) {
-            if (tab !== "command" && tab !== "modules" && tab !== "more") {
-                this._previousTab = tab;
-            }
-
-            this._activeTab = tab;
-            this._updateActiveTab();
-
             if (tab === "command") {
-                this._closeSheets();
-
                 if (global.Aegis?.run) {
                     global.Aegis.run("commandBar", "toggle");
                 } else if (global.CommandBar?.toggle) {
@@ -329,36 +234,16 @@
                 return;
             }
 
-            if (tab === "modules") {
-                this._els.morePanel?.classList.remove("open");
-                this._openModulesPanel();
-                return;
+            this._activeTab = tab;
+            this._updateActiveTab();
+
+            if (tab === "home") {
+                this.showPage("home");
+            } else if (tab === "modules") {
+                this.showPage("modules");
+            } else if (tab === "more") {
+                this.showPage("more");
             }
-
-            if (tab === "more") {
-                this._els.modulesPanel?.classList.remove("open");
-                this._openMorePanel();
-                return;
-            }
-
-            // "home" — close any open sheets and scroll up
-            this._closeSheets();
-
-            document.getElementById("dashboard")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-            document.dispatchEvent(
-                new CustomEvent("aegis:navigate", {
-                    detail: { page: tab }
-                })
-            );
-
-            global.Aegis?.broadcast(`navigation:${tab}`);
-        },
-
-        _closeSheets() {
-            this._els.modulesPanel?.classList.remove("open");
-            this._els.morePanel?.classList.remove("open");
         },
 
         _updateActiveTab() {
