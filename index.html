@@ -78,7 +78,7 @@ rel="stylesheet">
         DASHBOARD
 ========================= -->
 
-<div class="aegis-page active" data-page="home"></div>
+<div class="aegis-page active" data-page="home">
 <section id="dashboard" class="panel">
 
 <button onclick="Dashboard.toggleEditMode()">
@@ -677,10 +677,23 @@ Add Category
 
 </section>
 
-</div>
+<section class="card" id="systemSettings">
 
+<h2>
+🛠️ System
+</h2>
 
+<p class="empty-state">
+Force AEGIS to clear all cached files and reload the latest version.
+</p>
 
+<button onclick="fullRefresh()">
+
+🔄 Full Refresh
+
+</button>
+
+</section>
 
 </div>
 
