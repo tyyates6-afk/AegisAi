@@ -225,6 +225,10 @@ initialized automatically by Aegis.initModules().
                 "cmdbar-open"
             );
 
+            document.body.classList.add(
+                "cmdbar-active"
+            );
+
             this._els.input.value = "";
 
             this._els.output.innerHTML = "";
@@ -245,7 +249,7 @@ initialized automatically by Aegis.initModules().
         },
 
 
-        close() {
+                close() {
 
             if (!this._isOpen) {
                 return;
@@ -256,6 +260,12 @@ initialized automatically by Aegis.initModules().
             this._els.root.classList.remove(
                 "cmdbar-open"
             );
+
+            document.body.classList.remove(
+                "cmdbar-active"
+            );
+
+            this._els.input.blur();
 
             this._historyIndex =
                 this._history.length;
@@ -316,6 +326,14 @@ initialized automatically by Aegis.initModules().
                             aria-label="AEGIS command input"
                         />
 
+                        <button
+                            class="cmdbar-closeBtn"
+                            type="button"
+                            aria-label="Close Command Bar"
+                        >
+                            ✕
+                        </button>
+
                     </div>
 
 
@@ -353,10 +371,15 @@ initialized automatically by Aegis.initModules().
                     ".cmdbar-output"
                 );
 
+            this._els.closeBtn =
+                root.querySelector(
+                    ".cmdbar-closeBtn"
+                );
+
 
             // Close when clicking background
 
-            root.addEventListener(
+                        root.addEventListener(
                 "mousedown",
                 (event) => {
 
@@ -367,6 +390,22 @@ initialized automatically by Aegis.initModules().
                         this.close();
 
                     }
+
+                }
+            );
+
+
+            // Explicit close button (mobile: keyboard
+            // covers most of the backdrop, so a visible
+            // close target is needed).
+
+            this._els.closeBtn.addEventListener(
+                "click",
+                (event) => {
+
+                    event.preventDefault();
+
+                    this.close();
 
                 }
             );

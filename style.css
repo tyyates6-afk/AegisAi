@@ -2701,3 +2701,45 @@ body {
 .cmdbar-fab {
     display: none !important;
 }
+
+
+/* ======================================
+   AEGIS COMMAND BAR — MOBILE REFINEMENT
+====================================== */
+
+.cmdbar-closeBtn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    color: #8b93a1;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.cmdbar-closeBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    transform: none;
+}
+
+/* Hide the bottom nav while the Command Bar is open —
+   on mobile, position:fixed elements can visually
+   detach and float mid-screen once the keyboard opens,
+   and the overlay already covers the full screen anyway. */
+
+body.cmdbar-active .aegis-bottom-nav {
+    display: none !important;
+}
+
+@media (max-width: 640px) {
+
+    .cmdbar-inputRow {
+        gap: 10px;
+    }
+
+}
