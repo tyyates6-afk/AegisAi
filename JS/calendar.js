@@ -117,12 +117,31 @@ Aegis.listen(
 
 Aegis.register("calendar", {
 
-    version: "1.1.5",
+    version: "1.1.6",
 
     init() {
 
         console.log("Calendar initialized.");
-        
+
+        // The Planner page starts hidden (display:none) while
+        // Home is the active page, so FullCalendar's initial
+        // render measures a zero-width container. Recalculate
+        // sizing every time the Planner page actually becomes
+        // visible.
+
+        Aegis.listen(
+            "navigation:planner",
+            () => {
+
+                if(aegisCalendar){
+
+                    aegisCalendar.updateSize();
+
+                }
+
+            }
+        );
+
     },
 
     refresh() {

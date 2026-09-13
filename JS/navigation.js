@@ -1,12 +1,12 @@
 // AEGIS Navigation
-// Version 1.2.1
+// Version 1.2.2
 
 (function (global) {
     "use strict";
 
     const Navigation = {
         name: "navigation",
-        version: "1.2.1",
+        version: "1.2.2",
 
         _initialized: false,
         _els: {},
@@ -25,7 +25,7 @@
 
             this._initialized = true;
 
-            console.log("✓ Navigation v1.2.1 initialized");
+            console.log("✓ Navigation v1.2.2 initialized");
         },
 
         refresh() {
@@ -123,8 +123,10 @@
                 this._renderModulesList();
             }
 
-            if (changingPage && window.scrollY > 40) {
-                window.scrollTo({ top: 0, behavior: "smooth" });
+            if (changingPage) {
+                // Instant reset, no animation — a smooth scroll
+                // here reads as unwanted motion on a page swap.
+                window.scrollTo(0, 0);
             }
 
             document.dispatchEvent(
@@ -246,10 +248,6 @@
         _selectTab(tab) {
 
             if (tab === "command") {
-
-                // Call the module directly, as a proper method call,
-                // so `this` inside CommandBar.toggle() stays correct
-                // even if Aegis.run() ever regresses.
 
                 const commandBarModule =
                     global.Aegis?.getModule("commandBar");

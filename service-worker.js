@@ -1,9 +1,9 @@
-const CACHE_NAME = "aegis-v3";
+const CACHE_NAME = "aegis-v5";
 
 const BASE =
     self.location.pathname.replace("/service-worker.js", "");
 
-const FILES = [
+const PRECACHE_FILES = [
     `${BASE}/`,
     `${BASE}/index.html`,
     `${BASE}/style.css`,
@@ -13,6 +13,11 @@ const FILES = [
     `${BASE}/JS/app.js`
 ];
 
+// File types that rarely change and are safe to serve
+// from cache first (images, fonts, etc).
+const CACHE_FIRST_EXTENSIONS =
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf)$/;
+
 self.addEventListener("install", event => {
 
     event.waitUntil(
@@ -20,21 +25,21 @@ self.addEventListener("install", event => {
         caches.open(CACHE_NAME)
             .then(async cache => {
 
-                for (const file of FILES) {
+                for (const file of PRECACHE_FILES) {
 
                     try {
 
                         await cache.add(file);
 
                         console.log(
-                            "Cached:",
+                            "Precached:",
                             file
                         );
 
                     } catch (error) {
 
                         console.warn(
-                            "Could not cache:",
+                            "Could not precache:",
                             file,
                             error
                         );
@@ -207,20 +212,56 @@ self.addEventListener(
 
 
 /*
-    NORMAL OFFLINE CACHE
+    FETCH STRATEGY
+
+    - Images/fonts: cache-first (rarely change, save bandwidth)
+    - Everything else (HTML/JS/CSS): network-first, so a new
+      deploy is picked up immediately on next load. Falls back
+      to whatever is cached only when the network is unavailable,
+      preserving offline support.
 */
 
 self.addEventListener("fetch", event => {
 
+    const url = event.request.url;
+
+    if(CACHE_FIRST_EXTENSIONS.test(url)){
+
+        event.respondWith(
+
+            caches.match(event.request)
+                .then(cached =>
+                    cached || fetch(event.request)
+                )
+
+        );
+
+        return;
+
+    }
+
     event.respondWith(
 
-        caches.match(event.request)
-        .then(response => {
+        fetch(event.request)
+            .then(response => {
 
-            return response ||
-                fetch(event.request);
+                const copy = response.clone();
 
-        })
+                caches.open(CACHE_NAME)
+                    .then(cache => {
+
+                        cache.put(event.request, copy);
+
+                    });
+
+                return response;
+
+            })
+            .catch(() => {
+
+                return caches.match(event.request);
+
+            })
 
     );
 
