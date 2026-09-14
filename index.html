@@ -429,6 +429,84 @@ Save Reminder
 
 <div class="aegis-page" data-page="settings">
     <button class="aegis-page-back" data-back-to="more">← Back to More</button>
+
+<section class="card" id="systemSettings">
+
+<h2>
+🛠️ System
+</h2>
+
+<p class="empty-state">
+Force AEGIS to clear all cached files and reload the latest version.
+</p>
+
+<button onclick="fullRefresh()">
+
+🔄 Full Refresh
+
+</button>
+
+</section>
+
+<section class="card" id="volumeSettingsCard">
+
+<h2>
+🔊 Volume
+</h2>
+
+<label>
+Master Volume
+</label>
+
+<input
+type="range"
+id="masterVolumeSlider"
+min="0"
+max="1"
+step="0.05"
+value="1">
+
+
+<label>
+Background Audio
+</label>
+
+<input
+type="range"
+id="backgroundVolumeSlider"
+min="0"
+max="1"
+step="0.05"
+value="0.3">
+
+
+<label>
+Voice
+</label>
+
+<input
+type="range"
+id="voiceVolumeSlider"
+min="0"
+max="1"
+step="0.05"
+value="0.9">
+
+
+<label>
+Button Clicks
+</label>
+
+<input
+type="range"
+id="clickVolumeSlider"
+min="0"
+max="1"
+step="0.05"
+value="0.15">
+
+</section>
+
 <section class="card" id="profileSettings">
 
 
@@ -677,23 +755,9 @@ Add Category
 
 </section>
 
-<section class="card" id="systemSettings">
 
-<h2>
-🛠️ System
-</h2>
 
-<p class="empty-state">
-Force AEGIS to clear all cached files and reload the latest version.
-</p>
 
-<button onclick="fullRefresh()">
-
-🔄 Full Refresh
-
-</button>
-
-</section>
 
 </div>
 
@@ -813,6 +877,8 @@ Force AEGIS to clear all cached files and reload the latest version.
 <script src="JS/audio.js"></script>
 
 <script src="JS/voice.js"></script>
+
+<script src="JS/volumeSettings.js"></script>
 
 <script src="JS/commandBar.js"></script>
 

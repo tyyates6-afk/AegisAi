@@ -141,12 +141,24 @@ Aegis.register("voice", {
 
     },
 
-    init(){
+        init(){
 
         console.log(
             "Voice system initialized."
         );
 
+        const savedVolume =
+        loadData("voiceVolume")[0];
+
+        if(
+            savedVolume &&
+            typeof savedVolume.volume === "number"
+        ){
+
+            voiceSettings.volume =
+            savedVolume.volume;
+
+        }
 
         loadDefaultVoice();
 
@@ -192,7 +204,7 @@ Aegis.register("voice", {
 
 
 
-            const utterance =
+                        const utterance =
             new SpeechSynthesisUtterance(text);
 
             if(
@@ -204,6 +216,15 @@ Aegis.register("voice", {
 
             }
 
+            const globalVolume =
+            Aegis.getModule("audio")
+            ?.api
+            .globalVolume ?? 1;
+
+            const effectiveVolume =
+            voiceSettings.volume *
+            globalVolume;
+
             switch(style){
 
 
@@ -214,7 +235,7 @@ Aegis.register("voice", {
                     utterance.pitch = 0.85;
 
                     utterance.volume =
-                    voiceSettings.volume;
+                    effectiveVolume;
 
                 break;
 
@@ -227,7 +248,7 @@ Aegis.register("voice", {
                     utterance.pitch = 1.15;
 
                     utterance.volume =
-                    voiceSettings.volume;
+                    effectiveVolume;
 
                 break;
 
@@ -240,7 +261,7 @@ Aegis.register("voice", {
                     utterance.pitch = 1;
 
                     utterance.volume =
-                    voiceSettings.volume;
+                    effectiveVolume;
 
                 break;
 
@@ -255,7 +276,7 @@ Aegis.register("voice", {
                     utterance.pitch = 1;
 
                     utterance.volume =
-                    voiceSettings.volume;
+                    effectiveVolume;
 
                 break;
 
@@ -380,10 +401,15 @@ Aegis.register("voice", {
 
     },
 
-    setVolume(value){
+        setVolume(value){
 
         voiceSettings.volume =
         value;
+
+        saveData(
+            "voiceVolume",
+            [{ volume:value }]
+        );
 
     },
 

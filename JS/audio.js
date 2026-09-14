@@ -12,17 +12,21 @@ Aegis.register("audio", {
 
     masterVolume: 0.30,
 
+    globalVolume: 1.0,
+
     unlocked: false,
 
     currentState: "idle",
 
     fadeTimers: {},
 
-    init(){
+        init(){
 
         console.log("Audio Engine initialized.");
 
         this.loadLayers();
+
+        this.loadVolumeSettings();
 
         const unlock = ()=>{
 
@@ -51,6 +55,97 @@ Aegis.register("audio", {
             unlock,
             {once:true}
         );
+
+        // Play a click effect for any button press,
+        // app-wide. Delegated on document so it covers
+        // buttons rendered later (dashboard cards,
+        // dynamic lists) without needing extra wiring.
+
+        document.addEventListener(
+            "click",
+            (event)=>{
+
+                if(event.target.closest("button")){
+
+                    this.playEffect("click");
+
+                }
+
+            }
+        );
+
+    },
+
+    loadVolumeSettings(){
+
+        const saved =
+        loadData("audioSettings")[0];
+
+        if(!saved){
+
+            return;
+
+        }
+
+        if(typeof saved.global === "number"){
+
+            this.globalVolume = saved.global;
+
+        }
+
+        if(typeof saved.background === "number"){
+
+            this.masterVolume = saved.background;
+
+        }
+
+        if(typeof saved.clicks === "number"){
+
+            this.effectVolumes.click = saved.clicks;
+
+        }
+
+    },
+
+    saveVolumeSettings(){
+
+        saveData("audioSettings", [{
+
+            global:this.globalVolume,
+
+            background:this.masterVolume,
+
+            clicks:this.effectVolumes.click
+
+        }]);
+
+    },
+
+    setGlobalVolume(value){
+
+        this.globalVolume = value;
+
+        this.saveVolumeSettings();
+
+        this.setState(this.currentState);
+
+    },
+
+    setBackgroundVolume(value){
+
+        this.masterVolume = value;
+
+        this.saveVolumeSettings();
+
+        this.setState(this.currentState);
+
+    },
+
+    setClickVolume(value){
+
+        this.effectVolumes.click = value;
+
+        this.saveVolumeSettings();
 
     },
     states:{
@@ -91,7 +186,7 @@ Aegis.register("audio", {
             state[layerName] || 0;
 
             const volume =
-            target * this.masterVolume;
+            target * this.masterVolume * this.globalVolume;
 
             const layer =
             this.layers[layerName];
@@ -185,7 +280,7 @@ Aegis.register("audio", {
 
 
         sound.volume =
-        this.masterVolume *
+        this.globalVolume *
         (this.effectVolumes[effectName] || 1);
 
 
@@ -342,7 +437,7 @@ Aegis.register("audio", {
 
     shutdown(){},
 
-    status(){
+        status(){
 
         return{
 
@@ -350,10 +445,17 @@ Aegis.register("audio", {
 
             state: this.currentState,
 
-            layers: Object.keys(this.layers).length
+            layers: Object.keys(this.layers).length,
+
+            globalVolume: this.globalVolume,
+
+            backgroundVolume: this.masterVolume,
+
+            clickVolume: this.effectVolumes.click
 
         };
 
     }
 
 });
+
