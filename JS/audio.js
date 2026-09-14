@@ -232,16 +232,16 @@ Aegis.register("audio", {
     effects: {
 
         notification:
-        "audio/effects/notification.mp3",
+        "assets/audio/effects/notification.mp3",
 
         success:
-        "audio/effects/success.mp3",
+        "assets/audio/effects/success.mp3",
 
         error:
-        "audio/effects/error.mp3",
+        "assets/audio/effects/error.mp3",
 
         click:
-        "audio/effects/click.mp3"
+        "assets/audio/effects/click.mp3"
 
     },
 
