@@ -317,7 +317,7 @@ initialized automatically by Aegis.initModules().
                             >
                         </span>
 
-                        <input
+                                                <input
                             class="cmdbar-input"
                             type="text"
                             placeholder="Ask AEGIS or type /help..."
@@ -325,6 +325,14 @@ initialized automatically by Aegis.initModules().
                             spellcheck="false"
                             aria-label="AEGIS command input"
                         />
+
+                        <button
+                            class="cmdbar-submitBtn"
+                            type="button"
+                            aria-label="Submit command"
+                        >
+                            ↵
+                        </button>
 
                         <button
                             class="cmdbar-closeBtn"
@@ -335,7 +343,6 @@ initialized automatically by Aegis.initModules().
                         </button>
 
                     </div>
-
 
                     <div class="cmdbar-suggestions"></div>
 
@@ -376,6 +383,11 @@ initialized automatically by Aegis.initModules().
                     ".cmdbar-closeBtn"
                 );
 
+            this._els.submitBtn =
+                root.querySelector(
+                    ".cmdbar-submitBtn"
+                );
+
 
             // Close when clicking background
 
@@ -399,7 +411,7 @@ initialized automatically by Aegis.initModules().
             // covers most of the backdrop, so a visible
             // close target is needed).
 
-            this._els.closeBtn.addEventListener(
+                       this._els.closeBtn.addEventListener(
                 "click",
                 (event) => {
 
@@ -412,6 +424,9 @@ initialized automatically by Aegis.initModules().
 
 
             // Floating button
+
+
+            
 
             const fab =
                 document.createElement("button");

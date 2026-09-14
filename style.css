@@ -2743,3 +2743,28 @@ body.cmdbar-active .aegis-bottom-nav {
     }
 
 }
+
+
+.cmdbar-submitBtn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: rgba(0, 217, 255, 0.12);
+    border: 1px solid rgba(0, 217, 255, 0.4);
+    border-radius: 50%;
+    color: #7dd3fc;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.cmdbar-submitBtn:hover {
+    background: #00d9ff;
+    color: #001018;
+    transform: none;
+}
+
+.cmdbar-submitBtn:active {
+    transform: scale(0.92);
+}
