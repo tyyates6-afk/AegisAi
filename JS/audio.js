@@ -1,12 +1,16 @@
 /*======================================
-        AEGIS AUDIO ENGINE v1.0.0
+        AEGIS AUDIO ENGINE v1.1.0
 ======================================*/
 
 Aegis.register("audio", {
 
-    version: "1.0.0",
+    version: "1.1.0",
 
     layers: {},
+
+    layerGains: {},
+
+    audioContext: null,
 
     effects: {},
 
@@ -215,7 +219,10 @@ Aegis.register("audio", {
 
                 setTimeout(()=>{
 
-                    if(layer.volume <= 0.01){
+                    const gainNode =
+                    this.layerGains[layerName];
+
+                    if(gainNode && gainNode.gain.value <= 0.01){
 
                         layer.pause();
 
@@ -278,10 +285,53 @@ Aegis.register("audio", {
         const sound =
         new Audio(file);
 
+        sound.crossOrigin =
+        "anonymous";
 
-        sound.volume =
-        this.globalVolume *
-        (this.effectVolumes[effectName] || 1);
+
+        // iOS Safari ignores HTMLMediaElement.volume entirely —
+        // the only way to control an <audio> element's level
+        // there is by routing it through a Web Audio GainNode.
+        // This also works identically everywhere else, so it
+        // fully replaces setting sound.volume directly.
+
+        if(this.audioContext){
+
+            if(this.audioContext.state === "suspended"){
+
+                this.audioContext.resume();
+
+            }
+
+            const source =
+            this.audioContext.createMediaElementSource(sound);
+
+            const gainNode =
+            this.audioContext.createGain();
+
+            gainNode.gain.value =
+            this.globalVolume *
+            (this.effectVolumes[effectName] || 1);
+
+            source.connect(gainNode);
+
+            gainNode.connect(
+                this.audioContext.destination
+            );
+
+        }
+        else{
+
+            // Very old browser without Web Audio support —
+            // fall back to plain volume (works everywhere
+            // except iOS Safari, which is the case this
+            // whole rewrite exists to fix).
+
+            sound.volume =
+            this.globalVolume *
+            (this.effectVolumes[effectName] || 1);
+
+        }
 
 
         sound.play()
@@ -313,13 +363,66 @@ Aegis.register("audio", {
 
             layer.loop = true;
 
-            layer.volume = 0;
+            layer.volume = 1;
 
             layer.preload = "auto";
 
             layer.crossOrigin = "anonymous";
 
         });
+
+
+        // Set up the Web Audio graph: each background layer
+        // gets its own GainNode, which is what the sliders in
+        // Settings actually control from now on — see the note
+        // in playEffect() above for why .volume alone won't work.
+
+        const AudioContextClass =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+        if(AudioContextClass && !this.audioContext){
+
+            this.audioContext =
+            new AudioContextClass();
+
+        }
+
+        if(this.audioContext){
+
+            Object.entries(this.layers).forEach(
+                ([layerName, layer]) => {
+
+                    const source =
+                    this.audioContext.createMediaElementSource(
+                        layer
+                    );
+
+                    const gainNode =
+                    this.audioContext.createGain();
+
+                    gainNode.gain.value = 0;
+
+                    source.connect(gainNode);
+
+                    gainNode.connect(
+                        this.audioContext.destination
+                    );
+
+                    this.layerGains[layerName] =
+                    gainNode;
+
+                }
+            );
+
+        }
+        else{
+
+            console.warn(
+                "Web Audio API unavailable — volume sliders will not work on this browser."
+            );
+
+        }
 
     },
     
@@ -332,6 +435,15 @@ Aegis.register("audio", {
         this.unlocked = true;
 
         console.log("🔊 Audio Engine Unlocked");
+
+        if(
+            this.audioContext &&
+            this.audioContext.state === "suspended"
+        ){
+
+            this.audioContext.resume();
+
+        }
 
         Object.values(this.layers).forEach(layer=>{
 
@@ -357,13 +469,13 @@ Aegis.register("audio", {
             return;
         }
 
-        layer.volume = 0;
+        this.fadeTo(layerName, 0, 0);
 
         layer.play().catch(()=>{});
 
         this.fadeTo(
             layerName,
-            this.masterVolume,
+            this.masterVolume * this.globalVolume,
             2500
         );
 
@@ -371,15 +483,19 @@ Aegis.register("audio", {
 
     fadeTo(layerName, targetVolume, duration = 2500){
 
-        const layer = this.layers[layerName];
+        const gainNode =
+        this.layerGains[layerName];
 
-        if(!layer){
+        const layer =
+        this.layers[layerName];
+
+        if(!gainNode || !layer){
             return;
         }
 
         clearInterval(this.fadeTimers[layerName]);
 
-        const startVolume = layer.volume;
+        const startVolume = gainNode.gain.value;
 
         const difference = targetVolume - startVolume;
 
@@ -393,13 +509,13 @@ Aegis.register("audio", {
 
             currentStep++;
 
-            layer.volume =
+            gainNode.gain.value =
             startVolume +
             (difference * (currentStep / steps));
 
             if(currentStep >= steps){
 
-                layer.volume = targetVolume;
+                gainNode.gain.value = targetVolume;
 
                 clearInterval(
                     this.fadeTimers[layerName]
@@ -451,11 +567,13 @@ Aegis.register("audio", {
 
             backgroundVolume: this.masterVolume,
 
-            clickVolume: this.effectVolumes.click
+            clickVolume: this.effectVolumes.click,
+
+            audioContextState:
+            this.audioContext?.state || "unavailable"
 
         };
 
     }
 
 });
-
