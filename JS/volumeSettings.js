@@ -16,7 +16,7 @@ function wireVolumeSettings(){
 
     }
 
-    const masterSlider =
+        const masterSlider =
     document.getElementById("masterVolumeSlider");
 
     const backgroundSlider =
@@ -28,11 +28,15 @@ function wireVolumeSettings(){
     const clickSlider =
     document.getElementById("clickVolumeSlider");
 
+    const testClickButton =
+    document.getElementById("testClickButton");
+
     if(
         !masterSlider ||
         !backgroundSlider ||
         !voiceSlider ||
-        !clickSlider
+        !clickSlider ||
+        !testClickButton
     ){
 
         return;
@@ -67,7 +71,7 @@ function wireVolumeSettings(){
 
     };
 
-    clickSlider.oninput = (event) => {
+        clickSlider.oninput = (event) => {
 
         audio.setClickVolume(
             Number(event.target.value)
@@ -85,7 +89,22 @@ function wireVolumeSettings(){
 
     };
 
+    testClickButton.onclick = () => {
+
+        console.log(
+            "Testing click effect:",
+            audio.effects.click,
+            "at volume",
+            audio.globalVolume * audio.effectVolumes.click
+        );
+
+        audio.playEffect("click");
+
+    };
+
 }
+
+    
 
 Aegis.register("volumeSettings", {
 
