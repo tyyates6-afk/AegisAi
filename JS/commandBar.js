@@ -389,9 +389,9 @@ initialized automatically by Aegis.initModules().
                 );
 
 
-            // Close when clicking background
+                        // Close when clicking background
 
-                        root.addEventListener(
+            root.addEventListener(
                 "mousedown",
                 (event) => {
 
@@ -407,24 +407,53 @@ initialized automatically by Aegis.initModules().
             );
 
 
-            // Explicit close button (mobile: keyboard
-            // covers most of the backdrop, so a visible
-            // close target is needed).
+            // Delegated click handler for the input row's
+            // action buttons (submit / close). Delegating
+            // to the panel — rather than binding each button
+            // individually — means this keeps working even
+            // if a button gets rebuilt or re-rendered later.
 
-                       this._els.closeBtn.addEventListener(
+            root.addEventListener(
                 "click",
                 (event) => {
 
-                    event.preventDefault();
+                    const submitTarget =
+                        event.target.closest(
+                            ".cmdbar-submitBtn"
+                        );
 
-                    this.close();
+                    if (submitTarget) {
+
+                        event.preventDefault();
+
+                        this._submit(
+                            this._els.input.value
+                        );
+
+                        return;
+
+                    }
+
+                    const closeTarget =
+                        event.target.closest(
+                            ".cmdbar-closeBtn"
+                        );
+
+                    if (closeTarget) {
+
+                        event.preventDefault();
+
+                        this.close();
+
+                        return;
+
+                    }
 
                 }
             );
 
 
             // Floating button
-
 
             
 
