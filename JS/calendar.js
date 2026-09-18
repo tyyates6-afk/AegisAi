@@ -51,53 +51,75 @@ function(){
     aegisCalendar.render();
 });
 
-function getCalendarEvents(fetchInfo) {
+function getCalendarEvents(fetchInfo, successCallback, failureCallback) {
 
-    const sourceEvents = loadData("events");
+    try {
 
-    const start = fetchInfo.start.toISOString().split("T")[0];
-    const end = fetchInfo.end.toISOString().split("T")[0];
+        const sourceEvents = loadData("events") || [];
 
-    const occurrences = expandEventOccurrences(
-        sourceEvents,
-        start,
-        end
-    );
+        const start = fetchInfo.startStr.split("T")[0];
+        const end = fetchInfo.endStr.split("T")[0];
 
-    return occurrences.map(occurrence => ({
-        title: occurrence.title,
+        console.log("Calendar loading events:", {
+            count: sourceEvents.length,
+            start,
+            end,
+            events: sourceEvents
+        });
 
-        start:
-            occurrence.occurrenceDate +
-            (
-                occurrence.time
-                    ? "T" + occurrence.time
-                    : ""
-            ),
+        const occurrences = expandEventOccurrences(
+            sourceEvents,
+            start,
+            end
+        );
 
-        backgroundColor: occurrence.color,
-        borderColor: occurrence.color,
+        const calendarEvents = occurrences.map(occurrence => ({
 
-        editable: false,
+            title: occurrence.title,
 
-        description:
-            occurrence.notes ||
-            (
-                occurrence.location
-                    ? "📍 " + occurrence.location
-                    : ""
-            ),
+            start:
+                occurrence.occurrenceDate +
+                (
+                    occurrence.time
+                        ? "T" + occurrence.time
+                        : ""
+                ),
 
-        extendedProps: {
-            originalId: occurrence.id,
-            occurrenceDate: occurrence.occurrenceDate,
-            baseDate: occurrence.date,
+            backgroundColor: occurrence.color || "#00d9ff",
+            borderColor: occurrence.color || "#00d9ff",
 
-            isRecurrence:
-                occurrence.recurrence &&
-                occurrence.recurrence !== "none"
-        }
-    }));
+            editable: false,
+
+            extendedProps: {
+                originalId: occurrence.id,
+                occurrenceDate: occurrence.occurrenceDate,
+                baseDate: occurrence.date,
+
+                isRecurrence:
+                    occurrence.recurrence &&
+                    occurrence.recurrence !== "none"
+            }
+
+        }));
+
+        console.log(
+            "Calendar events generated:",
+            calendarEvents
+        );
+
+        successCallback(calendarEvents);
+
+    } catch (error) {
+
+        console.error(
+            "Calendar event loading failed:",
+            error
+        );
+
+        failureCallback(error);
+
+    }
+
 }
 
 function refreshCalendar(){
