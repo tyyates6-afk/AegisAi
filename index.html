@@ -10,6 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="manifest" href="manifest.json">
+
 <meta name="theme-color" content="#00d9ff">
 
 <title>AEGIS AI</title>
@@ -26,12 +27,9 @@ rel="stylesheet">
 </head>
 
 
-
 <body>
 
-
 <div class="container">
-
 
 <!-- =========================
         AEGIS HEADER
@@ -39,38 +37,28 @@ rel="stylesheet">
 
 <header class="aegis-header">
 
-
     <div class="logo-container">
-
 
         <img 
         src="assets/aegis-logo.png"
         class="aegis-logo">
-
 
         <div>
 
             <h1>
             AEGIS
             </h1>
-
             <p>
             Personal AI Assistant
             </p>
 
         </div>
 
-
     </div>
-
-
 
     
 
-
 </header>
-
-
 
 
 
@@ -101,10 +89,7 @@ AEGIS Dashboard
 
 
 
-
 <div class="dashboard-grid">
-
-
 
 <div class="dashboard-card hero-card" id="card-greeting" data-widget="greeting">
     <div id="greeting"></div>
@@ -117,34 +102,42 @@ AEGIS Dashboard
 
 <div class="dashboard-card small-card" id="card-events"data-widget="todayEvents">
     <div id="todayEvents"></div>
+
 </div>
 
 <div class="dashboard-card medium-card" id="card-verse" data-widget="dailyVerse">
     <div id="dailyVerse"></div>
+
 </div>
 
 <div class="dashboard-card small-card" id="card-reminders" data-widget="todayReminders">
     <div id="todayReminders"></div>
+
 </div>
 
 <div class="dashboard-card full-card" id="card-actions" data-widget="quickActions">
     <div id="quickActions"></div>
+
 </div>
 
 <div class="dashboard-card small-card" id="card-weather" data-widget="weather">
     <div id="weather"></div>
+
 </div>
 
 <div class="dashboard-card medium-card" id="card-profile" data-widget="profileWidget">
     <div id="profileWidget"></div>
+
 </div>
 
 <div class="dashboard-card small-card" id="card-notifications" data-widget="notifications">
     <div id="notifications"></div>
+
 </div>
 
 <div class="dashboard-card full-card" id="card-status" data-widget="aegisStatus">
     <div id="aegisStatus"></div>
+
 </div>
 
 <div 
@@ -160,18 +153,14 @@ data-widget="voiceWidget">
 class="dashboard-card small-card"
 id="card-account"
 data-widget="accountWidget">
+
     <div id="accountWidget"></div>
-</div>
 
 
 </div>
-
 
 </section>
 </div>
-
-
-
 
 
 
@@ -198,7 +187,6 @@ data-widget="accountWidget">
 
 
 
-
 <h2>
 ➕ Create Event
 </h2>
@@ -209,12 +197,9 @@ data-widget="accountWidget">
 Event Name
 </label>
 
-
 <input 
 id="eventTitle"
 placeholder="Event name">
-
-
 
 
 
@@ -222,12 +207,9 @@ placeholder="Event name">
 Category
 </label>
 
-
 <select id="eventCategory">
 
 </select>
-
-
 
 
 
@@ -235,12 +217,9 @@ Category
 Date
 </label>
 
-
 <input 
 id="eventDate"
 type="date">
-
-
 
 
 
@@ -248,12 +227,9 @@ type="date">
 Time
 </label>
 
-
 <input 
 id="eventTime"
 type="time">
-
-
 
 
 
@@ -261,12 +237,9 @@ type="time">
 Location
 </label>
 
-
 <input
 id="eventLocation"
 placeholder="Where?">
-
-
 
 
 
@@ -274,11 +247,9 @@ placeholder="Where?">
 Notes
 </label>
 
-
 <textarea
 id="eventNotes"
 placeholder="Details"></textarea>
-
 
 
 
@@ -286,9 +257,7 @@ placeholder="Details"></textarea>
 Repeat
 </label>
 
-
 <select id="eventRecurrence">
-
 <option value="none">
 Does Not Repeat
 </option>
@@ -311,11 +280,9 @@ Yearly
 
 </select>
 
-
 <label>
 Repeat Until (optional)
 </label>
-
 
 <input
 id="eventRecurrenceEnd"
@@ -323,14 +290,11 @@ type="date">
 
 
 
-
 <div id="eventNotifications">
-
 
 <label>
 Notifications:
 </label>
-
 
 
 <label>
@@ -338,28 +302,22 @@ Notifications:
 1 hour before
 </label>
 
-
 <label>
 <input type="checkbox" value="30">
 30 minutes before
 </label>
-
 
 <label>
 <input type="checkbox" value="15">
 15 minutes before
 </label>
 
-
 <label>
 <input type="checkbox" value="5">
 5 minutes before
 </label>
 
-
 </div>
-
-
 
 
 
@@ -373,17 +331,28 @@ Save Event
 
 
 
-
-
 <div id="eventList"></div>
 
+<hr>
 
+<h2 style="font-size:1.1em;margin-bottom:8px;">🔗 Google Calendar</h2>
 
-</section>
-
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+    <button id="gcalConnectBtn" onclick="handleGCalConnect()" style="padding:8px 16px;cursor:pointer;border:none;border-radius:4px;background:#4285f4;color:white;font-weight:500;">
+        🔗 Connect Google Calendar
+    </button>
+    <button id="gcalSyncBtn" onclick="handleGCalSync()" disabled style="padding:8px 16px;cursor:not-allowed;border:none;border-radius:4px;background:#34a853;color:white;font-weight:500;">
+        🔄 Sync Events to Google
+    </button>
+    <button id="gcalDisconnectBtn" onclick="handleGCalDisconnect()" disabled style="padding:8px 16px;cursor:not-allowed;border:none;border-radius:4px;background:#d93025;color:white;font-weight:500;">
+        🔌 Disconnect
+    </button>
 </div>
 
+<p id="gcalStatus" style="font-size:0.9em;color:#888;margin:0;">Not connected to Google Calendar.</p>
 
+</section>
+</div>
 
 
 
@@ -392,17 +361,14 @@ Save Event
 
 <section class="card" id="reminders">
 
-
 <h2>
 🔔 Reminders
 </h2>
 
 
-
 <label>
 Task
 </label>
-
 
 <input
 id="reminderInput"
@@ -410,11 +376,9 @@ placeholder="What needs to be done?">
 
 
 
-
 <label>
 Date
 </label>
-
 
 <input
 id="reminderDate"
@@ -422,19 +386,13 @@ type="date">
 
 
 
-
-
 <label>
 Time
 </label>
 
-
 <input
 id="reminderTime"
 type="time">
-
-
-
 
 
 <button onclick="addReminder()">
@@ -445,26 +403,17 @@ Save Reminder
 
 
 
-
-
 <div id="reminderList"></div>
 
 
-
 </section>
-
 </div>
-
-
-
-
 
 
 
 <!-- =========================
         SETTINGS
 ========================= -->
-
 
 
 <div class="aegis-page" data-page="settings">
@@ -520,7 +469,6 @@ max="1"
 step="0.01"
 value="1">
 
-
 <label>
 Background Audio
 </label>
@@ -533,7 +481,6 @@ max="1"
 step="0.01"
 value="0.3">
 
-
 <label>
 Voice
 </label>
@@ -545,7 +492,6 @@ min="0"
 max="1"
 step="0.01"
 value="0.9">
-
 
 <label>
 Button Clicks
@@ -569,17 +515,14 @@ value="0.15">
 
 <section class="card" id="profileSettings">
 
-
 <h2>
 ⚙️ AEGIS Profile
 </h2>
 
 
-
 <label>
 Name
 </label>
-
 
 <input 
 id="userName"
@@ -587,39 +530,28 @@ placeholder="Enter your name">
 
 
 
-
-
 <label>
 Bible Translation
 </label>
 
-
 <select id="bibleVersion">
-
 <option value="NIV">
 NIV
 </option>
-
 
 <option value="KJV">
 KJV
 </option>
 
-
 <option value="ESV">
 ESV
 </option>
-
 
 <option value="NKJV">
 NKJV
 </option>
 
-
 </select>
-
-
-
 
 
 
@@ -627,9 +559,7 @@ NKJV
 Assistant Style
 </label>
 
-
 <select id="assistantStyle">
-
 <option value="Jarvis">
 Jarvis
 </option>
@@ -638,28 +568,22 @@ Jarvis
 Professional
 </option>
 
-
 <option value="Friendly">
 Friendly
 </option>
-
 
 <option value="Minimal">
 Minimal
 </option>
 
-
 </select>
 
 <label>
-
 <input 
 type="checkbox"
 id="voiceEnabled"
 checked>
-
 Enable AEGIS Voice Assistant
-
 </label>
 
 
@@ -668,28 +592,19 @@ Enable AEGIS Voice Assistant
 City
 </label>
 
-
 <input id="userCity">
-
-
 
 <label>
 State
 </label>
 
-
 <input id="userState">
-
-
 
 <label>
 Country
 </label>
 
-
 <input id="userCountry">
-
-
 
 
 
@@ -697,23 +612,17 @@ Country
 Temperature
 </label>
 
-
 <select id="temperatureUnit">
-
 
 <option value="F">
 Fahrenheit
 </option>
 
-
 <option value="C">
 Celsius
 </option>
 
-
 </select>
-
-
 
 
 
@@ -723,81 +632,53 @@ Save Profile
 
 </button>
 
-
-
 <p id="profileStatus"></p>
-
 
 </section>
 
-
-
-
-
-
-
-
-
 <section class="card" id="categoriesSettings">
-
 
 <h2>
 🏷️ Categories
 </h2>
 
 
-
 <label>
 New Category
 </label>
-
-
 
 <input
 id="categoryName"
 placeholder="Example: School">
 
 
-
-
-
 <label>
 Color
 </label>
 
-
 <select id="categoryColor">
-
 
 <option value="green">
 Green
 </option>
 
-
 <option value="blue">
 Blue
 </option>
-
 
 <option value="purple">
 Purple
 </option>
 
-
 <option value="red">
 Red
 </option>
-
 
 <option value="gray">
 Gray
 </option>
 
-
 </select>
-
-
-
 
 
 <button onclick="addCategory()">
@@ -807,17 +688,10 @@ Add Category
 </button>
 
 
-
-
 <div id="categoryList"></div>
 
 
-
 </section>
-
-
-
-
 
 </div>
 
@@ -828,60 +702,42 @@ Add Category
 <div class="aegis-page" data-page="modules">
 
     <section class="card">
-
         <h2>▦ AEGIS Modules</h2>
-
         <p class="empty-state">
             Live status of every registered AEGIS module.
         </p>
-
         <div id="modulesList" class="aegis-modules-list"></div>
-
     </section>
 
 </div>
-
 
 <!-- =========================
         MORE HUB PAGE
 ========================= -->
 
 <div class="aegis-page" data-page="more">
-
     <section class="card">
-
         <h2>••• More</h2>
-
         <div class="aegis-more-list">
-
             <button class="aegis-more-item" data-goto-page="planner">
                 📅 Planner
             </button>
-
             <button class="aegis-more-item" data-goto-page="reminders">
                 🔔 Reminders
             </button>
-
             <button class="aegis-more-item" data-goto-page="settings">
                 ⚙️ Settings
             </button>
-
             <hr>
-
             <button class="aegis-more-item" onclick="Dashboard.toggleEditMode()">
                 🛠 Edit Dashboard
             </button>
-
             <button class="aegis-more-item" onclick="Dashboard.openWidgetGallery()">
                 ➕ Add Widget
             </button>
-
         </div>
-
     </section>
-
 </div>
-
 
 
 
@@ -889,10 +745,7 @@ Add Category
         LIBRARIES
 ========================= -->
 
-
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-
-
 
 
 
@@ -908,11 +761,9 @@ Add Category
 
 
 
-
 <!-- =========================
         MODULES
 ========================= -->
-
 
 <script src="JS/categories.js"></script>
 
@@ -945,7 +796,6 @@ Add Category
 <script src="JS/commandBar.js"></script>
 
 <script src="JS/navigation.js"></script>
-
 
 <!-- =========================
         DASHBOARD  
@@ -983,11 +833,9 @@ Add Category
 
 <script src="JS/widgets/accountWidget.js"></script>
 
-
 <script src="JS/dashboard.js"></script>
 
 <script src="JS/app.js"></script>
-
 
 
 </body>
