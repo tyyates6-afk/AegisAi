@@ -51,51 +51,51 @@ function(){
     aegisCalendar.render();
 });
 
-function getCalendarEvents(rangeStart, rangeEnd){
-    const sourceEvents =
-    loadData("events");
+function getCalendarEvents(fetchInfo) {
 
-    const startDate = rangeStart instanceof Date
-        ? rangeStart
-        : new Date(rangeStart || Date.now());
+    const sourceEvents = loadData("events");
 
-    const endDate = rangeEnd instanceof Date
-        ? rangeEnd
-        : new Date(rangeEnd || Date.now());
+    const start = fetchInfo.start.toISOString();
+    const end = fetchInfo.end.toISOString();
 
-    const start = startDate.toISOString();
-    const end = endDate.toISOString();
-
-   
-    const occurrences =
-    expandEventOccurrences(
+    const occurrences = expandEventOccurrences(
         sourceEvents,
         start,
         end
     );
 
     return occurrences.map(occurrence => ({
-        title:occurrence.title,
+        title: occurrence.title,
+
         start:
-        occurrence.occurrenceDate +
-        (occurrence.time ?
-        "T"+occurrence.time :
-        ""),
-        backgroundColor:
-        occurrence.color,
-        borderColor:
-        occurrence.color,
-        editable:false,
+            occurrence.occurrenceDate +
+            (
+                occurrence.time
+                    ? "T" + occurrence.time
+                    : ""
+            ),
+
+        backgroundColor: occurrence.color,
+        borderColor: occurrence.color,
+
+        editable: false,
+
         description:
-        occurrence.notes ||
-        (occurrence.location ?
-        "📍 " + occurrence.location :
-        ""),
-        extendedProps:{
-            originalId:occurrence.id,
-            occurrenceDate:occurrence.occurrenceDate,
-            baseDate:occurrence.date,
-            isRecurrence:occurrence.recurrence && occurrence.recurrence !== "none"
+            occurrence.notes ||
+            (
+                occurrence.location
+                    ? "📍 " + occurrence.location
+                    : ""
+            ),
+
+        extendedProps: {
+            originalId: occurrence.id,
+            occurrenceDate: occurrence.occurrenceDate,
+            baseDate: occurrence.date,
+
+            isRecurrence:
+                occurrence.recurrence &&
+                occurrence.recurrence !== "none"
         }
     }));
 }
