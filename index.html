@@ -684,8 +684,15 @@ Add Category
 
 </button>
 
+<div id="editOccurrenceBanner" class="edit-occurrence-banner" style="display:none; background:rgba(0,217,255,0.08); border:1px solid rgba(0,217,255,0.3); border-radius:12px; padding:12px 16px; margin:16px 0 8px; color:#66eaff;"></div>
 
-<div id="categoryList"></div>
+<div id="editOccurrenceActions" style="margin-top:8px;display:none;gap:10px;flex-wrap:wrap;">
+    <button type="button" id="saveSingleOccurrence" onclick="setEditMode('single'); saveEventChanges();" style="display:none;">Save This Occurrence Only</button>
+    <button type="button" id="saveAllFutureOccurrences" onclick="setEditMode('allFuture'); saveEventChanges();" style="display:none;">Save This & All Future</button>
+</div>
+
+
+<div id="eventList"></div>
 
 
 </section>

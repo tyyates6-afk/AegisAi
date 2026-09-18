@@ -733,23 +733,34 @@ function editEvent(id, occurrenceDate){
         ).innerText =
         "Save Exception";
 
-        const editArea = document.querySelector("#saveEventButton").parentElement;
-        let updateAllRow = editArea.querySelector("#updateAllFutureRow");
-        if(!updateAllRow){
-            updateAllRow = document.createElement("div");
-            updateAllRow.id = "updateAllFutureRow";
-            updateAllRow.style.marginTop = "8px";
-            updateAllRow.innerHTML = `
-            <label>
-                <input type="checkbox" id="updateAllFuture">
-                Update this and all future occurrences
-            </label>
-            <p style="font-size:0.8em;color:#888;margin-top:2px;">
-                Uncheck to change only this single occurrence.
-            </p>
-            `;
-            editArea.appendChild(updateAllRow);
-        }
+        // Clear any previous edit-occurrence UI
+        const banner = document.getElementById("editOccurrenceBanner");
+        const actions = document.getElementById("editOccurrenceActions");
+        const prevUpdateRow = document.getElementById("updateAllFutureRow");
+        if(prevUpdateRow) prevUpdateRow.remove();
+        banner.style.display = "none";
+        actions.style.display = "none";
+        document.getElementById("saveSingleOccurrence").style.display = "none";
+        document.getElementById("saveAllFutureOccurrences").style.display = "none";
+
+        // Show the banner
+        const categoryInfo = categories.find(c => c.id === editingEvent.categoryId);
+        banner.innerHTML = `
+            <strong>✏️ Editing occurrence of recurring event</strong><br>
+            <span style="font-size:0.9em;color:#8db6c9;">
+                Event: ${editingEvent.title}<br>
+                Original date: ${editingEvent._originalDate}<br>
+                Occurrence date: ${editingEvent._occurrenceDate}
+                ${categoryInfo ? '<br>Category: ' + categoryInfo.name : ''}
+            </span>
+        `;
+        banner.style.display = "block";
+
+        // Show the two buttons
+        actions.style.display = "flex";
+        document.getElementById("saveSingleOccurrence").style.display = "inline-block";
+        document.getElementById("saveAllFutureOccurrences").style.display = "inline-block";
+
         return;
     }
 
@@ -819,6 +830,12 @@ function editEvent(id, occurrenceDate){
     if(updateAllRow){
         updateAllRow.remove();
     }
+
+    // Hide occurrence edit UI
+    document.getElementById("editOccurrenceBanner").style.display = "none";
+    document.getElementById("editOccurrenceActions").style.display = "none";
+    document.getElementById("saveSingleOccurrence").style.display = "none";
+    document.getElementById("saveAllFutureOccurrences").style.display = "none";
 }
 
 function saveEventChanges(){
@@ -867,7 +884,7 @@ function saveEventChanges(){
     });
 
     const updateAllFuture =
-    document.getElementById("updateAllFuture")?.checked || false;
+        editingEvent._editMode === "allFuture";
 
     editingEvent.title = title;
     editingEvent.categoryId = categoryId;
@@ -1439,6 +1456,12 @@ Aegis.register("events", {
         return GOOGLE_CALENDAR;
     }
 });
+
+window.setEditMode = function(mode){
+    if(editingEvent && editingEvent._isExceptionEdit){
+        editingEvent._editMode = mode;
+    }
+};
 
 window.loadEventsFromCloud =
 loadEventsFromCloud;
