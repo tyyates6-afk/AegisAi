@@ -883,6 +883,27 @@ function printActiveSpreadsheet(){
 
 }
 
+function getSpreadsheetCellMap(doc){
+
+    const cells = {};
+
+    doc.content.forEach((row, r) => {
+
+        row.forEach((value, c) => {
+
+            const address =
+            getColumnLabel(c) + (r + 1);
+
+            cells[address] =
+            value ?? "";
+
+        });
+
+    });
+
+    return cells;
+
+}
 
 function renderSpreadsheetEditor(doc){
 
@@ -904,27 +925,68 @@ function renderSpreadsheetEditor(doc){
 
     }
 
+    /*
+       Build the cells.
+       Formula cells display their calculated
+       result instead of the raw formula.
+    */
+
     const bodyHtml =
     doc.content.map((row, r) => {
 
         const cellsHtml =
-        row.map((value, c) => `
+        row.map((value, c) => {
 
-            <td>
-                <input
-                    type="text"
-                    class="sheet-cell"
-                    data-row="${r}"
-                    data-col="${c}"
-                    value="${(value ?? "").toString().replace(/"/g, "&quot;")}"
-                >
-            </td>
+            const address =
+            getColumnLabel(c) + (r + 1);
 
-        `).join("");
+            let displayValue = value ?? "";
 
-        return `<tr><th class="sheet-row-label">${r + 1}</th>${cellsHtml}</tr>`;
+            if(
+                typeof value === "string" &&
+                value.startsWith("=") &&
+                window.FormulaEngine
+            ){
+
+                displayValue =
+                FormulaEngine.calculate(
+                    value,
+                    getSpreadsheetCellMap(doc)
+                );
+
+            }
+
+            return `
+
+                <td>
+
+                    <input
+                        type="text"
+                        class="sheet-cell"
+                        data-row="${r}"
+                        data-col="${c}"
+                        data-address="${address}"
+                        value="${String(displayValue)
+                            .replace(/"/g, "&quot;")}"
+                    >
+
+                </td>
+
+            `;
+
+        }).join("");
+
+        return `
+            <tr>
+                <th class="sheet-row-label">
+                    ${r + 1}
+                </th>
+                ${cellsHtml}
+            </tr>
+        `;
 
     }).join("");
+
 
     editorContainer.innerHTML = `
 
@@ -937,22 +999,31 @@ function renderSpreadsheetEditor(doc){
 
         <div class="workspace-toolbar">
 
-            <button id="sheetAddRowButton" type="button">
+            <button
+                id="sheetAddRowButton"
+                type="button"
+            >
                 ➕ Row
             </button>
 
-            <button id="sheetAddColButton" type="button">
+            <button
+                id="sheetAddColButton"
+                type="button"
+            >
                 ➕ Column
             </button>
 
         </div>
+
 
         <div class="workspace-sheet-scroll">
 
             <table class="workspace-sheet">
 
                 <thead>
-                    <tr>${headerHtml}</tr>
+                    <tr>
+                        ${headerHtml}
+                    </tr>
                 </thead>
 
                 <tbody>
@@ -962,6 +1033,7 @@ function renderSpreadsheetEditor(doc){
             </table>
 
         </div>
+
 
         <div class="workspace-actions">
 
@@ -981,85 +1053,141 @@ function renderSpreadsheetEditor(doc){
                 🖨️ Print / Save PDF
             </button>
 
-            <span id="workspaceSaveStatus" class="empty-state"></span>
+            <span
+                id="workspaceSaveStatus"
+                class="empty-state"
+            ></span>
 
         </div>
 
     `;
 
+
+    /* ===============================
+       TITLE
+    =============================== */
+
     document.getElementById(
         "workspaceDocTitle"
-    ).addEventListener("input", (event) => {
+    ).addEventListener(
+        "input",
+        (event) => {
 
-        doc.title = event.target.value;
+            doc.title =
+            event.target.value;
 
-        scheduleSpreadsheetAutosave(doc);
+            scheduleSpreadsheetAutosave(
+                doc
+            );
 
-    });
+        }
+    );
+
+
+    /* ===============================
+       CELLS
+    =============================== */
 
     editorContainer
     .querySelectorAll(".sheet-cell")
     .forEach(input => {
 
-        input.addEventListener("input", (event) => {
+        input.addEventListener(
+            "input",
+            (event) => {
 
-            const row =
-            Number(event.target.dataset.row);
+                const row =
+                Number(
+                    event.target.dataset.row
+                );
 
-            const col =
-            Number(event.target.dataset.col);
+                const col =
+                Number(
+                    event.target.dataset.col
+                );
 
-            doc.content[row][col] =
-            event.target.value;
+                doc.content[row][col] =
+                event.target.value;
 
-            scheduleSpreadsheetAutosave(doc);
+                /*
+                   Re-render the spreadsheet
+                   so formulas update immediately.
+                */
 
-        });
+                renderSpreadsheetEditor(doc);
+
+                scheduleSpreadsheetAutosave(
+                    doc
+                );
+
+            }
+        );
 
     });
+
+
+    /* ===============================
+       ADD ROW
+    =============================== */
 
     document.getElementById(
         "sheetAddRowButton"
-    ).addEventListener("click", () => {
+    ).addEventListener(
+        "click",
+        () => {
 
-        const width =
-        doc.content[0]?.length || 6;
+            const width =
+            doc.content[0]?.length || 6;
 
-        doc.content.push(
-            new Array(width).fill("")
-        );
+            doc.content.push(
+                new Array(width).fill("")
+            );
 
-        doc.updatedAt =
-        new Date().toISOString();
+            doc.updatedAt =
+            new Date().toISOString();
 
-        saveData(
-            "workspaceDocuments",
-            workspaceDocuments
-        );
+            saveData(
+                "workspaceDocuments",
+                workspaceDocuments
+            );
 
-        renderWorkspaceEditor();
+            renderWorkspaceEditor();
 
-    });
+        }
+    );
+
+
+    /* ===============================
+       ADD COLUMN
+    =============================== */
 
     document.getElementById(
         "sheetAddColButton"
-    ).addEventListener("click", () => {
+    ).addEventListener(
+        "click",
+        () => {
 
-        doc.content.forEach(
-            row => row.push("")
-        );
+            doc.content.forEach(
+                row => row.push("")
+            );
 
-        doc.updatedAt =
-        new Date().toISOString();
+            doc.updatedAt =
+            new Date().toISOString();
 
-        saveData(
-            "workspaceDocuments",
-            workspaceDocuments
-        );
+            saveData(
+                "workspaceDocuments",
+                workspaceDocuments
+            );
 
-        renderWorkspaceEditor();
+            renderWorkspaceEditor();
 
-    });
+        }
+    );
+
+
+    /* ===============================
+       SAVE / EXPORT
+    =============================== */
 
     document.getElementById(
         "workspaceSaveButton"
@@ -1068,6 +1196,7 @@ function renderSpreadsheetEditor(doc){
         saveActiveSpreadsheet
     );
 
+
     document.getElementById(
         "workspaceExportExcelButton"
     ).addEventListener(
@@ -1075,12 +1204,14 @@ function renderSpreadsheetEditor(doc){
         exportActiveSpreadsheetAsExcel
     );
 
+
     document.getElementById(
         "workspaceExportCsvButton"
     ).addEventListener(
         "click",
         exportActiveSpreadsheetAsCsv
     );
+
 
     document.getElementById(
         "workspacePrintButton"
