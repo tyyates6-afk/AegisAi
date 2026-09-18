@@ -56,19 +56,18 @@ function getCalendarEvents(rangeStart, rangeEnd){
     loadData("events");
 
     const start =
-    rangeStart ||
-    new Date().toISOString().split("T")[0];
+    typeof rangeStart === "string"
+    ? rangeStart
+    : (rangeStart || new Date()).toISOString().split("T")[0];
+
     const end =
-    rangeEnd ||
-    (() => {
+    typeof rangeEnd === "string"
+    ? rangeEnd
+    : (rangeEnd || (() => {
         const future = new Date();
-        future.setFullYear(
-            future.getFullYear() + 1
-        );
-        return future
-        .toISOString()
-        .split("T")[0];
-    })();
+        future.setFullYear(future.getFullYear() + 1);
+        return future;
+    })()).toISOString().split("T")[0];
 
     const occurrences =
     expandEventOccurrences(
