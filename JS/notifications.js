@@ -61,7 +61,7 @@ function checkNotifications(){
 function checkEventNotifications(){
 
 
-const events =
+const sourceEvents =
 loadData("events");
 
 
@@ -69,19 +69,42 @@ const now =
 new Date();
 
 
+const todayStr =
+formatDateOnly(now);
 
-events.forEach(event=>{
+
+const rangeEnd =
+new Date(now);
+
+rangeEnd.setDate(
+    rangeEnd.getDate() + 2
+);
+
+const rangeEndStr =
+formatDateOnly(rangeEnd);
 
 
-    if(!event.notifications)
+const occurrences =
+expandEventOccurrences(
+    sourceEvents,
+    todayStr,
+    rangeEndStr
+);
+
+
+
+occurrences.forEach(occurrence=>{
+
+
+    if(!occurrence.notifications)
         return;
 
 
     const [year, month, day] =
-    event.date.split("-").map(Number);
+    occurrence.occurrenceDate.split("-").map(Number);
 
     const [hour, minute] =
-    (event.time || "00:00").split(":").map(Number);
+    (occurrence.time || "00:00").split(":").map(Number);
 
     const eventTime = new Date(
         year,
@@ -94,7 +117,7 @@ events.forEach(event=>{
 
 
 
-    event.notifications.forEach(minutes=>{
+    occurrence.notifications.forEach(minutes=>{
 
 
         const difference =
@@ -103,7 +126,7 @@ events.forEach(event=>{
 
 
         const notificationID =
-        event.id +
+        occurrence.occurrenceId +
         "-" +
         minutes;
 
@@ -115,7 +138,7 @@ events.forEach(event=>{
         !notifiedItems.includes(notificationID)
         ){
             showAegisNotification(
-                event,
+                occurrence,
                 minutes
             );
 

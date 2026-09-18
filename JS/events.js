@@ -1,5 +1,173 @@
 let events = loadData("events");
 
+function parseDateOnly(dateStr){
+
+    const [year, month, day] =
+    dateStr.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
+
+}
+
+function formatDateOnly(date){
+
+    const year = date.getFullYear();
+
+    const month =
+    String(date.getMonth() + 1)
+    .padStart(2, "0");
+
+    const day =
+    String(date.getDate())
+    .padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+
+}
+
+function buildOccurrence(event, dateStr){
+
+    return {
+
+        ...event,
+
+        occurrenceDate: dateStr,
+
+        occurrenceId: `${event.id}_${dateStr}`
+
+    };
+
+}
+
+function expandEventOccurrences(sourceEvents, rangeStartStr, rangeEndStr){
+
+    // rangeStart is inclusive, rangeEnd is exclusive —
+    // matches FullCalendar's own info.startStr/info.endStr
+    // convention, so this can be called directly from
+    // calendar.js without any date-boundary translation.
+
+    const rangeStart =
+    parseDateOnly(rangeStartStr);
+
+    const rangeEnd =
+    parseDateOnly(rangeEndStr);
+
+    const occurrences = [];
+
+    sourceEvents.forEach(event => {
+
+        const recurrence =
+        event.recurrence || "none";
+
+        const baseDate =
+        parseDateOnly(event.date);
+
+        if(recurrence === "none"){
+
+            if(
+                baseDate >= rangeStart &&
+                baseDate < rangeEnd
+            ){
+
+                occurrences.push(
+                    buildOccurrence(
+                        event,
+                        event.date
+                    )
+                );
+
+            }
+
+            return;
+
+        }
+
+        const recurrenceEnd =
+        event.recurrenceEnd
+        ? parseDateOnly(event.recurrenceEnd)
+        : null;
+
+        // Safety cap so an indefinite recurrence
+        // can't loop forever — 2 years past the
+        // requested range is far more than any
+        // calendar view or notification check needs.
+
+        const hardCap =
+        new Date(rangeEnd);
+
+        hardCap.setFullYear(
+            hardCap.getFullYear() + 2
+        );
+
+        const stopAt =
+        recurrenceEnd && recurrenceEnd < hardCap
+        ? recurrenceEnd
+        : hardCap;
+
+        let cursor =
+        new Date(baseDate);
+
+        while(cursor <= stopAt){
+
+            if(cursor >= rangeEnd){
+
+                break;
+
+            }
+
+            if(cursor >= rangeStart){
+
+                occurrences.push(
+                    buildOccurrence(
+                        event,
+                        formatDateOnly(cursor)
+                    )
+                );
+
+            }
+
+            if(recurrence === "daily"){
+
+                cursor.setDate(
+                    cursor.getDate() + 1
+                );
+
+            }
+            else if(recurrence === "weekly"){
+
+                cursor.setDate(
+                    cursor.getDate() + 7
+                );
+
+            }
+            else if(recurrence === "monthly"){
+
+                cursor.setMonth(
+                    cursor.getMonth() + 1
+                );
+
+            }
+            else if(recurrence === "yearly"){
+
+                cursor.setFullYear(
+                    cursor.getFullYear() + 1
+                );
+
+            }
+            else{
+
+                break;
+
+            }
+
+        }
+
+    });
+
+    return occurrences;
+
+}
+
 async function loadEventsFromCloud(){
 
     const cloud =
@@ -36,6 +204,10 @@ async function loadEventsFromCloud(){
         location:event.location,
 
         notes:event.notes,
+
+        recurrence:event.recurrence || "none",
+
+        recurrenceEnd:event.recurrence_end || null,
 
         notifications:event.notifications || []
 
@@ -152,6 +324,20 @@ function addEvent(){
 
 
 
+    const recurrence =
+    document.getElementById(
+        "eventRecurrence"
+    ).value;
+
+
+
+    const recurrenceEnd =
+    document.getElementById(
+        "eventRecurrenceEnd"
+    ).value;
+
+
+
     const notifications = [];
 
     document.querySelectorAll(
@@ -208,6 +394,10 @@ const newEvent = {
     location:location,
 
     notes:notes,
+
+    recurrence:recurrence || "none",
+
+    recurrenceEnd:recurrenceEnd || null,
 
     notifications:notifications
     
@@ -286,7 +476,11 @@ async function deleteEvent(id){
     );
 
 
-    // Remove any pending notification IDs
+    // Remove any pending notification IDs for
+    // every occurrence of this event (recurring
+    // events generate one notified-item entry
+    // per occurrence date, prefixed with the
+    // event's own id).
     notifiedItems =
         loadData("notifiedItems") || [];
 
@@ -295,7 +489,7 @@ async function deleteEvent(id){
         notifiedItems.filter(
             notificationID =>
                 !notificationID.startsWith(
-                    `${id}-`
+                    `${id}_`
                 )
         );
 
@@ -413,6 +607,12 @@ function displayEvents(){
         ${event.notes}
         ` : ""}
 
+        ${event.recurrence && event.recurrence !== "none" ? `
+        <br>
+        🔁 Repeats:
+        ${event.recurrence}${event.recurrenceEnd ? " until " + event.recurrenceEnd : ""}
+        ` : ""}
+
         <br><br>
 
         <button onclick="editEvent(${event.id})">
@@ -455,6 +655,16 @@ function clearEventForm(){
 
     document.getElementById(
     "eventNotes"
+    ).value="";
+
+
+    document.getElementById(
+    "eventRecurrence"
+    ).value="none";
+
+
+    document.getElementById(
+    "eventRecurrenceEnd"
     ).value="";
 
 
@@ -528,6 +738,20 @@ function editEvent(id){
         "eventNotes"
     ).value =
     editingEvent.notes;
+
+
+
+    document.getElementById(
+        "eventRecurrence"
+    ).value =
+    editingEvent.recurrence || "none";
+
+
+
+    document.getElementById(
+        "eventRecurrenceEnd"
+    ).value =
+    editingEvent.recurrenceEnd || "";
 
 
 
@@ -605,6 +829,20 @@ function saveEventChanges(){
     ).value;
 
 
+
+    editingEvent.recurrence =
+    document.getElementById(
+        "eventRecurrence"
+    ).value || "none";
+
+
+
+    editingEvent.recurrenceEnd =
+    document.getElementById(
+        "eventRecurrenceEnd"
+    ).value || null;
+
+
     editingEvent.notifications = [];
 
     document.querySelectorAll(
@@ -660,7 +898,7 @@ window.refreshCalendar();
 
 Aegis.register("events", {
 
-    version: "1.1.5",
+    version: "1.2.0",
 
     init(){
 
@@ -689,25 +927,31 @@ Aegis.register("events", {
 
         const now = new Date();
 
-        const year =
-        now.getFullYear();
+        const todayStr =
+        formatDateOnly(now);
 
-        const month =
-        String(now.getMonth() + 1)
-        .padStart(2, "0");
+        const tomorrow =
+        new Date(now);
 
-        const day =
-        String(now.getDate())
-        .padStart(2, "0");
+        tomorrow.setDate(
+            tomorrow.getDate() + 1
+        );
 
-        const today =
-        `${year}-${month}-${day}`;
+        const tomorrowStr =
+        formatDateOnly(tomorrow);
 
-        return events.filter(event => {
+        return expandEventOccurrences(
+            events,
+            todayStr,
+            tomorrowStr
+        )
+        .map(occurrence => ({
 
-            return event.date === today;
+            ...occurrence,
 
-        });
+            date: occurrence.occurrenceDate
+
+        }));
 
     },
 
@@ -730,3 +974,6 @@ Aegis.register("events", {
 
 window.loadEventsFromCloud =
 loadEventsFromCloud;
+
+window.expandEventOccurrences =
+expandEventOccurrences;

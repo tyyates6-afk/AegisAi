@@ -1,736 +1,219 @@
-/*======================================
-        AEGIS CLOUD MODULE v1.0.0
-======================================*/
-
-const SUPABASE_URL =
-"https://tgsrvnbzxufwsskuerhv.supabase.co";
+let aegisCalendar;
 
 
-const SUPABASE_KEY =
-"sb_publishable_R2wr2I-2lLboaE0zc9In5g_SzmrTACw";
+
+document.addEventListener(
+"DOMContentLoaded",
+function(){
 
 
-const supabaseClient =
-supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
+const calendarEl =
+document.getElementById(
+"calendar"
 );
 
 
 
-let cloudConnected = false;
+aegisCalendar =
+new FullCalendar.Calendar(
+calendarEl,
+{
+
+height:"auto",
+expandRows:true,
+
+initialView:
+"dayGridMonth",
+
+eventDisplay:
+"block",
 
 
+events(info, successCallback, failureCallback){
 
-Aegis.register("cloud", {
+    try{
 
+        successCallback(
 
-    version:"1.0.0",
+            getCalendarEvents(
+                info.startStr,
+                info.endStr
+            )
 
-    async syncProfile(profile){
-
-        const user =
-        this.user;
-
-
-        if(!user){
-
-            console.log(
-                "No cloud account."
-            );
-
-            return;
-
-        }
-
-
-        const {data,error} =
-        await supabaseClient
-        .from("profiles")
-        .upsert({
-
-            id:user.id,
-
-            name:profile.name,
-
-            city:profile.city,
-
-            state:profile.state,
-
-            country:profile.country,
-
-            temperature:profile.temperature,
-
-            bible:profile.bible,
-
-            style:profile.style
-
-        });
-
-
-
-        if(error){
-
-            console.error(
-                "Profile sync failed:",
-                error
-            );
-
-            return false;
-
-        }
-
-
-        console.log(
-            "Profile synced:",
-            data
         );
-
-
-        return true;
-
-    },
-
-    async loadProfileFromCloud(){
-
-        const user =
-        this.user;
-
-
-        if(!user){
-
-            console.log(
-                "No cloud user. Cannot load profile."
-            );
-
-            return null;
-
-        }
-
-
-
-        const {
-            data,
-            error
-        } =
-        await supabaseClient
-        .from("profiles")
-        .select("*")
-        .eq(
-            "id",
-            user.id
-        )
-        .single();
-
-
-
-        if(error){
-
-            console.error(
-                "Cloud profile load failed:",
-                error
-            );
-
-            return null;
-
-        }
-
-
-
-        console.log(
-            "Cloud profile loaded:",
-            data
-        );
-
-
-        return data;
-
-    },
-    async init(){
-
-        console.log(
-            "Cloud system initialized."
-        );
-
-        await this.loadSession();
-
-        supabaseClient.auth.onAuthStateChange(
-            async (event, session)=>{
-
-                this.user =
-                session?.user || null;
-
-                console.log(
-                    "Auth State:",
-                    event
-                );
-
-                Aegis.broadcast(
-                    "cloudUpdated"
-                );
-
-                if(this.user){
-
-                    await this.initialSync();
-
-                }
-
-            }
-        );
-
-        await this.testConnection();
-
-    },
-    async testConnection(){
-
-        const {
-            data,
-            error
-        } =
-        await supabaseClient
-        .from("profiles")
-         .select("*")
-         .limit(1);
-
-
-          if(error){
-
-               console.error(
-                 "Supabase connection failed:",
-                    error
-              );
-
-              return false;
-
-           }
-
-
-            console.log(
-                "Supabase connected:",
-                data
-            );
-
-
-            return true;
-
-        },
-
-    async createAccount(email, password){
-
-
-        const {
-            data,
-            error
-        } =
-        await supabaseClient.auth.signUp({
-
-            email:email,
-
-            password:password
-
-        });
-
-
-
-        if(error){
-
-            console.error(
-                "Account creation failed:",
-                error
-            );
-
-            return false;
-
-        }
-
-
-
-        console.log(
-            "AEGIS account created:",
-            data
-        );
-
-
-
-        this.user =
-        data.user;
-
-
-
-        Aegis.broadcast(
-            "cloudUpdated"
-        );
-
-
-        return true;
-
-    },
-
-
-    async remove(table,id){
-
-        if(!this.user){
-
-            return false;
-
-        }
-
-        const {
-            error
-        } =
-        await supabaseClient
-        .from(table)
-        .delete()
-        .eq("id",id)
-        .eq("user_id",this.user.id);
-
-
-        if(error){
-
-            console.error(
-                `Cloud delete failed (${table})`,
-                error
-            );
-
-            return false;
-
-        }
-
-        return true;
-
-    },
-
-    async delete(table, id){
-
-    if(!this.user){
-
-        return false;
 
     }
+    catch(error){
 
-    const { error } =
-    await supabaseClient
-    .from(table)
-    .delete()
-    .eq("id", id)
-    .eq("user_id", this.user.id);
-
-    if(error){
-
-        console.error(
-            `Cloud delete failed (${table})`,
-            error
-        );
-
-        return false;
+        failureCallback(error);
 
     }
-
-    return true;
 
 },
 
-    async login(email,password){
 
-        const {
-            data,
-            error
-        } =
-        await supabaseClient
-        .auth
-        .signInWithPassword({
+dateClick(info){
 
-            email,
-            password
+setEventDate(
+info.dateStr
+);
 
-        });
 
-        if(error){
+}
 
-            console.error(
-                "AEGIS login failed:",
-                error
-            );
 
-            return false;
 
-        }
+});
 
-        this.user =
-        data.user;
 
-        console.log(
-            "AEGIS login successful:",
-            this.user
-        );
+aegisCalendar.render();
 
-        // Initialize push notifications after login
-        if(window.AegisPush){
 
-            await AegisPush.init();
+});
 
-        }
 
-        Aegis.broadcast(
-            "cloudUpdated"
-        );
 
-        return true;
+function getCalendarEvents(rangeStart, rangeEnd){
 
-    },
 
-    async logout(){
+const sourceEvents =
+loadData("events");
 
-        await supabaseClient
-        .auth
-        .signOut();
 
-        this.user = null;
+// FullCalendar always supplies a visible-range
+// window when calling this as an event source
+// function, but fall back to "today through one
+// year out" for any direct/manual call.
 
-        Aegis.broadcast(
-            "cloudUpdated"
-        );
+const start =
+rangeStart ||
+new Date().toISOString().split("T")[0];
 
-    },
+const end =
+rangeEnd ||
+(() => {
 
-    
-    async loadSession(){
+    const future = new Date();
 
-        const {
-            data
-        } =
-        await supabaseClient
-        .auth
-        .getSession();
+    future.setFullYear(
+        future.getFullYear() + 1
+    );
 
-        if(data.session){
+    return future
+    .toISOString()
+    .split("T")[0];
 
-            this.user =
-            data.session.user;
+})();
 
-            console.log(
-                "Supabase session restored:",
-                this.user
-            );
 
-            
+const occurrences =
+expandEventOccurrences(
+    sourceEvents,
+    start,
+    end
+);
 
-            Aegis.broadcast(
-                "cloudUpdated"
-            );
-            if(window.AegisPush){
-                await AegisPush.init();
-            }
-                
-            await this.initialSync();
 
-        }
+return occurrences.map(occurrence => ({
 
-    },
-    async initialSync(){
 
-        console.log(
-            "Beginning cloud sync..."
-        );
+title:occurrence.title,
 
-        try{
 
-            if(window.loadCloudProfile){
+start:
+occurrence.occurrenceDate +
+(occurrence.time ?
+"T"+occurrence.time
+:
+""),
 
-                await loadCloudProfile();
 
-            }
+backgroundColor:
+occurrence.color,
 
-            if(window.loadCategoriesFromCloud){
 
-                await loadCategoriesFromCloud();
+borderColor:
+occurrence.color
 
-            }
 
-            if(window.loadEventsFromCloud){
+}));
 
-                await loadEventsFromCloud();
 
-            }
+}
 
-            if(window.loadRemindersFromCloud){
 
-                await loadRemindersFromCloud();
 
-            }
+function refreshCalendar(){
 
-            if(window.loadNotificationStates){
+    if(aegisCalendar){
 
-                await loadNotificationStates();
-
-            }
-
-            Aegis.broadcast(
-                "cloudSyncComplete"
-            );
-
-            console.log(
-                "Cloud sync complete."
-            );
-
-        }
-        catch(error){
-
-            console.error(
-                "Cloud sync failed:",
-                error
-            );
-
-        }
-
-    },
-    async save(table,data){
-
-
-        if(!this.user){
-
-            console.error(
-                "No cloud user."
-            );
-
-            return false;
-
-        }
-
-       if(table === "events"){
-
-        if(data.categoryId){
-
-            data.category_id =
-            data.categoryId;
-
-            delete data.categoryId;
-
-        }
-
-
-        if(data.category){
-
-            data.category_id =
-            data.category;
-
-            delete data.category;
-
-        }
+        aegisCalendar.refetchEvents();
 
     }
 
-        const upload = {
-
-            ...data,
-
-            user_id:
-            this.user.id,
-
-            updated_at:
-            new Date()
-
-        };
+}
 
 
-        const {
-            error
-        } =
-        await supabaseClient
-        .from(table)
-        .upsert(
-            upload
-        );
+Aegis.listen(
 
+    "eventsUpdated",
 
-        if(error){
+    function(){
 
-            console.log(error);
-            console.log(JSON.stringify(error, null, 2));
-                        return false;
+        refreshCalendar();
 
-        }
+    }
 
+);
 
-        return true;
+Aegis.register("calendar", {
 
-    },
+    version: "1.2.0",
 
-    async load(table){
+    init() {
 
-        if(!this.user){
+        console.log("Calendar initialized.");
 
-            return [];
+        // The Planner page starts hidden (display:none) while
+        // Home is the active page, so FullCalendar's initial
+        // render measures a zero-width container. Recalculate
+        // sizing every time the Planner page actually becomes
+        // visible.
 
-        }
+        Aegis.listen(
+            "navigation:planner",
+            () => {
 
-        const {
-            data,
-            error
-        } =
-        await supabaseClient
-        .from(table)
-        .select("*")
-        .eq(
-            "user_id",
-            this.user.id
-        );
+                if(aegisCalendar){
 
-        if(error){
+                    aegisCalendar.updateSize();
 
-            console.error(
-                `Cloud load failed (${table})`,
-                error
-            );
-
-            return [];
-
-        }
-
-        return data;
-
-    },
-
-    async saveNotificationState(notificationId, changes){
-
-        if(!this.user){
-
-            console.log(
-                "No cloud user. Notification state not synced."
-            );
-
-            return false;
-
-        }
-
-
-        const upload = {
-
-            user_id:
-                this.user.id,
-
-            notification_id:
-                notificationId,
-
-            ...changes,
-
-            updated_at:
-                new Date().toISOString()
-
-        };
-
-
-        const {
-            error
-        } =
-        await supabaseClient
-            .from("notification_states")
-            .upsert(
-                upload,
-                {
-                    onConflict:
-                        "user_id,notification_id"
                 }
-            );
 
-
-        if(error){
-
-            console.error(
-                "Notification state sync failed:",
-                error
-            );
-
-            return false;
-
-        }
-
-
-        return true;
+            }
+        );
 
     },
 
+    refresh() {
 
-    async loadNotificationStates(){
-
-        if(!this.user){
-
-            return [];
-
-        }
-
-
-        const {
-            data,
-            error
-        } =
-        await supabaseClient
-            .from("notification_states")
-            .select("*")
-            .eq(
-                "user_id",
-                this.user.id
-            );
-
-
-        if(error){
-
-            console.error(
-                "Notification states load failed:",
-                error
-            );
-
-            return [];
-
-        }
-
-
-        return data || [];
+        refreshCalendar();
 
     },
 
-    getUser(){
+    shutdown() {
 
-        return this.user || null;
-
-    },
-
-
-    isConnected(){
-
-
-        return cloudConnected;
-
+        console.log("Calendar shutting down.");
 
     },
 
-
-
-    status(){
-
+    status() {
 
         return {
-
-
-            online:true,
-
-
-            version:this.version,
-
-
-            connected:
-            cloudConnected,
-
-
-            user:
-            cloudUser
-
-
+            online: true,
+            version: this.version
         };
 
-
     }
-
-
 
 });
