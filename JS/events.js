@@ -19,7 +19,10 @@ function formatDateOnly(date){
 
 function buildOccurrence(event, dateStr, exceptions){
     exceptions = exceptions || {};
-    const override = exceptions[dateStr] || null;
+    const override = exceptions[dateStr];
+    if(override === null){
+        return null;
+    }
     const base = {
         ...event,
         occurrenceDate: dateStr,
@@ -50,13 +53,14 @@ function expandEventOccurrences(sourceEvents, rangeStartStr, rangeEndStr){
                 baseDate >= rangeStart &&
                 baseDate < rangeEnd
             ){
-                occurrences.push(
-                    buildOccurrence(
-                        event,
-                        event.date,
-                        exceptions
-                    )
+                const occ = buildOccurrence(
+                    event,
+                    event.date,
+                    exceptions
                 );
+                if(occ){
+                    occurrences.push(occ);
+                }
             }
             return;
         }
@@ -86,13 +90,14 @@ function expandEventOccurrences(sourceEvents, rangeStartStr, rangeEndStr){
             }
             if(cursor >= rangeStart){
                 const dateStr = formatDateOnly(cursor);
-                occurrences.push(
-                    buildOccurrence(
-                        event,
-                        dateStr,
-                        exceptions
-                    )
+                const occ = buildOccurrence(
+                    event,
+                    dateStr,
+                    exceptions
                 );
+                if(occ){
+                    occurrences.push(occ);
+                }
             }
 
             if(recurrence === "daily"){
