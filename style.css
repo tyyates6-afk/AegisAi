@@ -2981,3 +2981,73 @@ body.cmdbar-active .aegis-bottom-nav {
     background:rgba(0,217,255,.08);
     box-shadow:none;
 }
+
+
+/* ======================================
+   AEGIS WORKSPACE — SPREADSHEET
+====================================== */
+
+.workspace-header-buttons {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.workspace-header-buttons button {
+    width:auto;
+}
+
+.workspace-sheet-scroll {
+    overflow-x:auto;
+    border:1px solid rgba(0,217,255,.15);
+    border-radius:12px;
+}
+
+.workspace-sheet {
+    border-collapse:collapse;
+    width:100%;
+}
+
+.workspace-sheet th,
+.workspace-sheet td {
+    border:1px solid rgba(0,217,255,.15);
+    padding:0;
+}
+
+.workspace-sheet thead th {
+    background:rgba(0,217,255,.08);
+    color:#66eaff;
+    padding:8px;
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+}
+
+.sheet-corner {
+    background:rgba(0,217,255,.12) !important;
+}
+
+.sheet-row-label {
+    background:rgba(0,217,255,.08);
+    color:#66eaff;
+    padding:8px;
+    text-align:center;
+    font-size:.8rem;
+    min-width:36px;
+}
+
+.sheet-cell {
+    width:110px;
+    min-width:90px;
+    padding:8px !important;
+    margin:0 !important;
+    border:none !important;
+    border-radius:0 !important;
+    background:transparent;
+    font-size:.85rem;
+}
+
+.sheet-cell:focus {
+    background:rgba(0,217,255,.08);
+    box-shadow:none;
+}
