@@ -386,81 +386,90 @@ function addEvent(){
 }
 
 
-async function deleteEvent(id, occurrenceDate){
-    if(occurrenceDate){
-        const event = events.find(e => e.id === id);
-        if(!event){
-            return;
-        }
-        if(event.recurrence === "none"){
-            occurrenceDate = null;
-        } else {
-            if(!event.exceptions){
-                event.exceptions = {};
-            }
-            event.exceptions[occurrenceDate] = null;
-            saveData("events", events);
-            syncEventsToCloud();
-            displayEvents();
-            if(window.refreshCalendar){
-                window.refreshCalendar();
-            }
-            Aegis.broadcast("eventsUpdated");
-            return;
-        }
-    }
+async function deleteEvent(id, occurrenceDate = null) {
 
-    const cloud =
-        Aegis
-            .getModule("cloud")
-            .api;
+    const event = events.find(e => e.id === id);
 
-    const deleted =
-        await cloud.delete(
-            "events",
-            id
-        );
-
-    if(!deleted){
-        console.error(
-            "Failed to delete event from cloud."
-        );
-        alert(
-            "Could not delete the event from the cloud."
-        );
+    if (!event) {
+        console.error("Event not found:", id);
         return;
     }
 
-    events =
-        events.filter(
-            event =>
-                event.id !== id
+    // ---------------------------------
+    // DELETE ONE RECURRENCE OCCURRENCE
+    // ---------------------------------
+    if (occurrenceDate && event.recurrence !== "none") {
+
+        if (!event.exceptions) {
+            event.exceptions = {};
+        }
+
+        event.exceptions[occurrenceDate] = null;
+
+        saveData("events", events);
+
+        displayEvents();
+
+        if (window.refreshCalendar) {
+            window.refreshCalendar();
+        }
+
+        Aegis.broadcast("eventsUpdated");
+
+        // Sync exception change to cloud
+        try {
+            await syncEventsToCloud();
+        } catch (error) {
+            console.error(
+                "Failed to sync deleted occurrence:",
+                error
+            );
+        }
+
+        console.log(
+            "Occurrence deleted:",
+            id,
+            occurrenceDate
         );
+
+        return;
+    }
+
+    // ---------------------------------
+    // DELETE ENTIRE EVENT
+    // ---------------------------------
+
+    // Remove locally FIRST
+    events = events.filter(
+        event => event.id !== id
+    );
 
     saveData(
         "events",
         events
     );
 
+    // Remove notification records
     const notifiedItems =
-    loadData("notifiedItems") || [];
+        loadData("notifiedItems") || [];
 
-    notifiedItems =
+    const filteredNotifications =
         notifiedItems.filter(
             notificationID =>
-                !notificationID.startsWith(
+                !String(notificationID).startsWith(
                     `${id}_`
                 )
         );
 
     saveData(
         "notifiedItems",
-        notifiedItems
+        filteredNotifications
     );
 
+    // Update UI immediately
     displayEvents();
 
-    if(window.refreshCalendar){
+    if (window.refreshCalendar) {
         window.refreshCalendar();
     }
 
@@ -469,9 +478,48 @@ async function deleteEvent(id, occurrenceDate){
     );
 
     console.log(
-        "Event deleted:",
+        "Event deleted locally:",
         id
     );
+
+    // ---------------------------------
+    // DELETE FROM CLOUD
+    // ---------------------------------
+
+    try {
+
+        const cloud =
+            Aegis
+                .getModule("cloud")
+                .api;
+
+        const deleted =
+            await cloud.delete(
+                "events",
+                id
+            );
+
+        if (!deleted) {
+            console.error(
+                "Cloud delete failed:",
+                id
+            );
+            return;
+        }
+
+        console.log(
+            "Event deleted from cloud:",
+            id
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Cloud delete error:",
+            error
+        );
+
+    }
 }
 
 function sortEvents(){
