@@ -55,8 +55,8 @@ function getCalendarEvents(fetchInfo) {
 
     const sourceEvents = loadData("events");
 
-    const start = fetchInfo.start.toISOString();
-    const end = fetchInfo.end.toISOString();
+    const start = fetchInfo.start.toISOString().split("T")[0];
+    const end = fetchInfo.end.toISOString().split("T")[0];
 
     const occurrences = expandEventOccurrences(
         sourceEvents,
