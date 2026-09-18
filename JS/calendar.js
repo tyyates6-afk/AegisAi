@@ -55,20 +55,18 @@ function getCalendarEvents(rangeStart, rangeEnd){
     const sourceEvents =
     loadData("events");
 
-    const start =
-    typeof rangeStart === "string"
-    ? rangeStart
-    : (rangeStart || new Date()).toISOString().split("T")[0];
+    const startDate = rangeStart instanceof Date
+        ? rangeStart
+        : new Date(rangeStart || Date.now());
 
-    const end =
-    typeof rangeEnd === "string"
-    ? rangeEnd
-    : (rangeEnd || (() => {
-        const future = new Date();
-        future.setFullYear(future.getFullYear() + 1);
-        return future;
-    })()).toISOString().split("T")[0];
+    const endDate = rangeEnd instanceof Date
+        ? rangeEnd
+        : new Date(rangeEnd || Date.now());
 
+    const start = startDate.toISOString();
+    const end = endDate.toISOString();
+
+   
     const occurrences =
     expandEventOccurrences(
         sourceEvents,
