@@ -2768,3 +2768,146 @@ body.cmdbar-active .aegis-bottom-nav {
 .cmdbar-submitBtn:active {
     transform: scale(0.92);
 }
+
+
+/* ======================================
+   AEGIS WORKSPACE
+====================================== */
+
+.workspace-header-actions {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:15px;
+}
+
+.workspace-header-actions button {
+    width:auto;
+}
+
+.workspace-layout {
+    display:grid;
+    grid-template-columns: 280px 1fr;
+    gap:20px;
+    align-items:start;
+}
+
+.workspace-sidebar {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    max-height:70vh;
+    overflow-y:auto;
+}
+
+.workspace-doc-item {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px;
+    border-radius:12px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(0,217,255,.2);
+    cursor:pointer;
+    transition:.2s;
+}
+
+.workspace-doc-item:hover {
+    border-color:#33c3ff;
+}
+
+.workspace-doc-item.active {
+    border-color:#00d9ff;
+    background:rgba(0,217,255,.1);
+}
+
+.workspace-doc-info {
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.workspace-doc-info strong {
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.workspace-doc-info small {
+    opacity:.6;
+}
+
+.workspace-doc-item button {
+    width:auto;
+    padding:6px 10px;
+    flex-shrink:0;
+}
+
+.workspace-editor {
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(0,217,255,.18);
+    border-radius:18px;
+    padding:20px;
+}
+
+.workspace-title-input {
+    font-size:1.4rem;
+    font-weight:700;
+    margin-top:0;
+    margin-bottom:15px;
+}
+
+.workspace-toolbar {
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+}
+
+.workspace-toolbar button {
+    width:auto;
+    padding:8px 14px;
+}
+
+.workspace-content {
+    min-height:400px;
+    padding:20px;
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(0,217,255,.15);
+    border-radius:12px;
+    color:var(--text);
+    line-height:1.6;
+    outline:none;
+}
+
+.workspace-content:focus {
+    border-color:var(--primary);
+    box-shadow:0 0 18px rgba(0,217,255,.25);
+}
+
+.workspace-actions {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:15px;
+}
+
+.workspace-actions button {
+    width:auto;
+}
+
+@media(max-width:768px){
+
+    .workspace-layout {
+        grid-template-columns:1fr;
+    }
+
+    .workspace-sidebar {
+        max-height:220px;
+    }
+
+}

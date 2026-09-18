@@ -700,6 +700,37 @@ Add Category
 </div>
 
 <!-- =========================
+        WORKSPACE PAGE
+========================= -->
+
+<div class="aegis-page" data-page="workspace">
+    <button class="aegis-page-back" data-back-to="more">← Back to More</button>
+
+    <section class="card" id="workspace">
+
+        <div class="workspace-header-actions">
+
+            <h2>🗂️ Workspace</h2>
+
+            <button onclick="createWorkspaceDocument()">
+                ➕ New Document
+            </button>
+
+        </div>
+
+        <div class="workspace-layout">
+
+            <div class="workspace-sidebar" id="workspaceList"></div>
+
+            <div class="workspace-editor" id="workspaceEditor"></div>
+
+        </div>
+
+    </section>
+</div>
+
+
+<!-- =========================
         MODULES PAGE
 ========================= -->
 
@@ -729,6 +760,9 @@ Add Category
             <button class="aegis-more-item" data-goto-page="reminders">
                 🔔 Reminders
             </button>
+            <button class="aegis-more-item" data-goto-page="workspace">
+                🗂️ Workspace
+            </button>            
             <button class="aegis-more-item" data-goto-page="settings">
                 ⚙️ Settings
             </button>
@@ -774,6 +808,8 @@ Add Category
 <script src="JS/events.js"></script>
 
 <script src="JS/reminders.js"></script>
+
+<script src="JS/workspace.js"></script>
 
 <script src="JS/calendar.js"></script>
 
