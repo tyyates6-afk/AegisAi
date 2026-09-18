@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS WORKSPACE MODULE v1.0.0
+        AEGIS WORKSPACE MODULE v1.1.0
 ======================================*/
 
 let workspaceDocuments =
@@ -10,17 +10,29 @@ let activeWorkspaceDocId = null;
 let workspaceAutosaveTimer = null;
 
 
-function createWorkspaceDocument(){
+function createWorkspaceDocument(type = "document"){
+
+    const isSpreadsheet =
+    type === "spreadsheet";
 
     const doc = {
 
         id: Date.now(),
 
-        title: "Untitled Document",
+        title:
+        isSpreadsheet
+        ? "Untitled Spreadsheet"
+        : "Untitled Document",
 
-        type: "document",
+        type: type,
 
-        content: "",
+        content:
+        isSpreadsheet
+        ? Array.from(
+            { length: 10 },
+            () => new Array(6).fill("")
+          )
+        : "",
 
         createdAt: new Date().toISOString(),
 
@@ -66,6 +78,162 @@ function getActiveWorkspaceDocument(){
     ) || null;
 
 }
+
+
+async function deleteWorkspaceDocument(id){
+
+    const confirmed =
+    confirm(
+        "Delete this project? This cannot be undone."
+    );
+
+    if(!confirmed) return;
+
+    const cloud =
+    Aegis.getModule("cloud")?.api;
+
+    if(cloud){
+
+        await cloud.delete(
+            "workspace_documents",
+            id
+        );
+
+    }
+
+    workspaceDocuments =
+    workspaceDocuments.filter(
+        doc => doc.id !== id
+    );
+
+    saveData(
+        "workspaceDocuments",
+        workspaceDocuments
+    );
+
+    if(activeWorkspaceDocId === id){
+
+        activeWorkspaceDocId = null;
+
+    }
+
+    renderWorkspaceList();
+
+    renderWorkspaceEditor();
+
+    Aegis.broadcast("workspaceUpdated");
+
+}
+
+
+function renderWorkspaceList(){
+
+    const list =
+    document.getElementById(
+        "workspaceList"
+    );
+
+    if(!list) return;
+
+    const sorted =
+    [...workspaceDocuments].sort(
+        (a, b) =>
+        new Date(b.updatedAt) -
+        new Date(a.updatedAt)
+    );
+
+    if(sorted.length === 0){
+
+        list.innerHTML = `
+
+            <p class="empty-state">
+                No projects yet. Create a document or spreadsheet to start one.
+            </p>
+
+        `;
+
+        return;
+
+    }
+
+    list.innerHTML =
+    sorted.map(doc => `
+
+        <div
+            class="workspace-doc-item ${doc.id === activeWorkspaceDocId ? "active" : ""}"
+            onclick="selectWorkspaceDocument(${doc.id})"
+        >
+
+            <div class="workspace-doc-info">
+
+                <strong>
+                    ${doc.type === "spreadsheet" ? "📊" : "📄"}
+                    ${doc.title || "Untitled"}
+                </strong>
+
+                <small>
+                    ${new Date(doc.updatedAt).toLocaleString()}
+                </small>
+
+            </div>
+
+            <button onclick="event.stopPropagation(); deleteWorkspaceDocument(${doc.id})">
+
+                🗑️
+
+            </button>
+
+        </div>
+
+    `)
+    .join("");
+
+}
+
+
+function renderWorkspaceEditor(){
+
+    const editorContainer =
+    document.getElementById(
+        "workspaceEditor"
+    );
+
+    if(!editorContainer) return;
+
+    const doc =
+    getActiveWorkspaceDocument();
+
+    if(!doc){
+
+        editorContainer.innerHTML = `
+
+            <p class="empty-state">
+                Select a project, or create a new one to get started.
+            </p>
+
+        `;
+
+        return;
+
+    }
+
+    if(doc.type === "spreadsheet"){
+
+        renderSpreadsheetEditor(doc);
+
+    }
+    else{
+
+        renderDocumentEditor(doc);
+
+    }
+
+}
+
+
+/* ==================================
+   DOCUMENT (WORD-STYLE) EDITOR
+================================== */
 
 
 function localSaveActiveDocument(){
@@ -131,52 +299,6 @@ function saveActiveDocument(){
         new Date().toLocaleTimeString();
 
     }
-
-}
-
-
-async function deleteWorkspaceDocument(id){
-
-    const confirmed =
-    confirm(
-        "Delete this document? This cannot be undone."
-    );
-
-    if(!confirmed) return;
-
-    const cloud =
-    Aegis.getModule("cloud")?.api;
-
-    if(cloud){
-
-        await cloud.delete(
-            "workspace_documents",
-            id
-        );
-
-    }
-
-    workspaceDocuments =
-    workspaceDocuments.filter(
-        doc => doc.id !== id
-    );
-
-    saveData(
-        "workspaceDocuments",
-        workspaceDocuments
-    );
-
-    if(activeWorkspaceDocId === id){
-
-        activeWorkspaceDocId = null;
-
-    }
-
-    renderWorkspaceList();
-
-    renderWorkspaceEditor();
-
-    Aegis.broadcast("workspaceUpdated");
 
 }
 
@@ -361,95 +483,12 @@ function printActiveDocument(){
 }
 
 
-function renderWorkspaceList(){
-
-    const list =
-    document.getElementById(
-        "workspaceList"
-    );
-
-    if(!list) return;
-
-    const sorted =
-    [...workspaceDocuments].sort(
-        (a, b) =>
-        new Date(b.updatedAt) -
-        new Date(a.updatedAt)
-    );
-
-    if(sorted.length === 0){
-
-        list.innerHTML = `
-
-            <p class="empty-state">
-                No projects yet. Tap "New Document" to start one.
-            </p>
-
-        `;
-
-        return;
-
-    }
-
-    list.innerHTML =
-    sorted.map(doc => `
-
-        <div
-            class="workspace-doc-item ${doc.id === activeWorkspaceDocId ? "active" : ""}"
-            onclick="selectWorkspaceDocument(${doc.id})"
-        >
-
-            <div class="workspace-doc-info">
-
-                <strong>
-                    ${doc.title || "Untitled Document"}
-                </strong>
-
-                <small>
-                    ${new Date(doc.updatedAt).toLocaleString()}
-                </small>
-
-            </div>
-
-            <button onclick="event.stopPropagation(); deleteWorkspaceDocument(${doc.id})">
-
-                🗑️
-
-            </button>
-
-        </div>
-
-    `)
-    .join("");
-
-}
-
-
-function renderWorkspaceEditor(){
+function renderDocumentEditor(doc){
 
     const editorContainer =
     document.getElementById(
         "workspaceEditor"
     );
-
-    if(!editorContainer) return;
-
-    const doc =
-    getActiveWorkspaceDocument();
-
-    if(!doc){
-
-        editorContainer.innerHTML = `
-
-            <p class="empty-state">
-                Select a project, or create a new one to get started.
-            </p>
-
-        `;
-
-        return;
-
-    }
 
     editorContainer.innerHTML = `
 
@@ -546,12 +585,9 @@ function renderWorkspaceEditor(){
         printActiveDocument
     );
 
-    const contentEl =
     document.getElementById(
         "workspaceDocContent"
-    );
-
-    contentEl.addEventListener("input", () => {
+    ).addEventListener("input", () => {
 
         clearTimeout(workspaceAutosaveTimer);
 
@@ -577,6 +613,488 @@ function renderWorkspaceEditor(){
     });
 
 }
+
+
+/* ==================================
+   SPREADSHEET (EXCEL-STYLE) EDITOR
+================================== */
+
+
+function getColumnLabel(index){
+
+    let label = "";
+
+    let n = index;
+
+    while(n >= 0){
+
+        label =
+        String.fromCharCode(65 + (n % 26)) +
+        label;
+
+        n = Math.floor(n / 26) - 1;
+
+    }
+
+    return label;
+
+}
+
+
+function saveActiveSpreadsheet(){
+
+    const doc =
+    getActiveWorkspaceDocument();
+
+    if(!doc) return;
+
+    doc.updatedAt =
+    new Date().toISOString();
+
+    saveData(
+        "workspaceDocuments",
+        workspaceDocuments
+    );
+
+    renderWorkspaceList();
+
+    syncWorkspaceDocument(doc);
+
+    Aegis.broadcast("workspaceUpdated");
+
+    const status =
+    document.getElementById(
+        "workspaceSaveStatus"
+    );
+
+    if(status){
+
+        status.innerText =
+        "Saved " +
+        new Date().toLocaleTimeString();
+
+    }
+
+}
+
+
+function scheduleSpreadsheetAutosave(doc){
+
+    clearTimeout(workspaceAutosaveTimer);
+
+    workspaceAutosaveTimer =
+    setTimeout(() => {
+
+        doc.updatedAt =
+        new Date().toISOString();
+
+        saveData(
+            "workspaceDocuments",
+            workspaceDocuments
+        );
+
+        renderWorkspaceList();
+
+        const status =
+        document.getElementById(
+            "workspaceSaveStatus"
+        );
+
+        if(status){
+
+            status.innerText =
+            "Autosaved locally";
+
+        }
+
+    }, 1200);
+
+}
+
+
+function exportActiveSpreadsheetAsExcel(){
+
+    const doc =
+    getActiveWorkspaceDocument();
+
+    if(!doc) return;
+
+    if(typeof XLSX === "undefined"){
+
+        alert(
+            "The Excel export library failed to load. Check your internet connection and try again."
+        );
+
+        return;
+
+    }
+
+    const worksheet =
+    XLSX.utils.aoa_to_sheet(doc.content);
+
+    const workbook =
+    XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Sheet1"
+    );
+
+    XLSX.writeFile(
+        workbook,
+        `${doc.title || "Untitled"}.xlsx`
+    );
+
+}
+
+
+function exportActiveSpreadsheetAsCsv(){
+
+    const doc =
+    getActiveWorkspaceDocument();
+
+    if(!doc) return;
+
+    if(typeof XLSX === "undefined"){
+
+        alert(
+            "The export library failed to load. Check your internet connection and try again."
+        );
+
+        return;
+
+    }
+
+    const worksheet =
+    XLSX.utils.aoa_to_sheet(doc.content);
+
+    const csv =
+    XLSX.utils.sheet_to_csv(worksheet);
+
+    const blob =
+    new Blob(
+        [csv],
+        { type: "text/csv" }
+    );
+
+    const link =
+    document.createElement("a");
+
+    link.href =
+    URL.createObjectURL(blob);
+
+    link.download =
+    `${doc.title || "Untitled"}.csv`;
+
+    link.click();
+
+    URL.revokeObjectURL(link.href);
+
+}
+
+
+function printActiveSpreadsheet(){
+
+    const doc =
+    getActiveWorkspaceDocument();
+
+    if(!doc) return;
+
+    const printWindow =
+    window.open("", "_blank");
+
+    if(!printWindow) return;
+
+    const rowsHtml =
+    doc.content.map(row =>
+
+        `<tr>${row.map(
+            cell => `<td>${cell ?? ""}</td>`
+        ).join("")}</tr>`
+
+    ).join("");
+
+    printWindow.document.write(`
+
+        <html>
+
+        <head>
+
+            <title>${doc.title}</title>
+
+            <style>
+
+                body{
+
+                    font-family:Arial,sans-serif;
+
+                    padding:30px;
+
+                }
+
+                table{
+
+                    border-collapse:collapse;
+
+                    width:100%;
+
+                }
+
+                td{
+
+                    border:1px solid #999;
+
+                    padding:6px 10px;
+
+                    font-size:.85rem;
+
+                }
+
+                h1{
+
+                    border-bottom:2px solid #333;
+
+                    padding-bottom:10px;
+
+                }
+
+            </style>
+
+        </head>
+
+        <body>
+
+            <h1>${doc.title}</h1>
+
+            <table>${rowsHtml}</table>
+
+        </body>
+
+        </html>
+
+    `);
+
+    printWindow.document.close();
+
+    printWindow.focus();
+
+    printWindow.print();
+
+}
+
+
+function renderSpreadsheetEditor(doc){
+
+    const editorContainer =
+    document.getElementById(
+        "workspaceEditor"
+    );
+
+    const columnCount =
+    doc.content[0]?.length || 6;
+
+    let headerHtml =
+    `<th class="sheet-corner"></th>`;
+
+    for(let c = 0; c < columnCount; c++){
+
+        headerHtml +=
+        `<th>${getColumnLabel(c)}</th>`;
+
+    }
+
+    const bodyHtml =
+    doc.content.map((row, r) => {
+
+        const cellsHtml =
+        row.map((value, c) => `
+
+            <td>
+                <input
+                    type="text"
+                    class="sheet-cell"
+                    data-row="${r}"
+                    data-col="${c}"
+                    value="${(value ?? "").toString().replace(/"/g, "&quot;")}"
+                >
+            </td>
+
+        `).join("");
+
+        return `<tr><th class="sheet-row-label">${r + 1}</th>${cellsHtml}</tr>`;
+
+    }).join("");
+
+    editorContainer.innerHTML = `
+
+        <input
+            id="workspaceDocTitle"
+            class="workspace-title-input"
+            value="${doc.title}"
+            placeholder="Spreadsheet title"
+        >
+
+        <div class="workspace-toolbar">
+
+            <button id="sheetAddRowButton" type="button">
+                ➕ Row
+            </button>
+
+            <button id="sheetAddColButton" type="button">
+                ➕ Column
+            </button>
+
+        </div>
+
+        <div class="workspace-sheet-scroll">
+
+            <table class="workspace-sheet">
+
+                <thead>
+                    <tr>${headerHtml}</tr>
+                </thead>
+
+                <tbody>
+                    ${bodyHtml}
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="workspace-actions">
+
+            <button id="workspaceSaveButton">
+                💾 Save
+            </button>
+
+            <button id="workspaceExportExcelButton">
+                📊 Export Excel (.xlsx)
+            </button>
+
+            <button id="workspaceExportCsvButton">
+                📃 Export CSV
+            </button>
+
+            <button id="workspacePrintButton">
+                🖨️ Print / Save PDF
+            </button>
+
+            <span id="workspaceSaveStatus" class="empty-state"></span>
+
+        </div>
+
+    `;
+
+    document.getElementById(
+        "workspaceDocTitle"
+    ).addEventListener("input", (event) => {
+
+        doc.title = event.target.value;
+
+        scheduleSpreadsheetAutosave(doc);
+
+    });
+
+    editorContainer
+    .querySelectorAll(".sheet-cell")
+    .forEach(input => {
+
+        input.addEventListener("input", (event) => {
+
+            const row =
+            Number(event.target.dataset.row);
+
+            const col =
+            Number(event.target.dataset.col);
+
+            doc.content[row][col] =
+            event.target.value;
+
+            scheduleSpreadsheetAutosave(doc);
+
+        });
+
+    });
+
+    document.getElementById(
+        "sheetAddRowButton"
+    ).addEventListener("click", () => {
+
+        const width =
+        doc.content[0]?.length || 6;
+
+        doc.content.push(
+            new Array(width).fill("")
+        );
+
+        doc.updatedAt =
+        new Date().toISOString();
+
+        saveData(
+            "workspaceDocuments",
+            workspaceDocuments
+        );
+
+        renderWorkspaceEditor();
+
+    });
+
+    document.getElementById(
+        "sheetAddColButton"
+    ).addEventListener("click", () => {
+
+        doc.content.forEach(
+            row => row.push("")
+        );
+
+        doc.updatedAt =
+        new Date().toISOString();
+
+        saveData(
+            "workspaceDocuments",
+            workspaceDocuments
+        );
+
+        renderWorkspaceEditor();
+
+    });
+
+    document.getElementById(
+        "workspaceSaveButton"
+    ).addEventListener(
+        "click",
+        saveActiveSpreadsheet
+    );
+
+    document.getElementById(
+        "workspaceExportExcelButton"
+    ).addEventListener(
+        "click",
+        exportActiveSpreadsheetAsExcel
+    );
+
+    document.getElementById(
+        "workspaceExportCsvButton"
+    ).addEventListener(
+        "click",
+        exportActiveSpreadsheetAsCsv
+    );
+
+    document.getElementById(
+        "workspacePrintButton"
+    ).addEventListener(
+        "click",
+        printActiveSpreadsheet
+    );
+
+}
+
+
+/* ==================================
+   CLOUD SYNC
+================================== */
 
 
 async function syncWorkspaceDocument(doc){
@@ -645,7 +1163,7 @@ async function loadWorkspaceFromCloud(){
 
 Aegis.register("workspace", {
 
-    version: "1.0.0",
+    version: "1.1.0",
 
     init(){
 
