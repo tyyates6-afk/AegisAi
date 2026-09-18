@@ -1089,41 +1089,75 @@ function renderSpreadsheetEditor(doc){
     =============================== */
 
     editorContainer
+.querySelectorAll(".sheet-cell")
+.forEach(input => {
+
+    input.addEventListener("input", (event) => {
+
+        const row =
+        Number(event.target.dataset.row);
+
+        const col =
+        Number(event.target.dataset.col);
+
+        doc.content[row][col] =
+        event.target.value;
+
+        scheduleSpreadsheetAutosave(doc);
+
+    });
+
+    input.addEventListener("blur", () => {
+
+        refreshSpreadsheetFormulas(doc);
+
+    });
+
+});
+
+function refreshSpreadsheetFormulas(doc){
+
+    const cellMap =
+    getSpreadsheetCellMap(doc);
+
+    editorContainer =
+    document.getElementById("workspaceEditor");
+
+    if(!editorContainer) return;
+
+    editorContainer
     .querySelectorAll(".sheet-cell")
     .forEach(input => {
 
-        input.addEventListener(
-            "input",
-            (event) => {
+        const row =
+        Number(input.dataset.row);
 
-                const row =
-                Number(
-                    event.target.dataset.row
-                );
+        const col =
+        Number(input.dataset.col);
 
-                const col =
-                Number(
-                    event.target.dataset.col
-                );
+        const value =
+        doc.content[row][col];
 
-                doc.content[row][col] =
-                event.target.value;
+        if(
+            typeof value === "string" &&
+            value.startsWith("=") &&
+            window.FormulaEngine
+        ){
 
-                /*
-                   Re-render the spreadsheet
-                   so formulas update immediately.
-                */
+            const result =
+            FormulaEngine.calculate(
+                value,
+                cellMap
+            );
 
-                renderSpreadsheetEditor(doc);
+            input.value =
+            result;
 
-                scheduleSpreadsheetAutosave(
-                    doc
-                );
-
-            }
-        );
+        }
 
     });
+
+}
 
 
     /* ===============================
