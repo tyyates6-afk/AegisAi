@@ -223,43 +223,91 @@ self.addEventListener(
 
 self.addEventListener("fetch", event => {
 
-    const url = event.request.url;
+    const request = event.request;
+    const url = new URL(request.url);
 
-    if(CACHE_FIRST_EXTENSIONS.test(url)){
+    // Only handle HTTP/HTTPS requests
+    if (
+        url.protocol !== "http:" &&
+        url.protocol !== "https:"
+    ) {
+        return;
+    }
+
+    // Never cache POST, PUT, PATCH, DELETE, etc.
+    if (request.method !== "GET") {
+        return;
+    }
+
+    // Never cache partial responses
+    if (
+        request.headers.get("range")
+    ) {
+        return;
+    }
+
+    // Cache-first for images/fonts
+    if (CACHE_FIRST_EXTENSIONS.test(url.href)) {
 
         event.respondWith(
 
-            caches.match(event.request)
-                .then(cached =>
-                    cached || fetch(event.request)
-                )
+            caches.match(request)
+                .then(cached => {
+
+                    if (cached) {
+                        return cached;
+                    }
+
+                    return fetch(request);
+
+                })
 
         );
 
         return;
-
     }
 
+    // Network-first for normal GET requests
     event.respondWith(
 
-        fetch(event.request)
+        fetch(request)
             .then(response => {
 
-                const copy = response.clone();
+                // Only cache normal successful responses
+                if (
+                    response.ok &&
+                    response.status === 200
+                ) {
 
-                caches.open(CACHE_NAME)
-                    .then(cache => {
+                    const copy =
+                        response.clone();
 
-                        cache.put(event.request, copy);
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
 
-                    });
+                            cache.put(
+                                request,
+                                copy
+                            ).catch(error => {
+
+                                console.warn(
+                                    "Cache skipped:",
+                                    error
+                                );
+
+                            });
+
+                        });
+
+                }
 
                 return response;
 
             })
+
             .catch(() => {
 
-                return caches.match(event.request);
+                return caches.match(request);
 
             })
 
