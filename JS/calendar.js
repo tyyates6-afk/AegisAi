@@ -152,10 +152,37 @@ Aegis.register("calendar", {
 
         Aegis.listen(
             "googleCalendarConnected",
-            () => {
+            async () => {
+
                 console.log(
-                    "GCal connected, calendar notified."
+                    "GCal connected — refreshing calendar."
                 );
+
+                try {
+
+                    const google =
+                        window.GOOGLE_CALENDAR;
+
+                    if(
+                        google &&
+                        google.syncFromGoogle
+                    ){
+
+                        await google.syncFromGoogle();
+
+                    }
+
+                    refreshCalendar();
+
+                } catch(error){
+
+                    console.error(
+                        "Google Calendar refresh failed:",
+                        error
+                    );
+
+                }
+
             }
         );
     },

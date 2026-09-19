@@ -995,362 +995,856 @@ function saveEventChanges(){
 }
 
 const GOOGLE_CALENDAR = {
+
     auth: null,
 
+    calendarId: "primary",
+
+    /* ==================================
+       INIT
+    ================================== */
+
     init(){
-        const token = localStorage.getItem("google_calendar_token");
+
+        const token =
+            localStorage.getItem(
+                "google_calendar_token"
+            );
+
         if(token){
+
             try{
-                this.auth = JSON.parse(token);
-            } catch(e){
-                localStorage.removeItem("google_calendar_token");
+
+                this.auth =
+                    JSON.parse(token);
+
+            }catch(error){
+
+                console.error(
+                    "Invalid Google Calendar token:",
+                    error
+                );
+
+                localStorage.removeItem(
+                    "google_calendar_token"
+                );
+
             }
+
         }
+
         this._updateUI();
+
     },
+
+
+    /* ==================================
+       CONNECT
+    ================================== */
 
     async connect(){
-        const clientId = localStorage.getItem("google_client_id");
-        if(!clientId){
-            alert(
-                "Google Calendar is not configured. " +
-                "Set google_client_id in your settings first."
-            );
-            return;
-        }
 
-        const authUrl =
-            "https://accounts.google.com/o/oauth2/v2/auth?" +
-            `client_id=${encodeURIComponent(clientId)}` +
-            "&redirect_uri=urn:ietf:wg:oauth:2.0:oob" +
-            "&response_type=code" +
-            "&scope=https://www.googleapis.com/auth/calendar.events" +
-            "&access_type=offline" +
-            "&prompt=consent";
+        /*
+           We are intentionally stopping here
+           until the Google OAuth configuration
+           is changed to a supported browser flow.
 
-        const width = 600;
-        const height = 700;
-        const left = (screen.width - width) / 2;
-        const top = (screen.height - height) / 2;
-        const popup = window.open(
-            authUrl,
-            "google_auth",
-            `width=${width},height=${height},left=${left},top=${top}`
+           The old:
+           urn:ietf:wg:oauth:2.0:oob
+
+           flow should not be used.
+        */
+
+        alert(
+            "Google Calendar OAuth needs to be configured with Google Identity Services before connecting."
         );
 
-        const poll = setInterval(() => {
-            try{
-                if(!popup || popup.closed){
-                    clearInterval(poll);
-                    return;
-                }
-                const params = new URLSearchParams(popup.location.search);
-                if(params.has("code")){
-                    popup.close();
-                    clearInterval(poll);
-                    this._exchangeCode(params.get("code"));
-                } else if(params.has("error")){
-                    popup.close();
-                    clearInterval(poll);
-                    alert("Google auth cancelled: " + params.get("error"));
-                }
-            } catch(e){
-                // popup may not have access to opener location
-            }
-        }, 500);
+        console.warn(
+            "Google Calendar: OAuth flow needs GIS / PKCE configuration."
+        );
+
     },
 
-    async _exchangeCode(code){
-        const clientSecret = localStorage.getItem("google_client_secret");
-        if(!clientSecret){
-            alert("Google client secret is not configured.");
-            return;
-        }
 
-        try{
-            const resp = await fetch(
-                "https://oauth2.googleapis.com/token",
-                {
-                    method:"POST",
-                    headers:{"Content-Type":"application/x-www-form-urlencoded"},
-                    body: new URLSearchParams({
-                        code,
-                        client_id:localStorage.getItem("google_client_id"),
-                        client_secret:clientSecret,
-                        redirect_uri:"urn:ietf:wg:oauth:2.0:oob",
-                        grant_type:"authorization_code"
-                    })
-                }
-            );
+    /* ==================================
+       TOKEN
+    ================================== */
 
-            const data = await resp.json();
-            if(!resp.ok){
-                throw new Error(data.error || "Token exchange failed");
-            }
+    async ensureToken(){
 
-            this.auth = {
-                access_token:data.access_token,
-                refresh_token:data.refresh_token,
-                token_type:data.token_type,
-                expires_in:data.expires_in,
-                expiry: Date.now() + (data.expires_in * 1000)
-            };
-
-            localStorage.setItem(
-                "google_calendar_token",
-                JSON.stringify(this.auth)
-            );
-
-            this._onConnected();
-        } catch(err){
-            alert("Failed to connect Google Calendar: " + err.message);
-        }
-    },
-
-    ensureToken(){
         if(!this.auth){
-            return Promise.reject("Not connected");
-        }
-        if(Date.now() >= (this.auth.expiry || 0)){
-            return this.refreshToken();
-        }
-        return Promise.resolve(this.auth.access_token);
-    },
 
-    async refreshToken(){
-        if(!this.auth?.refresh_token){
-            return Promise.reject("No refresh token");
+            throw new Error(
+                "Google Calendar is not connected."
+            );
+
         }
-        const clientSecret = localStorage.getItem("google_client_secret");
-        if(!clientSecret){
-            return Promise.reject("Missing client secret");
+
+        if(
+            !this.auth.access_token
+        ){
+
+            throw new Error(
+                "No Google access token."
+            );
+
         }
-        const resp = await fetch(
-            "https://oauth2.googleapis.com/token",
-            {
-                method:"POST",
-                headers:{"Content-Type":"application/x-www-form-urlencoded"},
-                body: new URLSearchParams({
-                    client_id:localStorage.getItem("google_client_id"),
-                    client_secret:clientSecret,
-                    refresh_token:this.auth.refresh_token,
-                    grant_type:"refresh_token"
-                })
-            }
-        );
-        const data = await resp.json();
-        if(!resp.ok){
-            throw new Error(data.error || "Refresh failed");
-        }
-        this.auth.access_token = data.access_token;
-        this.auth.expiry = Date.now() + (data.expires_in * 1000);
-        if(data.refresh_token){
-            this.auth.refresh_token = data.refresh_token;
-        }
-        localStorage.setItem(
-            "google_calendar_token",
-            JSON.stringify(this.auth)
-        );
+
         return this.auth.access_token;
+
     },
 
-    async syncToGoogle(){
-        const token = await this.ensureToken();
 
-        for(const event of events){
-            const exceptionDates = Object.keys(event.exceptions || {})
-                .filter(k => event.exceptions[k] !== null);
+    /* ==================================
+       API REQUEST
+    ================================== */
 
-            const gcalEvent = {
-                summary:event.title,
-                description:event.notes || "",
-                location:event.location || "",
-                start:{
-                    date:event.date,
-                    time:event.time ? {
-                        hour:parseInt(event.time.split(":")[0]),
-                        minute:parseInt(event.time.split(":")[1] || "0")
-                    } : undefined
-                },
-                end:{
-                    date:event.date,
-                    time:event.time ? {
-                        hour:parseInt(event.time.split(":")[0]),
-                        minute:parseInt(event.time.split(":")[1] || "0")
-                    } : undefined
-                },
-                colorId: this._colorToGoogle(event.color)
-            };
+    async apiRequest(
+        url,
+        options = {}
+    ){
 
-            if(event.recurrence !== "none"){
-                const recur = this._buildIcalRecurrence(event);
-                if(recur.recurrenceRules && recur.recurrenceRules.length > 0){
-                    gcalEvent.recurrence = recur.recurrenceRules;
+        const token =
+            await this.ensureToken();
+
+        const response =
+            await fetch(
+                url,
+                {
+                    ...options,
+
+                    headers:{
+                        ...(options.headers || {}),
+
+                        Authorization:
+                            `Bearer ${token}`,
+
+                        "Content-Type":
+                            "application/json"
+                    }
                 }
-                if(exceptionDates.length > 0){
-                    gcalEvent.exceptions = exceptionDates.map(d => ({
-                        date:d,
-                        detail: this._exceptionToJson(event.exceptions[d])
-                    }));
-                }
-            }
+            );
+
+        if(!response.ok){
+
+            let errorData = {};
 
             try{
-                const existing = await this._findGoogleEvent(event.id);
-                if(existing){
-                    await this._updateGoogleEvent(existing.id, gcalEvent, token);
-                } else {
-                    await this._createGoogleEvent(gcalEvent, token);
-                }
-            } catch(err){
-                console.error("GCal sync error for", event.id, err);
-            }
+                errorData =
+                    await response.json();
+            }catch{}
+
+            throw new Error(
+                errorData.error?.message ||
+                errorData.message ||
+                `Google Calendar API error ${response.status}`
+            );
+
         }
 
-        alert("Google Calendar sync complete.");
-    },
+        if(response.status === 204){
 
-    _colorToGoogle(color){
-        const map = {
-            "gray":"8", "red":"1", "blue":"2",
-            "green":"4", "purple":"5"
-        };
-        return map[color] || "8";
-    },
+            return null;
 
-    _buildIcalRecurrence(event){
-        if(event.recurrence === "none"){
-            return { recurrenceRules:[] };
         }
-        const rules = {
-            freq: event.recurrence,
-            until: event.recurrenceEnd || undefined
-        };
-        return { recurrenceRules:[rules] };
+
+        return response.json();
+
     },
 
-    _exceptionToJson(exc){
-        if(!exc) return null;
-        return {
-            title:exc.title,
-            time:exc.time,
-            location:exc.location,
-            notes:exc.notes
-        };
-    },
 
-    async _findGoogleEvent(localId){
-        const token = await this.ensureToken();
-        const resp = await fetch(
-            "https://www.googleapis.com/calendar/v3/calendars/primary/events?showDeleted=true",
-            {
-                headers:{
-                    Authorization:`Bearer ${token}`
-                }
-            }
-        );
-        if(!resp.ok) return null;
-        const data = await resp.json();
-        return (data.items || []).find(
-            e => e.extendedProperties?.private?.["aegis_id"] === String(localId)
-        ) || null;
-    },
+    /* ==================================
+       BUILD GOOGLE EVENT
+    ================================== */
 
-    async _createGoogleEvent(eventData, token){
+    buildGoogleEvent(event){
+
         const payload = {
-            ...eventData,
+
+            summary:
+                event.title || "AEGIS Event",
+
+            description:
+                event.notes || "",
+
+            location:
+                event.location || "",
+
             extendedProperties:{
                 private:{
-                    "aegis_id": String(eventData.id || eventData.summary)
+                    aegis_id:
+                        String(event.id)
                 }
             }
+
         };
-        delete payload.id;
-        const resp = await fetch(
-            "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+
+
+        /*
+           ALL DAY EVENT
+        */
+
+        if(!event.time){
+
+            payload.start = {
+                date: event.date
+            };
+
+            payload.end = {
+                date:
+                    this.addOneDay(
+                        event.date
+                    )
+            };
+
+        }
+
+
+        /*
+           TIMED EVENT
+        */
+
+        else{
+
+            const start =
+                `${event.date}T${event.time}:00`;
+
+            const end =
+                this.calculateEndTime(
+                    event.date,
+                    event.time
+                );
+
+            payload.start = {
+                dateTime: start
+            };
+
+            payload.end = {
+                dateTime: end
+            };
+
+        }
+
+
+        /*
+           RECURRENCE
+        */
+
+        if(
+            event.recurrence &&
+            event.recurrence !== "none"
+        ){
+
+            const rule =
+                this.buildRecurrenceRule(
+                    event
+                );
+
+            if(rule){
+
+                payload.recurrence = [
+                    rule
+                ];
+
+            }
+
+        }
+
+
+        return payload;
+
+    },
+
+
+    /* ==================================
+       RECURRENCE
+    ================================== */
+
+    buildRecurrenceRule(event){
+
+        const frequencyMap = {
+
+            daily: "DAILY",
+
+            weekly: "WEEKLY",
+
+            monthly: "MONTHLY",
+
+            yearly: "YEARLY"
+
+        };
+
+        const freq =
+            frequencyMap[
+                event.recurrence
+            ];
+
+        if(!freq){
+
+            return null;
+
+        }
+
+        let rule =
+            `RRULE:FREQ=${freq}`;
+
+        if(event.recurrenceEnd){
+
+            const until =
+                event.recurrenceEnd
+                    .replaceAll("-", "") +
+                "T235959Z";
+
+            rule +=
+                `;UNTIL=${until}`;
+
+        }
+
+        return rule;
+
+    },
+
+
+    /* ==================================
+       FIND AEGIS EVENT IN GOOGLE
+    ================================== */
+
+    async findGoogleEvent(localId){
+
+        const url =
+            "https://www.googleapis.com/calendar/v3/" +
+            `calendars/${encodeURIComponent(this.calendarId)}` +
+            "/events" +
+            "?privateExtendedProperty=" +
+            encodeURIComponent(
+                `aegis_id=${localId}`
+            );
+
+        const data =
+            await this.apiRequest(
+                url
+            );
+
+        return (
+            data.items &&
+            data.items.length
+        )
+            ? data.items[0]
+            : null;
+
+    },
+
+
+    /* ==================================
+       CREATE
+    ================================== */
+
+    async createGoogleEvent(event){
+
+        const payload =
+            this.buildGoogleEvent(
+                event
+            );
+
+        const url =
+            "https://www.googleapis.com/calendar/v3/" +
+            `calendars/${encodeURIComponent(this.calendarId)}` +
+            "/events";
+
+        return this.apiRequest(
+            url,
             {
                 method:"POST",
-                headers:{
-                    Authorization:`Bearer ${token}`,
-                    "Content-Type":"application/json"
-                },
-                body: JSON.stringify(payload)
+
+                body:
+                    JSON.stringify(
+                        payload
+                    )
             }
         );
-        if(!resp.ok){
-            const err = await resp.json();
-            throw new Error(err.message || "Create failed");
-        }
+
     },
 
-    async _updateGoogleEvent(googleEventId, eventData, token){
-        const payload = {
-            ...eventData,
-            extendedProperties:{
-                private:{
-                    "aegis_id": String(eventData.id || eventData.summary)
-                }
-            },
-            id: googleEventId
-        };
-        delete payload.id;
-        const resp = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`,
+
+    /* ==================================
+       UPDATE
+    ================================== */
+
+    async updateGoogleEvent(
+        googleEventId,
+        event
+    ){
+
+        const payload =
+            this.buildGoogleEvent(
+                event
+            );
+
+        const url =
+            "https://www.googleapis.com/calendar/v3/" +
+            `calendars/${encodeURIComponent(this.calendarId)}` +
+            `/events/${encodeURIComponent(googleEventId)}`;
+
+        return this.apiRequest(
+            url,
             {
                 method:"PATCH",
-                headers:{
-                    Authorization:`Bearer ${token}`,
-                    "Content-Type":"application/json"
-                },
-                body: JSON.stringify(payload)
+
+                body:
+                    JSON.stringify(
+                        payload
+                    )
             }
         );
-        if(!resp.ok){
-            const err = await resp.json();
-            throw new Error(err.message || "Update failed");
-        }
+
     },
+
+
+    /* ==================================
+       DELETE
+    ================================== */
+
+    async deleteGoogleEvent(
+        googleEventId
+    ){
+
+        const token =
+            await this.ensureToken();
+
+        const url =
+            "https://www.googleapis.com/calendar/v3/" +
+            `calendars/${encodeURIComponent(this.calendarId)}` +
+            `/events/${encodeURIComponent(googleEventId)}`;
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method:"DELETE",
+
+                    headers:{
+                        Authorization:
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+        if(
+            !response.ok &&
+            response.status !== 404
+        ){
+
+            throw new Error(
+                `Google delete failed: ${response.status}`
+            );
+
+        }
+
+    },
+
+
+    /* ==================================
+       SYNC AEGIS → GOOGLE
+    ================================== */
+
+    async syncToGoogle(){
+
+        if(!this.auth){
+
+            alert(
+                "Connect Google Calendar first."
+            );
+
+            return;
+
+        }
+
+        console.log(
+            "Starting AEGIS → Google Calendar sync..."
+        );
+
+
+        for(const event of events){
+
+            try{
+
+                const existing =
+                    await this.findGoogleEvent(
+                        event.id
+                    );
+
+
+                if(existing){
+
+                    await this.updateGoogleEvent(
+                        existing.id,
+                        event
+                    );
+
+                    console.log(
+                        "Google event updated:",
+                        event.id
+                    );
+
+                }else{
+
+                    await this.createGoogleEvent(
+                        event
+                    );
+
+                    console.log(
+                        "Google event created:",
+                        event.id
+                    );
+
+                }
+
+            }catch(error){
+
+                console.error(
+                    "Google sync failed:",
+                    event.id,
+                    error
+                );
+
+            }
+
+        }
+
+
+        alert(
+            "AEGIS → Google Calendar sync complete."
+        );
+
+    },
+
+
+    /* ==================================
+       GOOGLE → AEGIS
+    ================================== */
+
+    async syncFromGoogle(){
+
+        if(!this.auth){
+
+            throw new Error(
+                "Google Calendar is not connected."
+            );
+
+        }
+
+        console.log(
+            "Starting Google Calendar → AEGIS sync..."
+        );
+
+
+        const url =
+            "https://www.googleapis.com/calendar/v3/" +
+            `calendars/${encodeURIComponent(this.calendarId)}` +
+            "/events" +
+            "?singleEvents=true" +
+            "&showDeleted=false" +
+            "&maxResults=2500";
+
+        const data =
+            await this.apiRequest(
+                url
+            );
+
+        const googleEvents =
+            data.items || [];
+
+
+        for(
+            const googleEvent
+            of googleEvents
+        ){
+
+            const aegisId =
+                googleEvent
+                    .extendedProperties
+                    ?.private
+                    ?.aegis_id;
+
+            /*
+               Ignore Google events that were
+               not created by AEGIS.
+            */
+
+            if(!aegisId){
+
+                continue;
+
+            }
+
+
+            const localEvent =
+                events.find(
+                    event =>
+                        String(event.id) ===
+                        String(aegisId)
+                );
+
+            if(!localEvent){
+
+                continue;
+
+            }
+
+
+            /*
+               Update basic information
+            */
+
+            localEvent.title =
+                googleEvent.summary ||
+                localEvent.title;
+
+            localEvent.notes =
+                googleEvent.description ||
+                "";
+
+            localEvent.location =
+                googleEvent.location ||
+                "";
+
+
+            /*
+               ALL DAY
+            */
+
+            if(
+                googleEvent.start?.date
+            ){
+
+                localEvent.date =
+                    googleEvent.start.date;
+
+                localEvent.time = "";
+
+            }
+
+
+            /*
+               TIMED
+            */
+
+            else if(
+                googleEvent.start?.dateTime
+            ){
+
+                const dateTime =
+                    new Date(
+                        googleEvent.start.dateTime
+                    );
+
+                localEvent.date =
+                    formatDateOnly(
+                        dateTime
+                    );
+
+                localEvent.time =
+                    dateTime
+                        .toTimeString()
+                        .slice(0,5);
+
+            }
+
+        }
+
+
+        saveData(
+            "events",
+            events
+        );
+
+        displayEvents();
+
+        if(window.refreshCalendar){
+
+            window.refreshCalendar();
+
+        }
+
+        Aegis.broadcast(
+            "eventsUpdated"
+        );
+
+        console.log(
+            "Google Calendar → AEGIS sync complete."
+        );
+
+    },
+
+
+    /* ==================================
+       DATE HELPERS
+    ================================== */
+
+    addOneDay(dateString){
+
+        const date =
+            parseDateOnly(
+                dateString
+            );
+
+        date.setDate(
+            date.getDate() + 1
+        );
+
+        return formatDateOnly(
+            date
+        );
+
+    },
+
+
+    calculateEndTime(
+        date,
+        time
+    ){
+
+        const start =
+            new Date(
+                `${date}T${time}:00`
+            );
+
+        /*
+           Default event duration:
+           1 hour
+        */
+
+        start.setHours(
+            start.getHours() + 1
+        );
+
+        return (
+            start
+                .toISOString()
+                .slice(0,19)
+        );
+
+    },
+
+
+    /* ==================================
+       DISCONNECT
+    ================================== */
 
     disconnect(){
+
         this.auth = null;
-        localStorage.removeItem("google_calendar_token");
+
+        localStorage.removeItem(
+            "google_calendar_token"
+        );
+
         this._updateUI();
-        alert("Disconnected from Google Calendar.");
+
+        alert(
+            "Disconnected from Google Calendar."
+        );
+
     },
+
 
     isConnected(){
+
         return !!this.auth;
+
     },
+
+
+    /* ==================================
+       UI
+    ================================== */
 
     _updateUI(){
-        const connectBtn = document.getElementById("gcalConnectBtn");
-        const syncBtn = document.getElementById("gcalSyncBtn");
-        const disconnectBtn = document.getElementById("gcalDisconnectBtn");
-        const status = document.getElementById("gcalStatus");
+
+        const connectBtn =
+            document.getElementById(
+                "gcalConnectBtn"
+            );
+
+        const syncBtn =
+            document.getElementById(
+                "gcalSyncBtn"
+            );
+
+        const disconnectBtn =
+            document.getElementById(
+                "gcalDisconnectBtn"
+            );
+
+        const status =
+            document.getElementById(
+                "gcalStatus"
+            );
+
 
         if(connectBtn){
-            connectBtn.style.display = this.auth ? "none" : "inline-block";
+
+            connectBtn.style.display =
+                this.auth
+                    ? "none"
+                    : "inline-block";
+
         }
+
+
         if(syncBtn){
-            syncBtn.disabled = !this.auth;
-            syncBtn.style.cursor = this.auth ? "pointer" : "not-allowed";
+
+            syncBtn.disabled =
+                !this.auth;
+
+            syncBtn.style.cursor =
+                this.auth
+                    ? "pointer"
+                    : "not-allowed";
+
         }
+
+
         if(disconnectBtn){
-            disconnectBtn.disabled = !this.auth;
-            disconnectBtn.style.cursor = this.auth ? "pointer" : "not-allowed";
+
+            disconnectBtn.disabled =
+                !this.auth;
+
+            disconnectBtn.style.cursor =
+                this.auth
+                    ? "pointer"
+                    : "not-allowed";
+
         }
+
+
         if(status){
-            status.textContent = this.auth
-                ? "Connected to Google Calendar"
-                : "Not connected to Google Calendar.";
-            status.style.color = this.auth ? "#4caf50" : "#888";
+
+            status.textContent =
+                this.auth
+                    ? "Connected to Google Calendar"
+                    : "Not connected to Google Calendar.";
+
+            status.style.color =
+                this.auth
+                    ? "#4caf50"
+                    : "#888";
+
         }
+
     },
 
+
     _onConnected(){
+
         this._updateUI();
-        Aegis.broadcast("googleCalendarConnected");
+
+        Aegis.broadcast(
+            "googleCalendarConnected"
+        );
+
     }
+
 };
 
 GOOGLE_CALENDAR.init();
