@@ -997,7 +997,7 @@ function saveEventChanges(){
 const GOOGLE_CALENDAR = {
 
     auth: null,
-
+    clientId: "525444472618-c47e4nbbo5cugtkpq248t22919k2nl4h.apps.googleusercontent.com",
     calendarId: "primary",
 
     /* ==================================
@@ -1042,27 +1042,48 @@ const GOOGLE_CALENDAR = {
        CONNECT
     ================================== */
 
-    async connect(){
+    async connect() {
+        try {
+            if (!window.google || !google.accounts || !google.accounts.oauth2) {
+                alert("Google Identity Services is not loaded yet. Please refresh the page and try again.");
+                return;
+            }
 
-        /*
-           We are intentionally stopping here
-           until the Google OAuth configuration
-           is changed to a supported browser flow.
+            const client = google.accounts.oauth2.initTokenClient({
+                client_id: this.clientId,
+                scope: "https://www.googleapis.com/auth/calendar",
+                callback: (response) => {
+                    if (response.error) {
+                        console.error("Google Calendar OAuth error:", response);
+                        alert("Google Calendar authorization failed.");
+                        return;
+                    }
 
-           The old:
-           urn:ietf:wg:oauth:2.0:oob
+                    this.auth = {
+                        access_token: response.access_token,
+                        expires_at: Date.now() + ((response.expires_in || 3600) * 1000)
+                    };
 
-           flow should not be used.
-        */
+                    localStorage.setItem(
+                        "google_calendar_token",
+                        JSON.stringify(this.auth)
+                    );
 
-        alert(
-            "Google Calendar OAuth needs to be configured with Google Identity Services before connecting."
-        );
+                    console.log("✓ Google Calendar connected");
 
-        console.warn(
-            "Google Calendar: OAuth flow needs GIS / PKCE configuration."
-        );
+                    this._updateUI();
 
+                    if (typeof this._onConnected === "function") {
+                        this._onConnected();
+                    }
+                }
+            });
+
+            client.requestAccessToken();
+        } catch (error) {
+            console.error("Google Calendar connection failed:", error);
+            alert("Unable to connect Google Calendar.");
+        }
     },
 
 
