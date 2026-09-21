@@ -59,8 +59,8 @@ const FormulaEngine = {
                     );
 
                     return result
-                        ? this.cleanValue(trueValue)
-                        : this.cleanValue(falseValue);
+                        ? this.resolveOperand(trueValue, cells)
+                        : this.resolveOperand(falseValue, cells);
                 }
             );
 
@@ -278,13 +278,15 @@ const FormulaEngine = {
         if (comparison) {
 
             const left =
-                this.cleanValue(
-                    comparison[1]
+                this.resolveOperand(
+                    comparison[1],
+                    cells
                 );
 
             const right =
-                this.cleanValue(
-                    comparison[3]
+                this.resolveOperand(
+                    comparison[3],
+                    cells
                 );
 
             switch (comparison[2]) {
@@ -332,6 +334,49 @@ const FormulaEngine = {
         return this.cleanValue(
             expression
         );
+    },
+
+
+    /* -------------------------------
+       OPERAND RESOLUTION
+
+       Used anywhere a value is compared or
+       returned before the outer expression's
+       own cell-reference substitution pass has
+       run (currently: inside IF()'s condition
+       and its true/false branches) — without
+       this, a bare cell reference like "A1" is
+       treated as literal text instead of being
+       looked up.
+    -------------------------------- */
+
+    resolveOperand(value, cells) {
+
+        const trimmed =
+        String(value).trim();
+
+        if (/^[A-Z]+\d+$/i.test(trimmed)) {
+
+            const resolved =
+            this.getCellValue(
+                trimmed.toUpperCase(),
+                cells
+            );
+
+            // getCellValue wraps non-numeric cell
+            // content in literal quote characters
+            // for splicing back into an expression
+            // string — unwrap that here since we
+            // want the real JS value, not text.
+
+            return typeof resolved === "string"
+                ? this.cleanValue(resolved)
+                : resolved;
+
+        }
+
+        return this.cleanValue(trimmed);
+
     },
 
 

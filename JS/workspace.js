@@ -1092,6 +1092,34 @@ function renderSpreadsheetEditor(doc){
 .querySelectorAll(".sheet-cell")
 .forEach(input => {
 
+    input.addEventListener("focus", (event) => {
+
+        const row =
+        Number(event.target.dataset.row);
+
+        const col =
+        Number(event.target.dataset.col);
+
+        const raw =
+        doc.content[row][col];
+
+        // Reveal the raw formula while editing —
+        // otherwise re-focusing a formula cell shows
+        // its calculated result, and the first
+        // keystroke would overwrite the formula
+        // itself instead of editing it.
+
+        if(
+            typeof raw === "string" &&
+            raw.startsWith("=")
+        ){
+
+            event.target.value = raw;
+
+        }
+
+    });
+
     input.addEventListener("input", (event) => {
 
         const row =
