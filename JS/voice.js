@@ -542,21 +542,6 @@ getElevenLabsConfig(){
 
 
 
-    clearElevenLabs(){
-
-        localStorage.removeItem(
-            "elevenLabsApiKey"
-        );
-
-        localStorage.removeItem(
-            "elevenLabsVoiceId"
-        );
-
-        Aegis.broadcast(
-            "voiceUpdated"
-        );
-
-    },
 
 
     // Forces ElevenLabs even when the local
