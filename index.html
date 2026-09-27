@@ -521,6 +521,23 @@ value="0.15">
         <script src="JS/volumeSettings.js"></script>
 ====================================== -->
 
+<!-- ======================================
+    SETTINGS CARD — ElevenLabs voice v2
+
+    Matches the LIVE voice.js: ElevenLabs
+    runs through the Supabase edge function,
+    so the API key stays server-side and
+    this card manages ONLY the voice ID.
+
+    Replace the v1 card in index.html with
+    this section (same spot: right after
+    the </section> closing
+    volumeSettingsCard).
+
+    The <script> tag is unchanged:
+        <script src="JS/elevenLabsSettings.js"></script>
+====================================== -->
+
 <section class="card" id="elevenLabsSettingsCard">
 
 <h2>
@@ -528,38 +545,29 @@ value="0.15">
 </h2>
 
 <p class="empty-state">
-Optional cloud voice. Used automatically when the local XTTS
-server isn't running. Get a key and voice ID at elevenlabs.io —
-your key stays in this browser's local storage only.
+Cloud voice, served through your Supabase eleven-tts function
+(your API key stays server-side — nothing secret is stored here).
+XTTS is currently disabled, so this is the primary voice tier,
+with the browser voice as fallback.
 </p>
 
 <p id="elevenLabsStatus"></p>
 
 <label>
-API Key
-</label>
-
-<input
-type="password"
-id="elevenLabsApiKey"
-placeholder="sk_..."
-autocomplete="off">
-
-<label>
-Voice ID
+Voice ID override
 </label>
 
 <input
 type="text"
 id="elevenLabsVoiceId"
-placeholder="paste a voice ID from your ElevenLabs dashboard"
+placeholder="leave blank to use the default voice"
 autocomplete="off">
 
 <br><br>
 
 <button id="elevenLabsSave" type="button">
 
-💾 Save ElevenLabs Settings
+💾 Save Voice ID
 
 </button>
 
@@ -569,16 +577,14 @@ autocomplete="off">
 
 </button>
 
-<button id="elevenLabsClear" type="button">
+<button id="elevenLabsReset" type="button">
 
-🗑️ Remove ElevenLabs Settings
+↩️ Reset to Default Voice
 
 </button>
 
 </section>
 
-<!-- Add this next to the other settings scripts in index.html: -->
-<!-- <script src="JS/elevenLabsSettings.js"></script> -->
 
 <section class="card" id="profileSettings">
 

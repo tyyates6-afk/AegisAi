@@ -463,67 +463,37 @@ Aegis.register("voice", {
 
     },
 
-/*======================================
-    VOICE.JS API PATCH — ElevenLabs settings
+getElevenLabsConfig(){
 
-    voice.js v1.1.0 already speaks through
-    ElevenLabs (speakWithElevenLabs), but the
-    module API exposes no way to save, read,
-    or test the credentials from a UI.
-
-    Add these three methods inside
-    Aegis.register("voice", { ... }),
-    next to getSettings(). Nothing else in
-    voice.js changes.
-======================================*/
-
-    getElevenLabsConfig(){
-
-        const apiKey =
-        localStorage.getItem(
-            "elevenLabsApiKey"
-        ) || "";
-
-        const voiceId =
+        const customVoiceId =
         localStorage.getItem(
             "elevenLabsVoiceId"
         ) || "";
 
         return {
 
-            configured:
-            !!(apiKey && voiceId),
-
-            hasKey:
-            !!apiKey,
-
-            maskedKey:
-            apiKey
-            ? "••••" + apiKey.slice(-4)
-            : "",
-
             voiceId:
-            voiceId
+            customVoiceId ||
+            ELEVENLABS_VOICE_ID,
+
+            custom:
+            !!customVoiceId,
+
+            defaultVoiceId:
+            ELEVENLABS_VOICE_ID,
+
+            xttsEnabled:
+            XTTS_ENABLED,
+
+            xttsAvailable:
+            xttsAvailable
 
         };
 
     },
 
 
-    // Pass null for a value to keep the saved one.
-    setElevenLabs(apiKey, voiceId){
-
-        if(
-            apiKey &&
-            apiKey.trim()
-        ){
-
-            localStorage.setItem(
-                "elevenLabsApiKey",
-                apiKey.trim()
-            );
-
-        }
+    setElevenLabsVoice(voiceId){
 
         if(
             voiceId &&
@@ -542,6 +512,34 @@ Aegis.register("voice", {
         );
 
     },
+
+
+    clearElevenLabsVoice(){
+
+        localStorage.removeItem(
+            "elevenLabsVoiceId"
+        );
+
+        Aegis.broadcast(
+            "voiceUpdated"
+        );
+
+    },
+
+
+    // Exercises the Supabase eleven-tts
+    // function directly, bypassing XTTS,
+    // so the test always hits the cloud
+    // voice tier.
+    async testElevenLabs(text){
+
+        await speakViaElevenLabs(
+            text ||
+            "ElevenLabs voice check complete."
+        );
+
+    },
+
 
 
     clearElevenLabs(){

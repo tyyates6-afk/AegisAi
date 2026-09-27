@@ -1,20 +1,28 @@
 /*======================================
-    AEGIS ELEVENLABS SETTINGS v1.0.0
+    AEGIS ELEVENLABS SETTINGS v1.1.0
 
     Settings-page wiring for the ElevenLabs
-    cloud voice already built into voice.js.
+    cloud voice in the LIVE voice.js, which
+    routes through the Supabase edge
+    function (eleven-tts).
+
+    The API key lives server-side in the
+    Supabase function, so this UI manages
+    only the voice ID override. No key
+    field — nothing secret touches the
+    browser.
 
     Install:
       1. Drop this file into JS/
          as JS/elevenLabsSettings.js
-      2. Add the settings card from
-         settings-card.html to the settings
-         page in index.html
-      3. Add the script tag to index.html
-         next to the other settings scripts
-      4. Apply the three new API methods
-         from voice-api-patch.js inside
+         (replaces v1.0.0)
+      2. Use settings-card.html v2 for the
+         card (no API key input)
+      3. Apply voice-api-patch.js v2 inside
          Aegis.register("voice", {...})
+      4. Make the one-line change in
+         speakViaElevenLabs (see the patch
+         file header)
 ======================================*/
 
 function wireElevenLabsSettings(){
@@ -28,11 +36,6 @@ function wireElevenLabsSettings(){
 
     }
 
-    const keyInput =
-    document.getElementById(
-        "elevenLabsApiKey"
-    );
-
     const voiceInput =
     document.getElementById(
         "elevenLabsVoiceId"
@@ -43,9 +46,9 @@ function wireElevenLabsSettings(){
         "elevenLabsSave"
     );
 
-    const clearButton =
+    const resetButton =
     document.getElementById(
-        "elevenLabsClear"
+        "elevenLabsReset"
     );
 
     const testButton =
@@ -59,10 +62,9 @@ function wireElevenLabsSettings(){
     );
 
     if(
-        !keyInput ||
         !voiceInput ||
         !saveButton ||
-        !clearButton ||
+        !resetButton ||
         !testButton ||
         !statusElement
     ){
@@ -76,52 +78,36 @@ function wireElevenLabsSettings(){
         const config =
         voice.getElevenLabsConfig();
 
-        const engine =
-        voice.getSettings().engine;
-
-        let engineLabel =
-        "browser";
-
-        if(engine === "xtts"){
-
-            engineLabel =
-            "local XTTS";
-
-        }
-        else if(engine === "elevenlabs"){
-
-            engineLabel =
-            "ElevenLabs";
-
-        }
+        const tier =
+        config.xttsAvailable
+        ? "local XTTS"
+        : "ElevenLabs (via Supabase) → browser fallback";
 
         statusElement.textContent =
-        config.configured
-        ? `✅ Configured (key ${config.maskedKey}). Active engine: ${engineLabel}.`
-        : `⚠️ Not configured. Active engine: ${engineLabel}.`;
-
-        // Never put the real key back into the field.
-        keyInput.value = "";
-
-        keyInput.placeholder =
-        config.configured
-        ? `Saved (${config.maskedKey}) — leave blank to keep`
-        : "sk_...";
+        `Voice ID: ${config.voiceId}` +
+        (
+            config.custom
+            ? " (custom override)"
+            : " (default)"
+        ) +
+        ` — active tier: ${tier}.`;
 
         voiceInput.value =
-        config.voiceId || "";
+        config.custom
+        ? config.voiceId
+        : "";
+
+        voiceInput.placeholder =
+        `Default: ${config.defaultVoiceId}`;
 
     }
 
     saveButton.onclick = () => {
 
-        const apiKey =
-        keyInput.value.trim();
-
         const voiceId =
         voiceInput.value.trim();
 
-        if(!apiKey && !voiceId){
+        if(!voiceId){
 
             refreshStatus();
 
@@ -129,30 +115,17 @@ function wireElevenLabsSettings(){
 
         }
 
-        // Blank key field = keep the saved key.
-        // Blank voice field = keep the saved voice.
-        voice.setElevenLabs(
-            apiKey || null,
-            voiceId || null
+        voice.setElevenLabsVoice(
+            voiceId
         );
 
         refreshStatus();
 
     };
 
-    clearButton.onclick = () => {
+    resetButton.onclick = () => {
 
-        if(
-            !confirm(
-                "Remove the saved ElevenLabs key and voice ID?"
-            )
-        ){
-
-            return;
-
-        }
-
-        voice.clearElevenLabs();
+        voice.clearElevenLabsVoice();
 
         refreshStatus();
 
@@ -162,7 +135,18 @@ function wireElevenLabsSettings(){
 
         voice.testElevenLabs(
             "ElevenLabs voice check complete. AEGIS cloud voice is online."
-        );
+        ).catch(error => {
+
+            console.error(
+                "ElevenLabs test failed:",
+                error
+            );
+
+            statusElement.textContent =
+            `⚠️ Test failed: ${error.message} — ` +
+            `check the Supabase eleven-tts function and your ElevenLabs account status.`;
+
+        });
 
     };
 
@@ -172,7 +156,7 @@ function wireElevenLabsSettings(){
 
 Aegis.register("elevenLabsSettings", {
 
-    version:"1.0.0",
+    version:"1.1.0",
 
     init(){
 
