@@ -558,7 +558,7 @@ getElevenLabsConfig(){
         voiceSettings.volume *
         globalVolume;
 
-        await speakWithElevenLabs(
+        await speakViaElevenLabs(
             text ||
             "ElevenLabs voice check complete.",
             effectiveVolume
