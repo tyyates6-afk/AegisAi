@@ -509,6 +509,76 @@ value="0.15">
 </button>
 
 </section>
+<!-- ======================================
+    SETTINGS CARD — ElevenLabs voice
+
+    Paste this <section> into index.html on
+    the settings page, right after the
+    </section> that closes volumeSettingsCard.
+
+    Then add the script tag below next to
+    the other settings scripts:
+        <script src="JS/volumeSettings.js"></script>
+====================================== -->
+
+<section class="card" id="elevenLabsSettingsCard">
+
+<h2>
+🎙️ ElevenLabs Voice
+</h2>
+
+<p class="empty-state">
+Optional cloud voice. Used automatically when the local XTTS
+server isn't running. Get a key and voice ID at elevenlabs.io —
+your key stays in this browser's local storage only.
+</p>
+
+<p id="elevenLabsStatus"></p>
+
+<label>
+API Key
+</label>
+
+<input
+type="password"
+id="elevenLabsApiKey"
+placeholder="sk_..."
+autocomplete="off">
+
+<label>
+Voice ID
+</label>
+
+<input
+type="text"
+id="elevenLabsVoiceId"
+placeholder="paste a voice ID from your ElevenLabs dashboard"
+autocomplete="off">
+
+<br><br>
+
+<button id="elevenLabsSave" type="button">
+
+💾 Save ElevenLabs Settings
+
+</button>
+
+<button id="elevenLabsTest" type="button">
+
+🔊 Test ElevenLabs Voice
+
+</button>
+
+<button id="elevenLabsClear" type="button">
+
+🗑️ Remove ElevenLabs Settings
+
+</button>
+
+</section>
+
+<!-- Add this next to the other settings scripts in index.html: -->
+<!-- <script src="JS/elevenLabsSettings.js"></script> -->
 
 <section class="card" id="profileSettings">
 
@@ -843,6 +913,8 @@ Add Category
 <script src="JS/volumeSettings.js"></script>
 
 <script src="JS/storageSettings.js"></script>
+
+<script src="JS/elevenLabsSettings.js"></script>
 
 <script src="JS/commandBar.js"></script>
 

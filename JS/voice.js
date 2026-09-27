@@ -443,7 +443,7 @@ Aegis.register("voice", {
     volume:0.9,
 
     currentVoice:null,
-
+    
 
     getSettings(){
 
@@ -463,6 +463,125 @@ Aegis.register("voice", {
 
     },
 
+/*======================================
+    VOICE.JS API PATCH — ElevenLabs settings
+
+    voice.js v1.1.0 already speaks through
+    ElevenLabs (speakWithElevenLabs), but the
+    module API exposes no way to save, read,
+    or test the credentials from a UI.
+
+    Add these three methods inside
+    Aegis.register("voice", { ... }),
+    next to getSettings(). Nothing else in
+    voice.js changes.
+======================================*/
+
+    getElevenLabsConfig(){
+
+        const apiKey =
+        localStorage.getItem(
+            "elevenLabsApiKey"
+        ) || "";
+
+        const voiceId =
+        localStorage.getItem(
+            "elevenLabsVoiceId"
+        ) || "";
+
+        return {
+
+            configured:
+            !!(apiKey && voiceId),
+
+            hasKey:
+            !!apiKey,
+
+            maskedKey:
+            apiKey
+            ? "••••" + apiKey.slice(-4)
+            : "",
+
+            voiceId:
+            voiceId
+
+        };
+
+    },
+
+
+    // Pass null for a value to keep the saved one.
+    setElevenLabs(apiKey, voiceId){
+
+        if(
+            apiKey &&
+            apiKey.trim()
+        ){
+
+            localStorage.setItem(
+                "elevenLabsApiKey",
+                apiKey.trim()
+            );
+
+        }
+
+        if(
+            voiceId &&
+            voiceId.trim()
+        ){
+
+            localStorage.setItem(
+                "elevenLabsVoiceId",
+                voiceId.trim()
+            );
+
+        }
+
+        Aegis.broadcast(
+            "voiceUpdated"
+        );
+
+    },
+
+
+    clearElevenLabs(){
+
+        localStorage.removeItem(
+            "elevenLabsApiKey"
+        );
+
+        localStorage.removeItem(
+            "elevenLabsVoiceId"
+        );
+
+        Aegis.broadcast(
+            "voiceUpdated"
+        );
+
+    },
+
+
+    // Forces ElevenLabs even when the local
+    // XTTS server is running, so the test
+    // always exercises the cloud voice.
+    async testElevenLabs(text){
+
+        const globalVolume =
+        Aegis.getModule("audio")
+        ?.api
+        .globalVolume ?? 1;
+
+        const effectiveVolume =
+        voiceSettings.volume *
+        globalVolume;
+
+        await speakWithElevenLabs(
+            text ||
+            "ElevenLabs voice check complete.",
+            effectiveVolume
+        );
+
+    },
 
     toggle(){
 
