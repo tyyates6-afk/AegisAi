@@ -1,19 +1,6 @@
 /*======================================
         AEGIS VOICE MODULE v1.1.0
-        Tiered TTS: local XTTS → ElevenLabs → Browser
 ======================================*/
-
-// ---- Config ----
-
-const XTTS_LOCAL_URL = "http://localhost:8020/tts";
-const XTTS_PING_URL = "http://localhost:8020/health";
-const XTTS_PING_TIMEOUT_MS = 800;
-
-const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
-
-// ElevenLabs credentials live in localStorage, not hardcoded here:
-//   localStorage.setItem("elevenLabsApiKey", "sk_...")
-//   localStorage.setItem("elevenLabsVoiceId", "your_voice_id")
 
 let voiceSettings = {
 
@@ -27,72 +14,30 @@ let voiceSettings = {
 
 };
 
-let voiceAudioContext = null;
-let voicePlaybackChain = Promise.resolve();
 
-function getVoiceAudioContext(){
 
-    if(!voiceAudioContext){
 
-        voiceAudioContext =
-        new (window.AudioContext || window.webkitAudioContext)();
+// Configurable tiers — set XTTS_ENABLED to true and update
+// XTTS_SERVER_URL once your local Coqui XTTS server is ready.
+// While false, XTTS is skipped entirely (no reachability check,
+// no network attempt) and ElevenLabs becomes the primary voice.
 
-    }
+const XTTS_ENABLED = false;
 
-    if(voiceAudioContext.state === "suspended"){
+const XTTS_SERVER_URL =
+"http://localhost:8020/api/tts";
 
-        voiceAudioContext.resume().catch(()=>{});
+const ELEVENLABS_VOICE_ID =
+"21m00Tcm4TlvDq8ikWAM";
 
-    }
+const ELEVENLABS_FUNCTION_URL =
+"https://tgsrvnbzxufwsskuerhv.supabase.co/functions/v1/eleven-tts";
 
-    return voiceAudioContext;
 
-}
+let xttsAvailable = false;
 
-function playArrayBufferThroughGain(arrayBuffer, volume){
+let xttsChecked = false;
 
-    const context =
-    getVoiceAudioContext();
-
-    return context
-    .decodeAudioData(arrayBuffer.slice(0))
-    .then(audioBuffer => {
-
-        return new Promise((resolve, reject) => {
-
-            const source =
-            context.createBufferSource();
-
-            source.buffer =
-            audioBuffer;
-
-            const gain =
-            context.createGain();
-
-            gain.gain.value =
-            volume;
-
-            source.connect(gain);
-            gain.connect(context.destination);
-
-            source.onended = resolve;
-
-            try{
-
-                source.start(0);
-
-            }
-            catch(error){
-
-                reject(error);
-
-            }
-
-        });
-
-    });
-
-}
 
 function processVoiceQueue(){
 
@@ -168,49 +113,142 @@ function loadDefaultVoice(){
 
 }
 
-// ---- Fallback chain helpers ----
 
-async function checkXttsAvailable(){
-
-    const controller =
-    new AbortController();
-
-    const timeout =
-    setTimeout(
-        () => controller.abort(),
-        XTTS_PING_TIMEOUT_MS
-    );
+async function checkXttsAvailability(){
 
     try{
 
+        const controller =
+        new AbortController();
+
+        const timeout =
+        setTimeout(
+            () => controller.abort(),
+            1500
+        );
+
         const response =
-        await fetch(XTTS_PING_URL, {
-
-            method:"GET",
-
-            signal:controller.signal
-
-        });
+        await fetch(
+            XTTS_SERVER_URL,
+            {
+                method:"HEAD",
+                signal:controller.signal
+            }
+        );
 
         clearTimeout(timeout);
 
-        return response.ok;
+        xttsAvailable =
+        response.ok;
 
     }
     catch(error){
 
-        clearTimeout(timeout);
-
-        return false;
+        xttsAvailable = false;
 
     }
 
+    xttsChecked = true;
+
+    console.log(
+        xttsAvailable
+        ? "🟢 Local XTTS server reachable — will be used for voice."
+        : "⚪ Local XTTS server unavailable — falling back to ElevenLabs/browser voice."
+    );
+
 }
 
-async function speakWithXtts(text, volume){
+
+function getSpeechGainValue(){
+
+    const globalVolume =
+    Aegis.getModule("audio")
+    ?.api
+    .globalVolume ?? 1;
+
+    return voiceSettings.volume *
+    globalVolume;
+
+}
+
+
+function playAudioBlobThroughGain(blob){
+
+    const audioModule =
+    Aegis.getModule("audio")?.api;
+
+    const audioContext =
+    audioModule?.audioContext;
+
+    const url =
+    URL.createObjectURL(blob);
+
+    const audioEl =
+    new Audio(url);
+
+    audioEl.crossOrigin =
+    "anonymous";
+
+    return new Promise((resolve, reject) => {
+
+        audioEl.onended = () => {
+
+            URL.revokeObjectURL(url);
+
+            resolve();
+
+        };
+
+        audioEl.onerror = (error) => {
+
+            URL.revokeObjectURL(url);
+
+            reject(error);
+
+        };
+
+        if(audioContext){
+
+            if(audioContext.state === "suspended"){
+
+                audioContext.resume();
+
+            }
+
+            const source =
+            audioContext.createMediaElementSource(audioEl);
+
+            const gainNode =
+            audioContext.createGain();
+
+            gainNode.gain.value =
+            getSpeechGainValue();
+
+            source.connect(gainNode);
+
+            gainNode.connect(
+                audioContext.destination
+            );
+
+        }
+        else{
+
+            audioEl.volume =
+            getSpeechGainValue();
+
+        }
+
+        audioEl.play().catch(reject);
+
+    });
+
+}
+
+
+async function speakViaXtts(text){
 
     const response =
-    await fetch(XTTS_LOCAL_URL, {
+    await fetch(XTTS_SERVER_URL, {
 
         method:"POST",
 
@@ -225,90 +263,83 @@ async function speakWithXtts(text, volume){
     if(!response.ok){
 
         throw new Error(
-            `XTTS request failed: ${response.status}`
+            `XTTS server responded ${response.status}`
         );
 
     }
 
-    const arrayBuffer =
-    await response.arrayBuffer();
+    const blob =
+    await response.blob();
 
-    await playArrayBufferThroughGain(
-        arrayBuffer,
-        volume
-    );
+    await playAudioBlobThroughGain(blob);
 
 }
 
-async function speakWithElevenLabs(text, volume){
 
-    const apiKey =
-    localStorage.getItem("elevenLabsApiKey");
+async function speakViaElevenLabs(text){
 
-    const voiceId =
-    localStorage.getItem("elevenLabsVoiceId");
-
-    if(!apiKey || !voiceId){
+    if(typeof supabaseClient === "undefined"){
 
         throw new Error(
-            "ElevenLabs not configured."
+            "Supabase client is not available."
+        );
+
+    }
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient.auth.getSession();
+
+    if(error || !data?.session?.access_token){
+
+        throw new Error(
+            "No authenticated Supabase session — cannot call ElevenLabs function."
         );
 
     }
 
     const response =
-    await fetch(
-        `${ELEVENLABS_TTS_URL}/${voiceId}`,
-        {
+    await fetch(ELEVENLABS_FUNCTION_URL, {
 
-            method:"POST",
+        method:"POST",
 
-            headers:{
+        headers:{
 
-                "Content-Type":"application/json",
+            "Content-Type":"application/json",
 
-                "xi-api-key":apiKey
+            "Authorization":`Bearer ${data.session.access_token}`
 
-            },
+        },
 
-            body:JSON.stringify({
+        body:JSON.stringify({
 
-                text,
+            text,
 
-                model_id:"eleven_turbo_v2_5",
+            voiceId:ELEVENLABS_VOICE_ID
 
-                voice_settings:{
+        })
 
-                    stability:0.5,
-
-                    similarity_boost:0.75
-
-                }
-
-            })
-
-        }
-    );
+    });
 
     if(!response.ok){
 
         throw new Error(
-            `ElevenLabs request failed: ${response.status}`
+            `ElevenLabs function responded ${response.status}`
         );
 
     }
 
-    const arrayBuffer =
-    await response.arrayBuffer();
+    const blob =
+    await response.blob();
 
-    await playArrayBufferThroughGain(
-        arrayBuffer,
-        volume
-    );
+    await playAudioBlobThroughGain(blob);
 
 }
 
-function speakWithBrowser(text, style, volume){
+
+function speakViaBrowser(text, style){
 
     if(!("speechSynthesis" in window)){
 
@@ -320,58 +351,88 @@ function speakWithBrowser(text, style, volume){
 
     }
 
+
     const utterance =
     new SpeechSynthesisUtterance(text);
 
-    if(voiceSettings.voice){
+    if(
+        voiceSettings.voice
+    ){
 
         utterance.voice =
         voiceSettings.voice;
 
     }
 
+    const effectiveVolume =
+    getSpeechGainValue();
+
     switch(style){
+
 
         case "Jarvis":
 
             utterance.rate = 0.95;
+
             utterance.pitch = 0.85;
-            utterance.volume = volume;
+
+            utterance.volume =
+            effectiveVolume;
 
         break;
+
+
 
         case "Friendly":
 
             utterance.rate = 1.05;
+
             utterance.pitch = 1.15;
-            utterance.volume = volume;
+
+            utterance.volume =
+            effectiveVolume;
 
         break;
+
+
 
         case "Minimal":
 
             utterance.rate = 1;
+
             utterance.pitch = 1;
-            utterance.volume = volume;
+
+            utterance.volume =
+            effectiveVolume;
 
         break;
 
+
+
         case "Professional":
+
         default:
 
             utterance.rate = 0.95;
+
             utterance.pitch = 1;
-            utterance.volume = volume;
+
+            utterance.volume =
+            effectiveVolume;
 
         break;
 
+
     }
 
-    voiceSettings.queue.push(utterance);
+    voiceSettings.queue.push(
+        utterance
+    );
 
     processVoiceQueue();
 
 }
+
 
 Aegis.register("voice", {
 
@@ -382,8 +443,6 @@ Aegis.register("voice", {
     volume:0.9,
 
     currentVoice:null,
-
-    xttsAvailable:false,
 
 
     getSettings(){
@@ -396,9 +455,9 @@ Aegis.register("voice", {
 
             voice:this.currentVoice,
 
-            engine:
-                this.xttsAvailable ? "xtts" :
-                (localStorage.getItem("elevenLabsApiKey") ? "elevenlabs" : "browser")
+            xttsAvailable:xttsAvailable,
+
+            xttsChecked:xttsChecked
 
         };
 
@@ -421,7 +480,19 @@ Aegis.register("voice", {
     },
 
 
-    async init(){
+    setVolume(value){
+
+        voiceSettings.volume =
+        value;
+
+        saveData(
+            "voiceVolume",
+            [{ volume:value }]
+        );
+
+    },
+
+        init(){
 
         console.log(
             "Voice system initialized."
@@ -450,23 +521,33 @@ Aegis.register("voice", {
 
         };
 
-        // One quick reachability check per app load —
-        // no manual toggle needed.
-        this.xttsAvailable =
-        await checkXttsAvailable();
 
-        console.log(
-            this.xttsAvailable
-            ? "🎙️ Local XTTS detected — using it as the primary voice."
-            : "🎙️ No local XTTS found — will use ElevenLabs/browser voice."
-        );
+        // One reachability check per app load, not a manual toggle —
+        // skipped entirely while XTTS_ENABLED is false, so boot
+        // doesn't wait on a server that isn't running yet.
 
-        Aegis.broadcast("voiceUpdated");
+        if(XTTS_ENABLED){
+
+            checkXttsAvailability();
+
+        }
+        else{
+
+            xttsAvailable = false;
+
+            xttsChecked = true;
+
+            console.log(
+                "⚪ XTTS skipped (disabled) — ElevenLabs is the primary voice."
+            );
+
+        }
+
 
     },
 
 
-    speak(text){
+    async speak(text){
 
         if(!this.enabled){
             return;
@@ -480,57 +561,17 @@ Aegis.register("voice", {
             .getProfile();
 
 
-        const style =
-        profile?.style || "Professional";
+            const style =
+            profile?.style || "Professional";
 
 
-        const globalVolume =
-        Aegis.getModule("audio")
-        ?.api
-        .globalVolume ?? 1;
+        // Tier 1: local XTTS, if reachable.
 
-
-        const effectiveVolume =
-        voiceSettings.volume *
-        globalVolume;
-
-        // Chained so overlapping calls play in order instead
-        // of stacking on top of each other.
-        voicePlaybackChain =
-        voicePlaybackChain
-        .then(async () => {
-
-            if(this.xttsAvailable){
-
-                try{
-
-                    await speakWithXtts(
-                        text,
-                        effectiveVolume
-                    );
-
-                    return;
-
-                }
-                catch(error){
-
-                    console.warn(
-                        "XTTS failed, falling back to ElevenLabs:",
-                        error
-                    );
-
-                    this.xttsAvailable = false;
-
-                }
-
-            }
+        if(xttsAvailable){
 
             try{
 
-                await speakWithElevenLabs(
-                    text,
-                    effectiveVolume
-                );
+                await speakViaXtts(text);
 
                 return;
 
@@ -538,27 +579,40 @@ Aegis.register("voice", {
             catch(error){
 
                 console.warn(
-                    "ElevenLabs unavailable, falling back to browser voice:",
+                    "XTTS failed, falling back to ElevenLabs:",
                     error
                 );
 
+                xttsAvailable = false;
+
             }
 
-            speakWithBrowser(
-                text,
-                style,
-                effectiveVolume
-            );
+        }
 
-        })
-        .catch(error => {
 
-            console.error(
-                "Voice playback chain error:",
+        // Tier 2: ElevenLabs, via the Supabase edge function.
+
+        try{
+
+            await speakViaElevenLabs(text);
+
+            return;
+
+        }
+        catch(error){
+
+            console.warn(
+                "ElevenLabs failed, falling back to browser voice:",
                 error
             );
 
-        });
+        }
+
+
+        // Tier 3: browser speechSynthesis — always available.
+
+        speakViaBrowser(text, style);
+
 
     },
 
@@ -669,19 +723,6 @@ Aegis.register("voice", {
     },
 
 
-    setVolume(value){
-
-        voiceSettings.volume =
-        value;
-
-        saveData(
-            "voiceVolume",
-            [{ volume:value }]
-        );
-
-    },
-
-
     getVoices(){
 
         return speechSynthesis.getVoices();
@@ -701,21 +742,6 @@ Aegis.register("voice", {
 
         speechSynthesis.cancel();
 
-        voicePlaybackChain =
-        Promise.resolve();
-
-    },
-
-
-    async recheckXtts(){
-
-        this.xttsAvailable =
-        await checkXttsAvailable();
-
-        Aegis.broadcast("voiceUpdated");
-
-        return this.xttsAvailable;
-
     },
 
 
@@ -727,7 +753,7 @@ Aegis.register("voice", {
 
             version:this.version,
 
-            xttsAvailable:this.xttsAvailable
+            xttsAvailable:xttsAvailable
 
         };
 

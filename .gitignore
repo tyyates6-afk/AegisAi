@@ -743,3 +743,4 @@ node_modules/jose/README.md
 node_modules/supabase/dist/supabase.js
 node_modules/supabase/README.md
 supabase/config.toml
+xtts/voice_preview_aegis.wav
