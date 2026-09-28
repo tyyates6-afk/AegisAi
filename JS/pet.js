@@ -8,10 +8,11 @@
     1. Save this file as JS/pet.js
     2. Add <script src="JS/pet.js"></script> after core.js
     3. Drop the sprite sheets into assets/pet/ as:
-         orb-idle.webp     (4 frames)
-         orb-happy.webp    (4 frames)
-         orb-sleep.webp    (3 frames)
-         orb-excited.webp  (4 frames)
+         orb-idle.png      (4 frames)
+         orb-happy.png     (4 frames)
+         orb-sleep.png     (3 frames)
+         orb-excited.png   (4 frames)
+       (Transparent PNGs — backgrounds already keyed out.)
 
     DRIVING THE PET:
     - Aegis.run("pet", "setMood", "happy")
@@ -28,25 +29,25 @@
 const PET_SPRITES = {
 
     idle: {
-        src: "assets/pet/orb-idle.webp",
+        src: "assets/pet/orb-idle.png",
         frames: 4,
         fps: 6
     },
 
     happy: {
-        src: "assets/pet/orb-happy.webp",
+        src: "assets/pet/orb-happy.png",
         frames: 4,
         fps: 10
     },
 
     sleep: {
-        src: "assets/pet/orb-sleep.webp",
+        src: "assets/pet/orb-sleep.png",
         frames: 3,
         fps: 2
     },
 
     excited: {
-        src: "assets/pet/orb-excited.webp",
+        src: "assets/pet/orb-excited.png",
         frames: 4,
         fps: 12
     }
@@ -402,10 +403,7 @@ function petBuild() {
 
         userSelect: "none",
 
-        /* drops the black sprite background,
-           keeps the hologram glow */
-
-        mixBlendMode: "screen"
+        filter: "drop-shadow(0 0 14px rgba(80, 210, 255, 0.55))"
 
     });
 
