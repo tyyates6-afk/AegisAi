@@ -19,9 +19,12 @@
     - Aegis.broadcast("petMood", { mood: "excited", duration: 4000 })
     - The pet broadcasts "petClicked" when tapped.
 
-    LATER (real desktop pet):
-    This same module runs inside an Electron transparent,
-    always-on-top window. No code changes needed here.
+    LINKING THE TWO PETS:
+    The desktop app hosts a local WebSocket server
+    (127.0.0.1:17373). This module connects to it, so the
+    dashboard pet and the desktop pet mirror each other's
+    moods. Nothing leaves your PC. If the desktop app
+    isn't running, the dashboard pet just works solo.
 
 ======================================*/
 
@@ -58,6 +61,135 @@ const PET_SPRITES = {
 const PET_HEIGHT = 128;
 
 const PET_POS_KEY = "aegisPetPos";
+
+
+/* Links the dashboard pet and the desktop pet.
+   The desktop app hosts a WebSocket server on localhost;
+   this module connects to it. Everything is local-only.
+   If the desktop app isn't running, this fails silently
+   and retries quietly in the background. */
+
+const PET_LINK_URL = "ws://127.0.0.1:17373";
+
+const PET_LINK_ID =
+    "pet-" + Math.random().toString(36).slice(2, 10);
+
+let petSocket = null;
+
+let petLinked = false;
+
+let petApplyingRemote = false;
+
+
+function petLinkSend(mood, durationMs) {
+
+    if (!petLinked || !petSocket) return;
+
+    if (petSocket.readyState !== 1) return;
+
+    try {
+
+        petSocket.send(JSON.stringify({
+
+            from: PET_LINK_ID,
+
+            mood: mood,
+
+            duration: durationMs || 0
+
+        }));
+
+    } catch (error) {}
+
+}
+
+
+function petLinkRetry() {
+
+    setTimeout(() => {
+
+        petSocket = null;
+
+        petLinkConnect();
+
+    }, 10000);
+
+}
+
+
+function petLinkConnect() {
+
+    if (petSocket) return;
+
+    if (typeof WebSocket === "undefined") return;
+
+    let socket = null;
+
+    try {
+
+        socket = new WebSocket(PET_LINK_URL);
+
+    } catch (error) {
+
+        petLinkRetry();
+
+        return;
+
+    }
+
+    socket.onopen = () => {
+
+        petSocket = socket;
+
+        petLinked = true;
+
+        Aegis.broadcast("petLinked", { id: PET_LINK_ID });
+
+    };
+
+    socket.onmessage = (event) => {
+
+        let data = null;
+
+        try {
+
+            data = JSON.parse(event.data);
+
+        } catch (error) {
+
+            return;
+
+        }
+
+        if (!data || !data.mood) return;
+
+        if (data.from === PET_LINK_ID) return;
+
+        petApplyingRemote = true;
+
+        setMood(data.mood, data.duration || 0);
+
+        petApplyingRemote = false;
+
+    };
+
+    const drop = () => {
+
+        petLinked = false;
+
+        if (petSocket === socket) petSocket = null;
+
+        try { socket.close(); } catch (error) {}
+
+        petLinkRetry();
+
+    };
+
+    socket.onclose = drop;
+
+    socket.onerror = drop;
+
+}
 
 
 let petEl = null;
@@ -222,6 +354,12 @@ function setMood(mood, durationMs = 0) {
     }
 
     petShowMood(mood);
+
+    if (!petApplyingRemote) {
+
+        petLinkSend(mood, durationMs);
+
+    }
 
     if (durationMs > 0 && mood !== "idle" && mood !== "sleep") {
 
@@ -491,6 +629,12 @@ Aegis.register("pet", {
 
     init() {
 
+        if (petEl) {
+
+            return;
+
+        }
+
         petBuild();
 
         petShowMood("idle");
@@ -506,6 +650,8 @@ Aegis.register("pet", {
         );
 
         console.log("Pet initialized.");
+
+        petLinkConnect();
 
     },
 
@@ -536,7 +682,9 @@ Aegis.register("pet", {
 
             version: this.version,
 
-            mood: petMood
+            mood: petMood,
+
+            linked: petLinked
 
         };
 
