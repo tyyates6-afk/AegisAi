@@ -175,6 +175,10 @@ function petLinkConnect() {
 
     const drop = () => {
 
+        if (socket.__petDead) return;
+
+        socket.__petDead = true;
+
         petLinked = false;
 
         if (petSocket === socket) petSocket = null;
