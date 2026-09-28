@@ -54,7 +54,7 @@ const PET_SPRITES = {
 };
 
 
-const PET_SIZE = 128;
+const PET_HEIGHT = 128;
 
 const PET_POS_KEY = "aegisPetPos";
 
@@ -63,17 +63,19 @@ let petEl = null;
 
 let petStrip = null;
 
-let petImg = null;
-
 let petMood = "idle";
 
 let petFrame = 0;
+
+let petFrameW = PET_HEIGHT;
 
 let petTimer = null;
 
 let petRevertTimer = null;
 
 let petListeners = [];
+
+let petPreloaded = {};
 
 
 function petSprite(mood) {
@@ -83,12 +85,40 @@ function petSprite(mood) {
 }
 
 
+/* Measure one frame from the real image so the window
+   always shows exactly one frame, whatever the sheet size. */
+
+function petMeasure(mood) {
+
+    const sprite = petSprite(mood);
+
+    const img = petPreloaded[mood];
+
+    if (img && img.naturalWidth > 0) {
+
+        const scale = PET_HEIGHT / img.naturalHeight;
+
+        petFrameW = (img.naturalWidth / sprite.frames) * scale;
+
+    } else {
+
+        petFrameW = PET_HEIGHT;
+
+    }
+
+    petEl.style.width = `${petFrameW}px`;
+
+    petEl.style.height = `${PET_HEIGHT}px`;
+
+}
+
+
 function petDrawFrame() {
 
     if (!petStrip) return;
 
     petStrip.style.transform =
-        `translateX(${-petFrame * PET_SIZE}px)`;
+        `translateX(${-petFrame * petFrameW}px)`;
 
 }
 
@@ -131,7 +161,7 @@ function petStopLoop() {
 }
 
 
-function petApplyMood(mood) {
+function petShowMood(mood) {
 
     const sprite = petSprite(mood);
 
@@ -139,10 +169,29 @@ function petApplyMood(mood) {
 
     petFrame = 0;
 
-    petImg.src = sprite.src;
+    petMeasure(mood);
 
-    petStrip.style.width =
-        `${sprite.frames * PET_SIZE}px`;
+    petStrip.innerHTML = "";
+
+    const frameImg = petPreloaded[mood];
+
+    if (frameImg) {
+
+        const view = frameImg.cloneNode(false);
+
+        view.style.height = `${PET_HEIGHT}px`;
+
+        view.style.width = "auto";
+
+        view.style.flexShrink = "0";
+
+        view.style.pointerEvents = "none";
+
+        view.draggable = false;
+
+        petStrip.appendChild(view);
+
+    }
 
     petDrawFrame();
 
@@ -171,19 +220,46 @@ function setMood(mood, durationMs = 0) {
 
     }
 
-    petApplyMood(mood);
+    petShowMood(mood);
 
     if (durationMs > 0 && mood !== "idle" && mood !== "sleep") {
 
         petRevertTimer = setTimeout(() => {
 
-            petApplyMood("idle");
+            petShowMood("idle");
 
             petRevertTimer = null;
 
         }, durationMs);
 
     }
+
+}
+
+
+function petPreload() {
+
+    Object.keys(PET_SPRITES).forEach((mood) => {
+
+        const img = new Image();
+
+        img.src = PET_SPRITES[mood].src;
+
+        img.onload = () => {
+
+            if (mood === petMood) {
+
+                petMeasure(mood);
+
+                petDrawFrame();
+
+            }
+
+        };
+
+        petPreloaded[mood] = img;
+
+    });
 
 }
 
@@ -227,9 +303,13 @@ function petSavePos(x, y) {
 
 function petPlace(x, y) {
 
-    const maxX = window.innerWidth - PET_SIZE;
+    const w = petEl.offsetWidth || petFrameW;
 
-    const maxY = window.innerHeight - PET_SIZE;
+    const h = petEl.offsetHeight || PET_HEIGHT;
+
+    const maxX = window.innerWidth - w;
+
+    const maxY = window.innerHeight - h;
 
     const clampedX = Math.max(0, Math.min(x, maxX));
 
@@ -312,10 +392,6 @@ function petBuild() {
 
         position: "fixed",
 
-        width: `${PET_SIZE}px`,
-
-        height: `${PET_SIZE}px`,
-
         overflow: "hidden",
 
         zIndex: "9999",
@@ -326,7 +402,10 @@ function petBuild() {
 
         userSelect: "none",
 
-        filter: "drop-shadow(0 0 18px rgba(70, 200, 255, 0.45))"
+        /* drops the black sprite background,
+           keeps the hologram glow */
+
+        mixBlendMode: "screen"
 
     });
 
@@ -338,27 +417,11 @@ function petBuild() {
 
     petStrip.style.willChange = "transform";
 
-    petImg = document.createElement("img");
-
-    petImg.alt = "AEGIS companion";
-
-    petImg.draggable = false;
-
-    Object.assign(petImg.style, {
-
-        height: `${PET_SIZE}px`,
-
-        width: "auto",
-
-        pointerEvents: "none"
-
-    });
-
-    petStrip.appendChild(petImg);
-
     petEl.appendChild(petStrip);
 
     document.body.appendChild(petEl);
+
+    petPreload();
 
     const saved = petLoadPos();
 
@@ -369,8 +432,8 @@ function petBuild() {
     } else {
 
         petPlace(
-            window.innerWidth - PET_SIZE - 24,
-            window.innerHeight - PET_SIZE - 24
+            window.innerWidth - petFrameW - 24,
+            window.innerHeight - PET_HEIGHT - 24
         );
 
     }
@@ -410,8 +473,6 @@ function petDestroy() {
 
     petStrip = null;
 
-    petImg = null;
-
 }
 
 
@@ -434,7 +495,7 @@ Aegis.register("pet", {
 
         petBuild();
 
-        petApplyMood("idle");
+        petShowMood("idle");
 
         petListeners.push(
             Aegis.listen("petMood", (data) => {
