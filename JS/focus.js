@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS FOCUS PROTOCOL v1.2.0
+        AEGIS FOCUS PROTOCOL v1.3.0
 ======================================
 
     One-tap focus mode for AEGIS.
@@ -65,6 +65,13 @@ let focusSetupMinSel = null;
 let focusSetupSecSel = null;
 
 let focusSetupTimeRow = null;
+
+/* True while focusFinish is running its own timer stop, so the
+   "timerStopped" listener doesn't re-enter on our own stop. */
+
+let focusFinishing = false;
+
+let focusTimerStopUnsub = null;
 
 
 function focusLoadSessions() {
@@ -279,6 +286,8 @@ function focusFinish(completed) {
 
     if (!focusActive) return;
 
+    focusFinishing = true;
+
     if (Aegis.modules.timer) {
 
         Aegis.run("timer", "stop");
@@ -342,6 +351,8 @@ function focusFinish(completed) {
     });
 
     document.title = "AEGIS";
+
+    focusFinishing = false;
 
 }
 
@@ -1011,7 +1022,7 @@ function focusBuildOverlay() {
 
 Aegis.register("focus", {
 
-    version: "1.2.0",
+    version: "1.3.0",
 
 
     start: focusStart,
@@ -1039,6 +1050,20 @@ Aegis.register("focus", {
 
         focusBuildSetupWindow();
 
+        /* If the timer is stopped out from under us (e.g. the
+           timer widget's STOP button), end the session as
+           incomplete instead of leaving it frozen. */
+
+        focusTimerStopUnsub = Aegis.listen("timerStopped", () => {
+
+            if (focusActive && !focusFinishing) {
+
+                focusFinish(false);
+
+            }
+
+        });
+
         console.log("Focus initialized.");
 
     },
@@ -1048,6 +1073,14 @@ Aegis.register("focus", {
 
 
     shutdown() {
+
+        if (focusTimerStopUnsub) {
+
+            try { focusTimerStopUnsub(); } catch (error) {}
+
+            focusTimerStopUnsub = null;
+
+        }
 
         if (Aegis.modules.timer) {
 
