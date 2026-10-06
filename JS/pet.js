@@ -202,6 +202,12 @@ let petStrip = null;
 
 let petMood = "idle";
 
+/* The mood the pet returns to when a timed mood (like the
+   happy flash when you click him) expires. This is what
+   keeps him asleep through focus mode. */
+
+let petBaseMood = "idle";
+
 let petFrame = 0;
 
 let petFrameW = PET_HEIGHT;
@@ -367,13 +373,25 @@ function setMood(mood, durationMs = 0) {
 
     if (durationMs > 0 && mood !== "idle" && mood !== "sleep") {
 
+        /* A timed mood always returns to the pet's base mood
+           (e.g. "sleep" during focus mode), not hardcoded
+           "idle" — that's the focus-mode bug fix. */
+
+        const revertMood = petBaseMood;
+
         petRevertTimer = setTimeout(() => {
 
-            petShowMood("idle");
+            petShowMood(revertMood);
 
             petRevertTimer = null;
 
         }, durationMs);
+
+    } else {
+
+        /* A persistent mood (no timer) becomes the new base. */
+
+        petBaseMood = mood;
 
     }
 
@@ -594,6 +612,8 @@ function petDestroy() {
         petRevertTimer = null;
 
     }
+
+    petBaseMood = "idle";
 
     petListeners.forEach((unsub) => {
 
