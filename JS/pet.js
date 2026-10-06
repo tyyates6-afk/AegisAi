@@ -365,6 +365,19 @@ function setMood(mood, durationMs = 0) {
 
     }
 
+    /* The pet DOM isn't built until init() runs — modules that
+       initialize earlier must wait instead of crashing. */
+
+    if (!petEl) {
+
+        console.warn(
+            "Pet: setMood called before init, ignoring."
+        );
+
+        return;
+
+    }
+
     if (petRevertTimer) {
 
         clearTimeout(petRevertTimer);

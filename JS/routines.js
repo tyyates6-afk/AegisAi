@@ -13,9 +13,9 @@
 
     USE:
     - Everything is automatic once loaded. Defaults: asleep
-      22:00–07:00, checked every minute. Waking up comes with
+      23:00–07:00, checked every minute. Waking up comes with
       a little happy stretch.
-    - Aegis.run("routines", "setSleepWindow", 22, 7)
+    - Aegis.run("routines", "setSleepWindow", 23, 7)
     - Aegis.run("routines", "setEnabled", false)
     - Aegis.run("routines", "sleepNow")
     - Aegis.run("routines", "wakeNow")
@@ -39,7 +39,7 @@ const ROUTINES_CHECK_MS = 60 * 1000;
 
 let routinesEnabled = true;
 
-let routinesSleepStart = 22;
+let routinesSleepStart = 23;
 
 let routinesSleepEnd = 7;
 
@@ -138,6 +138,27 @@ function routinesFocusActive() {
 }
 
 
+function routinesPetReady() {
+
+    /* The pet module may initialize after routines (script order).
+       Never touch him before his DOM exists. */
+
+    try {
+
+        return !!(
+            Aegis.modules.pet &&
+            Aegis.run("pet", "status").online
+        );
+
+    } catch (error) {
+
+        return false;
+
+    }
+
+}
+
+
 function routinesPetMood() {
 
     try {
@@ -204,6 +225,11 @@ function check() {
     /* Focus owns the pet during sessions — never override it. */
 
     if (routinesFocusActive()) return;
+
+    /* The pet might not exist yet (init order) — the next
+       minute's check will catch him once he's built. */
+
+    if (!routinesPetReady()) return;
 
     const hour = new Date().getHours();
 
