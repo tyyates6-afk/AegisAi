@@ -13,12 +13,23 @@
          orb-sleep.png     (3 frames)
          orb-sleep-night.png (4 frames — breathing, cozy nighttime look)
          orb-excited.png   (4 frames)
+         orb-hungry.png    (3 frames — grumble shiver)
        (Transparent PNGs — backgrounds already keyed out.)
 
     DRIVING THE PET:
     - Aegis.run("pet", "setMood", "happy")
     - Aegis.broadcast("petMood", { mood: "excited", duration: 4000 })
     - The pet broadcasts "petClicked" when tapped.
+
+    FEEDING:
+    - POTATO gets hungry after 6h without food (configurable).
+    - A 🍪 button floats at his top-right, pulsing when hungry.
+    - Aegis.run("pet", "feed") — drops a random snack, happy wiggle.
+    - Aegis.run("pet", "setHungerHours", n)
+    - Aegis.run("pet", "checkHunger")
+    - Broadcasts: petHungry, petFed { food, wasHungry }
+    - Hunger waits while he sleeps or focuses; midnight snacks
+      don't wake him.
 
     LINKING THE TWO PETS:
     The desktop app hosts a local WebSocket server
@@ -57,6 +68,14 @@ const PET_SPRITES = {
         src: "assets/pet/orb-sleep-night.png",
         frames: 4,
         fps: 2
+    },
+
+    /* Hungry: droopy side-eye + tummy growl. Frames shiver. */
+
+    hungry: {
+        src: "assets/pet/orb-hungry.png",
+        frames: 3,
+        fps: 4
     },
 
     excited: {
@@ -235,6 +254,25 @@ let petZzz = null;
 let petCssInjected = false;
 
 
+/* ---- Hunger & feeding ---- */
+
+let petLastFed = 0;
+
+let petHungry = false;
+
+let petHungerMs = 6 * 3600 * 1000; /* hungry after 6 hours */
+
+let petHungerTimer = null;
+
+let petFeedBtn = null;
+
+const PET_FED_KEY = "aegisPetLastFed";
+
+const PET_FOODS = ["🍪", "🍎", "🍩", "🍕", "🧁"];
+
+const PET_HUNGER_CHECK_MS = 5 * 60 * 1000; /* check every 5 minutes */
+
+
 const PET_CSS = `
 #aegis-pet-zzz {
     position: absolute;
@@ -264,6 +302,29 @@ const PET_CSS = `
     20% { opacity: 1; }
     100% { opacity: 0; transform: translate(14px, -58px) scale(1.2); }
 }
+@keyframes aegis-pet-food-drop {
+    0% { opacity: 0; transform: translateY(-16px) scale(0.6); }
+    25% { opacity: 1; transform: translateY(0) scale(1.1); }
+    70% { opacity: 1; transform: translateY(48px) scale(1); }
+    100% { opacity: 0; transform: translateY(66px) scale(0.7); }
+}
+.aegis-pet-food {
+    position: fixed;
+    font-size: 34px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 10001;
+    animation: aegis-pet-food-drop 1.3s ease-in forwards;
+}
+@keyframes aegis-pet-feed-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+#aegis-pet-feed.hungry {
+    animation: aegis-pet-feed-pulse 1s ease-in-out infinite;
+    opacity: 1 !important;
+    border-color: #ffb347 !important;
+}
 `;
 
 
@@ -278,6 +339,181 @@ function petInjectCss() {
     style.textContent = PET_CSS;
 
     (document.head || document.body).appendChild(style);
+
+}
+
+
+function petLoadFed() {
+
+    try {
+
+        const saved = parseInt(localStorage.getItem(PET_FED_KEY) || "0", 10);
+
+        petLastFed = saved > 0 ? saved : Date.now();
+
+    } catch (error) {
+
+        petLastFed = Date.now();
+
+    }
+
+}
+
+
+function petSaveFed() {
+
+    try {
+
+        localStorage.setItem(PET_FED_KEY, String(petLastFed));
+
+    } catch (error) {}
+
+}
+
+
+function petFocusActive() {
+
+    try {
+
+        return !!(
+            Aegis.modules.focus &&
+            Aegis.run("focus", "getStatus").active
+        );
+
+    } catch (error) {
+
+        return false;
+
+    }
+
+}
+
+
+function petCheckHunger() {
+
+    if (!petEl) return;
+
+    if (Date.now() - petLastFed < petHungerMs) return;
+
+    /* Let him sleep and focus in peace — hunger waits. */
+
+    if (petMood === "sleep" || petMood === "sleepNight") return;
+
+    if (petFocusActive()) return;
+
+    if (petMood === "hungry") return;
+
+    const firstTime = !petHungry;
+
+    petHungry = true;
+
+    setMood("hungry");
+
+    if (petFeedBtn) {
+
+        petFeedBtn.classList.add("hungry");
+
+    }
+
+    if (firstTime) {
+
+        Aegis.broadcast("petHungry", {});
+
+        console.log("Pet: POTATO is hungry!");
+
+    }
+
+}
+
+
+function petFoodDrop(food) {
+
+    const x = petEl.offsetLeft + petFrameW / 2;
+
+    const y = petEl.offsetTop;
+
+    const el = document.createElement("div");
+
+    el.className = "aegis-pet-food";
+
+    el.textContent = food;
+
+    el.style.left = `${x - 17}px`;
+
+    el.style.top = `${y - 56}px`;
+
+    document.body.appendChild(el);
+
+    setTimeout(() => {
+
+        if (el.parentNode) {
+
+            el.parentNode.removeChild(el);
+
+        }
+
+    }, 1400);
+
+}
+
+
+function feed() {
+
+    if (!petEl) {
+
+        console.warn("Pet: feed called before init.");
+
+        return;
+
+    }
+
+    petLastFed = Date.now();
+
+    petSaveFed();
+
+    const wasHungry = petHungry;
+
+    petHungry = false;
+
+    if (petFeedBtn) {
+
+        petFeedBtn.classList.remove("hungry");
+
+    }
+
+    const food =
+        PET_FOODS[Math.floor(Math.random() * PET_FOODS.length)];
+
+    petFoodDrop(food);
+
+    if (petMood === "sleep" || petMood === "sleepNight") {
+
+        /* Midnight snack — hunger cleared, let him sleep. */
+
+    } else {
+
+        setMood("idle");
+
+        setMood("happy", 2500);
+
+    }
+
+    Aegis.broadcast("petFed", { food, wasHungry });
+
+    console.log(`Pet: POTATO fed ${food}`);
+
+}
+
+
+function petPlaceFeedBtn() {
+
+    if (!petFeedBtn || !petEl) return;
+
+    petFeedBtn.style.left =
+        `${petEl.offsetLeft + petFrameW - 4}px`;
+
+    petFeedBtn.style.top =
+        `${petEl.offsetTop - 18}px`;
 
 }
 
@@ -571,6 +807,8 @@ function petPlace(x, y) {
 
     petEl.style.top = `${clampedY}px`;
 
+    petPlaceFeedBtn();
+
 }
 
 
@@ -680,6 +918,48 @@ function petBuild() {
 
     petEl.appendChild(petZzz);
 
+    /* Feed button — floats at his top-right, follows him around. */
+
+    petFeedBtn = document.createElement("button");
+
+    petFeedBtn.id = "aegis-pet-feed";
+
+    petFeedBtn.textContent = "🍪";
+
+    petFeedBtn.title = "Feed POTATO";
+
+    Object.assign(petFeedBtn.style, {
+
+        position: "fixed",
+
+        zIndex: "10000",
+
+        width: "38px",
+
+        height: "38px",
+
+        borderRadius: "50%",
+
+        border: "2px solid rgba(140, 220, 255, 0.5)",
+
+        background: "rgba(10, 25, 45, 0.85)",
+
+        fontSize: "20px",
+
+        lineHeight: "1",
+
+        cursor: "pointer",
+
+        opacity: "0.65",
+
+        padding: "0"
+
+    });
+
+    petFeedBtn.addEventListener("click", () => feed());
+
+    document.body.appendChild(petFeedBtn);
+
     document.body.appendChild(petEl);
 
     petPreload();
@@ -707,6 +987,14 @@ function petBuild() {
 function petDestroy() {
 
     petStopLoop();
+
+    if (petHungerTimer) {
+
+        clearInterval(petHungerTimer);
+
+        petHungerTimer = null;
+
+    }
 
     if (petRevertTimer) {
 
@@ -738,6 +1026,16 @@ function petDestroy() {
 
     petZzz = null;
 
+    if (petFeedBtn && petFeedBtn.parentNode) {
+
+        petFeedBtn.parentNode.removeChild(petFeedBtn);
+
+    }
+
+    petFeedBtn = null;
+
+    petHungry = false;
+
 }
 
 
@@ -747,6 +1045,23 @@ Aegis.register("pet", {
 
 
     setMood,
+
+
+    feed,
+
+
+    checkHunger() {
+
+        petCheckHunger();
+
+    },
+
+
+    setHungerHours(hours) {
+
+        petHungerMs = Math.max(0.001, hours) * 3600 * 1000;
+
+    },
 
 
     getMood() {
@@ -764,9 +1079,18 @@ Aegis.register("pet", {
 
         }
 
+        petLoadFed();
+
         petBuild();
 
         petShowMood("idle");
+
+        petCheckHunger();
+
+        petHungerTimer = setInterval(
+            petCheckHunger,
+            PET_HUNGER_CHECK_MS
+        );
 
         petListeners.push(
             Aegis.listen("petMood", (data) => {
@@ -813,7 +1137,13 @@ Aegis.register("pet", {
 
             mood: petMood,
 
-            linked: petLinked
+            linked: petLinked,
+
+            hungry: petHungry,
+
+            lastFed: petLastFed,
+
+            hungerHours: petHungerMs / 3600000
 
         };
 
