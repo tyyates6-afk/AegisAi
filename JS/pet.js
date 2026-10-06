@@ -22,10 +22,12 @@
     - The pet broadcasts "petClicked" when tapped.
 
     FEEDING:
-    - POTATO gets hungry after 6h without food (configurable).
-    - A 🍪 button floats at his top-right, pulsing when hungry.
-    - Aegis.run("pet", "feed") — drops a random snack, happy wiggle.
-    - Aegis.run("pet", "setHungerHours", n)
+    - POTATO eats 3 meals a day: 8am, 12pm, 6pm (configurable).
+    - Miss a meal and he gets hungry (droopy side-eye + grumble).
+    - The 🍪 button only appears when he's hungry, floating at
+      his top-right. Tap it (or Aegis.run("pet", "feed")) and a
+      random snack drops in with a happy wiggle.
+    - Aegis.run("pet", "setMeals", 8, 12, 18)
     - Aegis.run("pet", "checkHunger")
     - Broadcasts: petHungry, petFed { food, wasHungry }
     - Hunger waits while he sleeps or focuses; midnight snacks
@@ -260,13 +262,17 @@ let petLastFed = 0;
 
 let petHungry = false;
 
-let petHungerMs = 6 * 3600 * 1000; /* hungry after 6 hours */
+/* Mealtimes (24h hours). Hungry at a mealtime if not fed since it. */
+
+let petHungerMeals = [8, 12, 18];
 
 let petHungerTimer = null;
 
 let petFeedBtn = null;
 
 const PET_FED_KEY = "aegisPetLastFed";
+
+const PET_MEALS_KEY = "aegisPetMeals";
 
 const PET_FOODS = ["🍪", "🍎", "🍩", "🍕", "🧁"];
 
@@ -357,6 +363,63 @@ function petLoadFed() {
 
     }
 
+    try {
+
+        const raw = localStorage.getItem(PET_MEALS_KEY);
+
+        if (raw) {
+
+            const arr = JSON.parse(raw);
+
+            if (Array.isArray(arr) && arr.length &&
+                arr.every((h) => h >= 0 && h < 24)) {
+
+                petHungerMeals = arr.slice().sort((a, b) => a - b);
+
+            }
+
+        }
+
+    } catch (error) {}
+
+}
+
+
+function petSaveMeals() {
+
+    try {
+
+        localStorage.setItem(PET_MEALS_KEY, JSON.stringify(petHungerMeals));
+
+    } catch (error) {}
+
+}
+
+
+/* Most recent mealtime at or before `now` (may be yesterday). */
+
+function petLastMealTime(now) {
+
+    const d = new Date(now);
+
+    for (let i = petHungerMeals.length - 1; i >= 0; i--) {
+
+        const m = new Date(d);
+
+        m.setHours(petHungerMeals[i], 0, 0, 0);
+
+        if (m.getTime() <= now) return m.getTime();
+
+    }
+
+    const m = new Date(d);
+
+    m.setDate(m.getDate() - 1);
+
+    m.setHours(petHungerMeals[petHungerMeals.length - 1], 0, 0, 0);
+
+    return m.getTime();
+
 }
 
 
@@ -393,7 +456,9 @@ function petCheckHunger() {
 
     if (!petEl) return;
 
-    if (Date.now() - petLastFed < petHungerMs) return;
+    /* Hungry if not fed since the most recent mealtime. */
+
+    if (petLastFed >= petLastMealTime(Date.now())) return;
 
     /* Let him sleep and focus in peace — hunger waits. */
 
@@ -409,11 +474,7 @@ function petCheckHunger() {
 
     setMood("hungry");
 
-    if (petFeedBtn) {
-
-        petFeedBtn.classList.add("hungry");
-
-    }
+    petUpdateFeedBtn();
 
     if (firstTime) {
 
@@ -422,6 +483,19 @@ function petCheckHunger() {
         console.log("Pet: POTATO is hungry!");
 
     }
+
+}
+
+
+function petUpdateFeedBtn() {
+
+    if (!petFeedBtn) return;
+
+    /* The feed button only exists when he's hungry. */
+
+    petFeedBtn.style.display = petHungry ? "block" : "none";
+
+    petFeedBtn.classList.toggle("hungry", petHungry);
 
 }
 
@@ -475,11 +549,7 @@ function feed() {
 
     petHungry = false;
 
-    if (petFeedBtn) {
-
-        petFeedBtn.classList.remove("hungry");
-
-    }
+    petUpdateFeedBtn();
 
     const food =
         PET_FOODS[Math.floor(Math.random() * PET_FOODS.length)];
@@ -918,7 +988,8 @@ function petBuild() {
 
     petEl.appendChild(petZzz);
 
-    /* Feed button — floats at his top-right, follows him around. */
+    /* Feed button — only appears when he's hungry. Floats at
+       his top-right and follows him around. */
 
     petFeedBtn = document.createElement("button");
 
@@ -931,6 +1002,8 @@ function petBuild() {
     Object.assign(petFeedBtn.style, {
 
         position: "fixed",
+
+        display: "none",
 
         zIndex: "10000",
 
@@ -949,8 +1022,6 @@ function petBuild() {
         lineHeight: "1",
 
         cursor: "pointer",
-
-        opacity: "0.65",
 
         padding: "0"
 
@@ -1057,9 +1128,21 @@ Aegis.register("pet", {
     },
 
 
-    setHungerHours(hours) {
+    setMeals(...hours) {
 
-        petHungerMs = Math.max(0.001, hours) * 3600 * 1000;
+        let arr = Array.isArray(hours[0]) ? hours[0] : hours;
+
+        arr = arr
+            .map((h) => Number(h))
+            .filter((h) => h >= 0 && h < 24);
+
+        if (!arr.length) return;
+
+        petHungerMeals = arr.slice().sort((a, b) => a - b);
+
+        petSaveMeals();
+
+        petCheckHunger();
 
     },
 
@@ -1143,7 +1226,7 @@ Aegis.register("pet", {
 
             lastFed: petLastFed,
 
-            hungerHours: petHungerMs / 3600000
+            meals: petHungerMeals.slice()
 
         };
 
