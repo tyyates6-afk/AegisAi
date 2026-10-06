@@ -226,6 +226,68 @@ let petTimer = null;
 
 let petRevertTimer = null;
 
+
+/* Night-sleep life: breathing pulse + floating Zzz overlay. */
+
+let petZzz = null;
+
+let petCssInjected = false;
+
+
+const PET_CSS = `
+@keyframes aegis-pet-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.045); }
+}
+#aegis-pet.aegis-pet-breathing #aegis-pet-strip img {
+    animation: aegis-pet-breathe 3.4s ease-in-out infinite;
+    transform-origin: 50% 82%;
+}
+#aegis-pet-zzz {
+    position: absolute;
+    right: 26px;
+    top: 8px;
+    width: 44px;
+    height: 66px;
+    pointer-events: none;
+    display: none;
+}
+#aegis-pet-zzz.on { display: block; }
+#aegis-pet-zzz span {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    font-size: 20px;
+    line-height: 1;
+    color: #aef1ff;
+    text-shadow: 0 0 10px rgba(140, 220, 255, 0.95);
+    opacity: 0;
+    animation: aegis-pet-zzz-float 3.4s ease-in infinite;
+}
+#aegis-pet-zzz span:nth-child(2) { animation-delay: 1.13s; font-size: 24px; }
+#aegis-pet-zzz span:nth-child(3) { animation-delay: 2.26s; font-size: 28px; }
+@keyframes aegis-pet-zzz-float {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translate(14px, -58px) scale(1.2); }
+}
+`;
+
+
+function petInjectCss() {
+
+    if (petCssInjected) return;
+
+    petCssInjected = true;
+
+    const style = document.createElement("style");
+
+    style.textContent = PET_CSS;
+
+    (document.head || document.body).appendChild(style);
+
+}
+
 let petListeners = [];
 
 let petPreloaded = {};
@@ -319,6 +381,18 @@ function petShowMood(mood) {
     const sprite = petSprite(mood);
 
     petMood = mood;
+
+    /* Night-sleep life: breathing pulse + floating Zzz. */
+
+    const snoring = mood === "sleepNight";
+
+    petEl.classList.toggle("aegis-pet-breathing", snoring);
+
+    if (petZzz) {
+
+        petZzz.classList.toggle("on", snoring);
+
+    }
 
     petFrame = 0;
 
@@ -571,6 +645,8 @@ function petMakeDraggable() {
 
 function petBuild() {
 
+    petInjectCss();
+
     petEl = document.createElement("div");
 
     petEl.id = "aegis-pet";
@@ -602,6 +678,16 @@ function petBuild() {
     petStrip.style.willChange = "transform";
 
     petEl.appendChild(petStrip);
+
+    /* Floating Zzz overlay, shown only for the night-sleep mood. */
+
+    petZzz = document.createElement("div");
+
+    petZzz.id = "aegis-pet-zzz";
+
+    petZzz.innerHTML = "<span>z</span><span>z</span><span>z</span>";
+
+    petEl.appendChild(petZzz);
 
     document.body.appendChild(petEl);
 
@@ -658,6 +744,8 @@ function petDestroy() {
     petEl = null;
 
     petStrip = null;
+
+    petZzz = null;
 
 }
 
