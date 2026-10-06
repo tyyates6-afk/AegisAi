@@ -11,7 +11,7 @@
          orb-idle.png      (4 frames)
          orb-happy.png     (4 frames)
          orb-sleep.png     (3 frames)
-         orb-sleep-night.png (1 frame — cozy nighttime look)
+         orb-sleep-night.png (4 frames — breathing, cozy nighttime look)
          orb-excited.png   (4 frames)
        (Transparent PNGs — backgrounds already keyed out.)
 
@@ -55,7 +55,7 @@ const PET_SPRITES = {
 
     sleepNight: {
         src: "assets/pet/orb-sleep-night.png",
-        frames: 1,
+        frames: 4,
         fps: 2
     },
 
@@ -227,7 +227,8 @@ let petTimer = null;
 let petRevertTimer = null;
 
 
-/* Night-sleep life: breathing pulse + floating Zzz overlay. */
+/* Night-sleep life: floating Zzz overlay.
+   (The breathing itself is baked into the sprite frames.) */
 
 let petZzz = null;
 
@@ -235,14 +236,6 @@ let petCssInjected = false;
 
 
 const PET_CSS = `
-@keyframes aegis-pet-breathe {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.045); }
-}
-#aegis-pet.aegis-pet-breathing #aegis-pet-strip img {
-    animation: aegis-pet-breathe 3.4s ease-in-out infinite;
-    transform-origin: 50% 82%;
-}
 #aegis-pet-zzz {
     position: absolute;
     right: 26px;
@@ -382,11 +375,9 @@ function petShowMood(mood) {
 
     petMood = mood;
 
-    /* Night-sleep life: breathing pulse + floating Zzz. */
+    /* Night-sleep life: floating Zzz overlay. */
 
     const snoring = mood === "sleepNight";
-
-    petEl.classList.toggle("aegis-pet-breathing", snoring);
 
     if (petZzz) {
 
