@@ -13,9 +13,9 @@
 
     USE:
     - Everything is automatic once loaded. Defaults: asleep
-      23:00–07:00, checked every minute. Waking up comes with
+      22:00–07:00, checked every minute. Waking up comes with
       a little happy stretch.
-    - Aegis.run("routines", "setSleepWindow", 23, 7)
+    - Aegis.run("routines", "setSleepWindow", 22, 7)
     - Aegis.run("routines", "setEnabled", false)
     - Aegis.run("routines", "sleepNow")
     - Aegis.run("routines", "wakeNow")
@@ -39,7 +39,7 @@ const ROUTINES_CHECK_MS = 60 * 1000;
 
 let routinesEnabled = true;
 
-let routinesSleepStart = 23;
+let routinesSleepStart = 22;
 
 let routinesSleepEnd = 7;
 
@@ -168,7 +168,9 @@ function routinesSleep() {
 
     routineSleeping = true;
 
-    routinesSetMood("sleep");
+    /* The cozy nighttime graphic: pillow, blanket, nightcap. */
+
+    routinesSetMood("sleepNight");
 
     Aegis.broadcast("routineSleep", {});
 
@@ -207,7 +209,8 @@ function check() {
 
     const night = routinesInSleepWindow(hour);
 
-    if (night && !routineSleeping && routinesPetMood() !== "sleep") {
+    if (night && !routineSleeping &&
+        routinesPetMood() !== "sleepNight") {
 
         routinesSleep();
 

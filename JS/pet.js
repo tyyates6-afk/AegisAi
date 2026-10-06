@@ -11,6 +11,7 @@
          orb-idle.png      (4 frames)
          orb-happy.png     (4 frames)
          orb-sleep.png     (3 frames)
+         orb-sleep-night.png (1 frame — cozy nighttime look)
          orb-excited.png   (4 frames)
        (Transparent PNGs — backgrounds already keyed out.)
 
@@ -46,6 +47,15 @@ const PET_SPRITES = {
     sleep: {
         src: "assets/pet/orb-sleep.png",
         frames: 3,
+        fps: 2
+    },
+
+    /* Cozy nighttime look: pillow, blanket, nightcap. Used by
+       routines at night; focus naps use the plain "sleep". */
+
+    sleepNight: {
+        src: "assets/pet/orb-sleep-night.png",
+        frames: 1,
         fps: 2
     },
 
@@ -371,7 +381,10 @@ function setMood(mood, durationMs = 0) {
 
     }
 
-    if (durationMs > 0 && mood !== "idle" && mood !== "sleep") {
+    if (durationMs > 0 &&
+        mood !== "idle" &&
+        mood !== "sleep" &&
+        mood !== "sleepNight") {
 
         /* A timed mood always returns to the pet's base mood
            (e.g. "sleep" during focus mode), not hardcoded
