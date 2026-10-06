@@ -1,8 +1,8 @@
 /*======================================
-        AEGIS TIMER v1.1.0
+        AEGIS TIMER v2.0.0
 ======================================
 
-    A standalone countdown backend for AEGIS, with a mini
+    Multiple simultaneous countdowns for AEGIS, with a mini
     widget interface (floating pill + control panel).
 
     SETUP:
@@ -12,48 +12,62 @@
 
     USE:
     - Tap the ⏱ pill (bottom-left, above FOCUS) to open the
-      control panel: HRS / MIN / SEC dropdowns + START, or
-      PAUSE / RESUME / STOP while running. Draggable by its
-      title bar.
-    - Or: Aegis.run("timer", "start", 90, {
+      control panel: optional label, HRS / MIN / SEC dropdowns,
+      START. Every running timer gets its own row with
+      PAUSE / RESUME and STOP. Draggable by its title bar.
+    - Or: const id = Aegis.run("timer", "start", 90, {
+          label: "Tea",
           onTick: (remainingSec) => { ... },
           onDone: () => { ... }
       });
-    - Aegis.run("timer", "pause")
-    - Aegis.run("timer", "resume")
-    - Aegis.run("timer", "stop")    // stops silently, onDone is NOT fired
-    - Aegis.run("timer", "getStatus")
+    - Aegis.run("timer", "pause", id)
+    - Aegis.run("timer", "resume", id)
+    - Aegis.run("timer", "stop", id)   // onDone is NOT fired
+    - Aegis.run("timer", "getStatus", id)  // null if finished
+    - Aegis.run("timer", "list")           // all running timers
 
-    BROADCASTS (for widgets and other modules):
-    - "timerStarted" { seconds }
-    - "timerTick"    { remainingSec, totalSec }
-    - "timerDone"    { seconds }
-    - "timerStopped" {}
+    The id may be omitted from pause / resume / stop /
+    getStatus — it then targets the most recently started
+    timer, so single-timer use stays simple.
 
-    Only one countdown runs at a time — starting a new one
-    replaces the old. Callbacks are optional.
+    BROADCASTS:
+    - "timerStarted" { id, seconds, label }
+    - "timerTick"    { id, remainingSec, totalSec, label }
+    - "timerPaused"  { id }
+    - "timerResumed" { id }
+    - "timerDone"    { id, seconds, label }
+    - "timerStopped" { id, label }
+
+    One shared 1-second loop drives every timer.
 
 ======================================*/
 
 
-let timerActive = false;
+/* id -> { id, label, totalSec, remainingSec, paused,
+           onTick, onDone }. Map keeps insertion order, so the
+   last entry is always the most recently started timer. */
 
-let timerPaused = false;
-
-let timerTotalSec = 0;
-
-let timerRemainingSec = 0;
+let timers = new Map();
 
 let timerHandle = null;
 
-let timerOnTick = null;
-
-let timerOnDone = null;
+let timerSeq = 0;
 
 
-function timerClear() {
+function timerEnsureLoop() {
 
-    if (timerHandle) {
+    if (!timerHandle) {
+
+        timerHandle = setInterval(timerTickAll, 1000);
+
+    }
+
+}
+
+
+function timerMaybeStopLoop() {
+
+    if (timers.size === 0 && timerHandle) {
 
         clearInterval(timerHandle);
 
@@ -64,161 +78,254 @@ function timerClear() {
 }
 
 
-function timerTick() {
+function timerTickAll() {
 
-    if (timerPaused) return;
+    timers.forEach((t) => {
 
-    timerRemainingSec -= 1;
+        if (t.paused) return;
 
-    Aegis.broadcast("timerTick", {
+        t.remainingSec -= 1;
 
-        remainingSec: timerRemainingSec,
+        Aegis.broadcast("timerTick", {
 
-        totalSec: timerTotalSec
+            id: t.id,
 
-    });
+            remainingSec: t.remainingSec,
 
-    if (timerOnTick) {
+            totalSec: t.totalSec,
 
-        try { timerOnTick(timerRemainingSec); } catch (error) {}
+            label: t.label
 
-    }
+        });
 
-    if (timerRemainingSec <= 0) {
+        if (t.onTick) {
 
-        const done = timerOnDone;
-
-        const secs = timerTotalSec;
-
-        timerStopInternal();
-
-        Aegis.broadcast("timerDone", { seconds: secs });
-
-        if (done) {
-
-            try { done(); } catch (error) {}
+            try { t.onTick(t.remainingSec); } catch (error) {}
 
         }
 
-    }
+        if (t.remainingSec <= 0) {
+
+            const done = t.onDone;
+
+            const secs = t.totalSec;
+
+            const label = t.label;
+
+            const id = t.id;
+
+            timers.delete(id);
+
+            timerMaybeStopLoop();
+
+            Aegis.broadcast("timerDone", {
+
+                id: id,
+
+                seconds: secs,
+
+                label: label
+
+            });
+
+            if (done) {
+
+                try { done(); } catch (error) {}
+
+            }
+
+        }
+
+    });
 
 }
 
 
 function timerStart(seconds, callbacks) {
 
-    timerStopInternal();
+    callbacks = callbacks || {};
 
     seconds = Math.max(1, Math.round(seconds) || 60);
 
-    callbacks = callbacks || {};
+    timerSeq += 1;
 
-    timerActive = true;
+    const id =
+        "timer-" + Date.now().toString(36) + "-" + timerSeq;
 
-    timerPaused = false;
+    const t = {
 
-    timerTotalSec = seconds;
+        id: id,
 
-    timerRemainingSec = seconds;
+        label: String(callbacks.label || "").slice(0, 40),
 
-    timerOnTick =
-        typeof callbacks.onTick === "function" ? callbacks.onTick : null;
+        totalSec: seconds,
 
-    timerOnDone =
-        typeof callbacks.onDone === "function" ? callbacks.onDone : null;
+        remainingSec: seconds,
 
-    if (timerOnTick) {
+        paused: false,
 
-        try { timerOnTick(timerRemainingSec); } catch (error) {}
+        onTick:
+            typeof callbacks.onTick === "function"
+                ? callbacks.onTick
+                : null,
 
-    }
+        onDone:
+            typeof callbacks.onDone === "function"
+                ? callbacks.onDone
+                : null
 
-    timerClear();
+    };
 
-    timerHandle = setInterval(timerTick, 1000);
+    timers.set(id, t);
 
-    Aegis.broadcast("timerStarted", { seconds: seconds });
+    timerEnsureLoop();
 
-    return true;
+    if (t.onTick) {
 
-}
-
-
-function timerPause() {
-
-    if (!timerActive || timerPaused) return false;
-
-    timerPaused = true;
-
-    return true;
-
-}
-
-
-function timerResume() {
-
-    if (!timerActive || !timerPaused) return false;
-
-    timerPaused = false;
-
-    return true;
-
-}
-
-
-/* Silent stop: no broadcast. Used when the timer is being
-   replaced or has completed on its own. */
-
-function timerStopInternal() {
-
-    timerClear();
-
-    const wasActive = timerActive;
-
-    timerActive = false;
-
-    timerPaused = false;
-
-    timerOnTick = null;
-
-    timerOnDone = null;
-
-    return wasActive;
-
-}
-
-
-/* Public stop: broadcasts "timerStopped" so widgets and other
-   modules (like focus) can react. onDone is NOT fired. */
-
-function timerStop() {
-
-    const wasActive = timerStopInternal();
-
-    if (wasActive) {
-
-        Aegis.broadcast("timerStopped", {});
+        try { t.onTick(t.remainingSec); } catch (error) {}
 
     }
 
-    return wasActive;
+    Aegis.broadcast("timerStarted", {
+
+        id: id,
+
+        seconds: seconds,
+
+        label: t.label
+
+    });
+
+    return id;
 
 }
 
 
-function timerGetStatus() {
+/* Most recently started timer still on the board. */
+
+function timerLatestId() {
+
+    let last = null;
+
+    timers.forEach((t) => { last = t.id; });
+
+    return last;
+
+}
+
+
+/* Resolve an id, defaulting to the most recent timer so
+   single-timer callers can omit it. */
+
+function timerResolve(id) {
+
+    if (id == null) {
+
+        id = timerLatestId();
+
+    }
+
+    return (id != null && timers.get(id)) || null;
+
+}
+
+
+function timerPause(id) {
+
+    const t = timerResolve(id);
+
+    if (!t || t.paused) return false;
+
+    t.paused = true;
+
+    Aegis.broadcast("timerPaused", { id: t.id });
+
+    return true;
+
+}
+
+
+function timerResume(id) {
+
+    const t = timerResolve(id);
+
+    if (!t || !t.paused) return false;
+
+    t.paused = false;
+
+    Aegis.broadcast("timerResumed", { id: t.id });
+
+    return true;
+
+}
+
+
+/* Public stop: drops the timer and broadcasts "timerStopped".
+   onDone is NOT fired. */
+
+function timerStop(id) {
+
+    const t = timerResolve(id);
+
+    if (!t) return false;
+
+    timers.delete(t.id);
+
+    timerMaybeStopLoop();
+
+    Aegis.broadcast("timerStopped", {
+
+        id: t.id,
+
+        label: t.label
+
+    });
+
+    return true;
+
+}
+
+
+function timerGetStatus(id) {
+
+    const t = timerResolve(id);
+
+    if (!t) return null;
 
     return {
 
-        active: timerActive,
+        id: t.id,
 
-        paused: timerPaused,
+        label: t.label,
 
-        remainingSec: timerRemainingSec,
+        active: true,
 
-        totalSec: timerTotalSec
+        paused: t.paused,
+
+        remainingSec: t.remainingSec,
+
+        totalSec: t.totalSec
 
     };
+
+}
+
+
+function timerList() {
+
+    return [...timers.values()].map((t) => ({
+
+        id: t.id,
+
+        label: t.label,
+
+        paused: t.paused,
+
+        remainingSec: t.remainingSec,
+
+        totalSec: t.totalSec
+
+    }));
 
 }
 
@@ -226,12 +333,13 @@ function timerGetStatus() {
 /*======================================
     TIMER WIDGET — the timer's mini interface.
 
-    A small floating pill (always visible) shows the countdown;
-    tapping it opens a draggable control panel with HRS / MIN /
-    SEC dropdowns and START, or PAUSE / RESUME / STOP while a
-    countdown is running. It follows the timer via broadcasts,
-    so it stays in sync no matter who started the timer
-    (the widget itself, focus mode, or Aegis.run calls).
+    A small floating pill (always visible) shows the most
+    recently started timer's countdown; tapping it opens a
+    draggable control panel: optional label, HRS / MIN / SEC
+    dropdowns, START, and one row per running timer with
+    PAUSE / RESUME and STOP. It follows the timers via
+    broadcasts, so it stays in sync no matter who started
+    them (the widget itself, focus mode, or Aegis.run calls).
 ======================================*/
 
 
@@ -241,13 +349,9 @@ let timerPillTime = null;
 
 let timerPanel = null;
 
-let timerPanelSetupView = null;
+let timerPanelList = null;
 
-let timerPanelActiveView = null;
-
-let timerPanelActiveTime = null;
-
-let timerPanelToggleBtn = null;
+let timerPanelLabelInput = null;
 
 let timerPanelHourSel = null;
 
@@ -277,38 +381,177 @@ function timerFmt(sec) {
 }
 
 
-function timerWidgetUpdate(remainingSec) {
+/* Rebuild the pill + list from the current timers. The pill
+   shows the most recently started timer. */
 
-    const t = timerFmt(remainingSec);
+function timerWidgetSync() {
+
+    const list = timerList();
+
+    const primary = list.length ? list[list.length - 1] : null;
 
     if (timerPillTime) {
 
-        timerPillTime.textContent = t;
+        timerPillTime.textContent =
+            primary ? timerFmt(primary.remainingSec) : "--:--";
 
     }
 
-    if (timerPanelActiveTime) {
-
-        timerPanelActiveTime.textContent = t;
-
-    }
+    timerWidgetRenderList(list);
 
 }
 
 
-function timerWidgetSetActive(active) {
+function timerWidgetRenderList(list) {
 
-    if (!timerPanel) return;
+    if (!timerPanelList) return;
 
-    timerPanelSetupView.style.display = active ? "none" : "block";
+    timerPanelList.innerHTML = "";
 
-    timerPanelActiveView.style.display = active ? "block" : "none";
+    if (!list.length) {
 
-    if (!active && timerPillTime) {
+        const empty = document.createElement("div");
 
-        timerPillTime.textContent = "--:--";
+        empty.textContent = "No timers running.";
+
+        Object.assign(empty.style, {
+
+            fontSize: "12px",
+
+            color: "rgba(159, 220, 255, 0.4)",
+
+            textAlign: "center",
+
+            padding: "8px 0"
+
+        });
+
+        timerPanelList.appendChild(empty);
+
+        return;
 
     }
+
+    list.forEach((t) => {
+
+        const row = document.createElement("div");
+
+        Object.assign(row.style, {
+
+            display: "flex",
+
+            alignItems: "center",
+
+            gap: "8px",
+
+            padding: "8px 0",
+
+            borderTop: "1px solid rgba(80, 210, 255, 0.12)"
+
+        });
+
+        const name = document.createElement("div");
+
+        name.textContent = t.label || "Timer";
+
+        Object.assign(name.style, {
+
+            flex: "1",
+
+            fontSize: "13px",
+
+            overflow: "hidden",
+
+            textOverflow: "ellipsis",
+
+            whiteSpace: "nowrap"
+
+        });
+
+        const time = document.createElement("div");
+
+        time.textContent = timerFmt(t.remainingSec);
+
+        Object.assign(time.style, {
+
+            fontSize: "14px",
+
+            color: "#eaf7ff",
+
+            fontVariantNumeric: "tabular-nums"
+
+        });
+
+        const toggle = document.createElement("button");
+
+        toggle.textContent = t.paused ? "RESUME" : "PAUSE";
+
+        timerRowBtn(toggle);
+
+        toggle.addEventListener("click", () => {
+
+            if (t.paused) {
+
+                timerResume(t.id);
+
+            } else {
+
+                timerPause(t.id);
+
+            }
+
+        });
+
+        const stop = document.createElement("button");
+
+        stop.textContent = "×";
+
+        timerRowBtn(stop);
+
+        stop.addEventListener("click", () => {
+
+            timerStop(t.id);
+
+        });
+
+        row.appendChild(name);
+
+        row.appendChild(time);
+
+        row.appendChild(toggle);
+
+        row.appendChild(stop);
+
+        timerPanelList.appendChild(row);
+
+    });
+
+}
+
+
+function timerRowBtn(btn) {
+
+    Object.assign(btn.style, {
+
+        padding: "6px 10px",
+
+        borderRadius: "999px",
+
+        cursor: "pointer",
+
+        fontSize: "11px",
+
+        letterSpacing: "1px",
+
+        color: "#9fdcff",
+
+        border: "1px solid rgba(80, 210, 255, 0.35)",
+
+        background: "transparent",
+
+        flexShrink: "0"
+
+    });
 
 }
 
@@ -316,8 +559,6 @@ function timerWidgetSetActive(active) {
 function timerStyleBtn(btn, primary) {
 
     Object.assign(btn.style, {
-
-        flex: "1",
 
         padding: "12px 0",
 
@@ -335,7 +576,11 @@ function timerStyleBtn(btn, primary) {
 
         background: primary
             ? "rgba(80, 210, 255, 0.2)"
-            : "transparent"
+            : "transparent",
+
+        width: "100%",
+
+        boxSizing: "border-box"
 
     });
 
@@ -385,6 +630,23 @@ function timerWidgetMakeSelect(max, def) {
     });
 
     return sel;
+
+}
+
+
+function timerWidgetFlash(sels) {
+
+    sels.forEach((sel) => {
+
+        sel.style.border = "1px solid rgba(255, 90, 90, 0.8)";
+
+        setTimeout(() => {
+
+            sel.style.border = "1px solid rgba(80, 210, 255, 0.3)";
+
+        }, 800);
+
+    });
 
 }
 
@@ -476,6 +738,10 @@ function timerBuildWidget() {
 
         width: "300px",
 
+        maxHeight: "60vh",
+
+        overflowY: "auto",
+
         padding: "0 20px 20px",
 
         borderRadius: "16px",
@@ -556,9 +822,41 @@ function timerBuildWidget() {
 
     timerPanel.appendChild(bar);
 
-    /* Setup view: dropdowns + start. */
+    /* New-timer form: optional label + dropdowns + start. */
 
-    timerPanelSetupView = document.createElement("div");
+    timerPanelLabelInput = document.createElement("input");
+
+    timerPanelLabelInput.type = "text";
+
+    timerPanelLabelInput.placeholder = "Label (optional)";
+
+    timerPanelLabelInput.maxLength = 40;
+
+    Object.assign(timerPanelLabelInput.style, {
+
+        width: "100%",
+
+        boxSizing: "border-box",
+
+        padding: "10px 12px",
+
+        borderRadius: "10px",
+
+        border: "1px solid rgba(80, 210, 255, 0.3)",
+
+        background: "rgba(2, 8, 20, 0.8)",
+
+        color: "#eaf7ff",
+
+        fontSize: "14px",
+
+        outline: "none",
+
+        marginBottom: "12px"
+
+    });
+
+    timerPanel.appendChild(timerPanelLabelInput);
 
     const selRow = document.createElement("div");
 
@@ -626,15 +924,13 @@ function timerBuildWidget() {
 
     timerPanelSecSel = sels[2];
 
+    timerPanel.appendChild(selRow);
+
     const startBtn = document.createElement("button");
 
     startBtn.textContent = "START";
 
     timerStyleBtn(startBtn, true);
-
-    startBtn.style.width = "100%";
-
-    startBtn.style.boxSizing = "border-box";
 
     startBtn.addEventListener("click", () => {
 
@@ -645,115 +941,45 @@ function timerBuildWidget() {
 
         if (total < 1) {
 
-            [timerPanelHourSel, timerPanelMinSel, timerPanelSecSel].forEach((sel) => {
-
-                sel.style.border = "1px solid rgba(255, 90, 90, 0.8)";
-
-                setTimeout(() => {
-
-                    sel.style.border = "1px solid rgba(80, 210, 255, 0.3)";
-
-                }, 800);
-
-            });
+            timerWidgetFlash([
+                timerPanelHourSel,
+                timerPanelMinSel,
+                timerPanelSecSel
+            ]);
 
             return;
 
         }
 
-        timerStart(total);
+        timerStart(total, {
+
+            label: timerPanelLabelInput.value.trim()
+
+        });
+
+        timerPanelLabelInput.value = "";
 
     });
 
-    timerPanelSetupView.appendChild(selRow);
+    timerPanel.appendChild(startBtn);
 
-    timerPanelSetupView.appendChild(startBtn);
+    /* Running timers list. */
 
-    timerPanel.appendChild(timerPanelSetupView);
+    const divider = document.createElement("div");
 
-    /* Active view: big time + pause/resume + stop. */
+    Object.assign(divider.style, {
 
-    timerPanelActiveView = document.createElement("div");
+        borderTop: "1px solid rgba(80, 210, 255, 0.15)",
 
-    timerPanelActiveView.style.display = "none";
-
-    timerPanelActiveTime = document.createElement("div");
-
-    timerPanelActiveTime.textContent = "--:--";
-
-    Object.assign(timerPanelActiveTime.style, {
-
-        fontSize: "56px",
-
-        fontWeight: "200",
-
-        textAlign: "center",
-
-        color: "#eaf7ff",
-
-        fontVariantNumeric: "tabular-nums",
-
-        textShadow: "0 0 30px rgba(80, 210, 255, 0.6)",
-
-        marginBottom: "16px"
+        margin: "16px 0 8px"
 
     });
 
-    const ctlRow = document.createElement("div");
+    timerPanel.appendChild(divider);
 
-    Object.assign(ctlRow.style, {
+    timerPanelList = document.createElement("div");
 
-        display: "flex",
-
-        gap: "10px"
-
-    });
-
-    timerPanelToggleBtn = document.createElement("button");
-
-    timerPanelToggleBtn.textContent = "PAUSE";
-
-    timerStyleBtn(timerPanelToggleBtn, false);
-
-    timerPanelToggleBtn.addEventListener("click", () => {
-
-        if (timerGetStatus().paused) {
-
-            timerResume();
-
-            timerPanelToggleBtn.textContent = "PAUSE";
-
-        } else {
-
-            timerPause();
-
-            timerPanelToggleBtn.textContent = "RESUME";
-
-        }
-
-    });
-
-    const stopBtn = document.createElement("button");
-
-    stopBtn.textContent = "STOP";
-
-    timerStyleBtn(stopBtn, false);
-
-    stopBtn.addEventListener("click", () => {
-
-        timerStop();
-
-    });
-
-    ctlRow.appendChild(timerPanelToggleBtn);
-
-    ctlRow.appendChild(stopBtn);
-
-    timerPanelActiveView.appendChild(timerPanelActiveTime);
-
-    timerPanelActiveView.appendChild(ctlRow);
-
-    timerPanel.appendChild(timerPanelActiveView);
+    timerPanel.appendChild(timerPanelList);
 
     document.body.appendChild(timerPanel);
 
@@ -803,31 +1029,19 @@ function timerBuildWidget() {
 
     bar.addEventListener("pointercancel", endDrag);
 
-    /* Follow the timer through broadcasts, so the widget stays
-       in sync no matter who started the countdown. */
+    /* Follow the timers through broadcasts, so the widget stays
+       in sync no matter who started them. */
 
     timerWidgetUnsubs.push(
-        Aegis.listen("timerTick", (d) => timerWidgetUpdate(d.remainingSec)),
-        Aegis.listen("timerStarted", (d) => {
-
-            timerPanelToggleBtn.textContent = "PAUSE";
-
-            timerWidgetSetActive(true);
-
-            timerWidgetUpdate(d.seconds);
-
-        }),
-        Aegis.listen("timerStopped", () => {
-
-            timerWidgetSetActive(false);
-
-        }),
-        Aegis.listen("timerDone", () => {
-
-            timerWidgetSetActive(false);
-
-        })
+        Aegis.listen("timerStarted", () => timerWidgetSync()),
+        Aegis.listen("timerTick", () => timerWidgetSync()),
+        Aegis.listen("timerPaused", () => timerWidgetSync()),
+        Aegis.listen("timerResumed", () => timerWidgetSync()),
+        Aegis.listen("timerDone", () => timerWidgetSync()),
+        Aegis.listen("timerStopped", () => timerWidgetSync())
     );
+
+    timerWidgetSync();
 
 }
 
@@ -860,16 +1074,14 @@ function timerDestroyWidget() {
 
     timerPanel = null;
 
-    timerPanelSetupView = null;
-
-    timerPanelActiveView = null;
+    timerPanelList = null;
 
 }
 
 
 Aegis.register("timer", {
 
-    version: "1.1.0",
+    version: "2.0.0",
 
 
     start: timerStart,
@@ -881,6 +1093,8 @@ Aegis.register("timer", {
     stop: timerStop,
 
     getStatus: timerGetStatus,
+
+    list: timerList,
 
 
     init() {
@@ -897,7 +1111,7 @@ Aegis.register("timer", {
 
     shutdown() {
 
-        timerStop();
+        [...timers.keys()].forEach((id) => timerStop(id));
 
         timerDestroyWidget();
 
@@ -914,11 +1128,7 @@ Aegis.register("timer", {
 
             version: this.version,
 
-            active: timerActive,
-
-            paused: timerPaused,
-
-            remainingSec: timerRemainingSec
+            count: timers.size
 
         };
 

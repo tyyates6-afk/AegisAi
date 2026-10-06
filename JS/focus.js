@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS FOCUS PROTOCOL v1.3.0
+        AEGIS FOCUS PROTOCOL v1.4.0
 ======================================
 
     One-tap focus mode for AEGIS.
@@ -72,6 +72,11 @@ let focusSetupTimeRow = null;
 let focusFinishing = false;
 
 let focusTimerStopUnsub = null;
+
+/* The timer module's id for this session — focus only ever
+   touches its own timer, even when several are running. */
+
+let focusTimerId = null;
 
 
 function focusLoadSessions() {
@@ -209,11 +214,13 @@ function startSeconds(totalSec, label = "") {
 
     focusRender();
 
-    Aegis.run("timer", "start", totalSec, {
+    focusTimerId = Aegis.run("timer", "start", totalSec, {
 
         onTick: focusTimerTick,
 
-        onDone: () => focusFinish(true)
+        onDone: () => focusFinish(true),
+
+        label: focusLabel || "Focus"
 
     });
 
@@ -248,9 +255,9 @@ function focusPause() {
 
     if (!focusActive || focusPaused) return;
 
-    if (Aegis.modules.timer) {
+    if (Aegis.modules.timer && focusTimerId) {
 
-        Aegis.run("timer", "pause");
+        Aegis.run("timer", "pause", focusTimerId);
 
     }
 
@@ -267,9 +274,9 @@ function focusResume() {
 
     if (!focusActive || !focusPaused) return;
 
-    if (Aegis.modules.timer) {
+    if (Aegis.modules.timer && focusTimerId) {
 
-        Aegis.run("timer", "resume");
+        Aegis.run("timer", "resume", focusTimerId);
 
     }
 
@@ -288,11 +295,13 @@ function focusFinish(completed) {
 
     focusFinishing = true;
 
-    if (Aegis.modules.timer) {
+    if (Aegis.modules.timer && focusTimerId) {
 
-        Aegis.run("timer", "stop");
+        Aegis.run("timer", "stop", focusTimerId);
 
     }
+
+    focusTimerId = null;
 
     const elapsedSec = focusTotalSec - focusRemainingSec;
 
@@ -1022,7 +1031,7 @@ function focusBuildOverlay() {
 
 Aegis.register("focus", {
 
-    version: "1.3.0",
+    version: "1.4.0",
 
 
     start: focusStart,
@@ -1050,13 +1059,15 @@ Aegis.register("focus", {
 
         focusBuildSetupWindow();
 
-        /* If the timer is stopped out from under us (e.g. the
-           timer widget's STOP button), end the session as
-           incomplete instead of leaving it frozen. */
+        /* If OUR timer is stopped out from under us (e.g. the
+           timer widget's STOP button on our row), end the session
+           as incomplete instead of leaving it frozen. Other
+           timers' stops are none of our business. */
 
-        focusTimerStopUnsub = Aegis.listen("timerStopped", () => {
+        focusTimerStopUnsub = Aegis.listen("timerStopped", (d) => {
 
-            if (focusActive && !focusFinishing) {
+            if (focusActive && !focusFinishing &&
+                d && d.id === focusTimerId) {
 
                 focusFinish(false);
 
@@ -1082,11 +1093,13 @@ Aegis.register("focus", {
 
         }
 
-        if (Aegis.modules.timer) {
+        if (Aegis.modules.timer && focusTimerId) {
 
-            Aegis.run("timer", "stop");
+            Aegis.run("timer", "stop", focusTimerId);
 
         }
+
+        focusTimerId = null;
 
         if (focusBtn && focusBtn.parentNode) {
 
