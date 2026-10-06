@@ -13,9 +13,8 @@
 
     USE:
     - Tap the FOCUS button (bottom-left) to open the in-app
-      setup window: editable label, minute presets or custom
-      hours / minutes / seconds dropdowns, Start / Cancel.
-      Draggable by its title bar.
+      setup window: editable label, hours / minutes / seconds
+      dropdowns, Start / Cancel. Draggable by its title bar.
     - Or: Aegis.run("focus", "start", 25, "Bible study")
     - Or: Aegis.run("focus", "startSeconds", 90, "Quick sprint")
     - Aegis.run("focus", "stop")
@@ -31,8 +30,6 @@
 
 
 const FOCUS_STORE_KEY = "aegisFocusSessions";
-
-const FOCUS_PRESETS = [15, 25, 50];
 
 
 let focusActive = false;
@@ -454,38 +451,9 @@ function focusOpenSetup() {
 
 
 /* In-app setup window — replaces the old native prompt()
-   popups. A small editable panel with a label field, minute
-   presets (or a custom value), and Start / Cancel. Draggable
-   by its title bar. */
-
-function focusStyleMinBtn(btn, selected) {
-
-    Object.assign(btn.style, {
-
-        flex: "1",
-
-        padding: "10px 0",
-
-        borderRadius: "10px",
-
-        cursor: "pointer",
-
-        fontSize: "14px",
-
-        color: "#9fdcff",
-
-        border: selected
-            ? "1px solid rgba(80, 210, 255, 0.9)"
-            : "1px solid rgba(80, 210, 255, 0.25)",
-
-        background: selected
-            ? "rgba(80, 210, 255, 0.18)"
-            : "transparent"
-
-    });
-
-}
-
+   popups. A small editable panel with a label field,
+   hours / minutes / seconds dropdowns, and Start / Cancel.
+   Draggable by its title bar. */
 
 function focusStyleActionBtn(btn, primary) {
 
@@ -687,47 +655,7 @@ function focusBuildSetupWindow() {
 
     });
 
-    const minRow = document.createElement("div");
-
-    Object.assign(minRow.style, {
-
-        display: "flex",
-
-        gap: "8px",
-
-        marginBottom: "20px"
-
-    });
-
-    const minBtns = [];
-
-    FOCUS_PRESETS.forEach((m) => {
-
-        const b = document.createElement("button");
-
-        b.textContent = String(m);
-
-        focusStyleMinBtn(b, m === 25);
-
-        b.addEventListener("click", () => {
-
-            focusSetupHourSel.value = "0";
-
-            focusSetupMinSel.value = String(m);
-
-            focusSetupSecSel.value = "0";
-
-            minBtns.forEach((x) => focusStyleMinBtn(x, x === b));
-
-        });
-
-        minRow.appendChild(b);
-
-        minBtns.push(b);
-
-    });
-
-    /* Custom time: three dropdowns — hours, minutes, seconds. */
+    /* Three dropdowns — hours, minutes, seconds. */
 
     focusSetupTimeRow = document.createElement("div");
 
@@ -794,12 +722,6 @@ function focusBuildSetupWindow() {
             outline: "none",
 
             cursor: "pointer"
-
-        });
-
-        sel.addEventListener("change", () => {
-
-            minBtns.forEach((x) => focusStyleMinBtn(x, false));
 
         });
 
@@ -872,8 +794,6 @@ function focusBuildSetupWindow() {
     focusSetupWin.appendChild(focusSetupLabelInput);
 
     focusSetupWin.appendChild(minTitle);
-
-    focusSetupWin.appendChild(minRow);
 
     focusSetupWin.appendChild(focusSetupTimeRow);
 
