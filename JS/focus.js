@@ -875,6 +875,8 @@ function focusBuildSetupWindow() {
 
     focusSetupWin.appendChild(minRow);
 
+    focusSetupWin.appendChild(focusSetupTimeRow);
+
     focusSetupWin.appendChild(btnRow);
 
     document.body.appendChild(focusSetupWin);
