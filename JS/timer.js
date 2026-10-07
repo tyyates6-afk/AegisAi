@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS TIMER v2.0.0
+        AEGIS TIMER v2.0.2
 ======================================
 
     Multiple simultaneous countdowns for AEGIS, with a mini
@@ -25,6 +25,12 @@
     - Aegis.run("timer", "stop", id)   // onDone is NOT fired
     - Aegis.run("timer", "getStatus", id)  // null if finished
     - Aegis.run("timer", "list")           // all running timers
+    - v2.0.1: mobile layout — the pill shrinks and sits above
+      the phone's bottom nav bar (safe-area aware); the panel
+      fits narrow screens.
+    - v2.0.2: running timers stay visible as compact chips
+      (label + live time + pause + stop) while the maker
+      panel is closed.
 
     The id may be omitted from pause / resume / stop /
     getStatus — it then targets the most recently started
@@ -351,6 +357,8 @@ let timerPanel = null;
 
 let timerPanelList = null;
 
+let timerChips = null;
+
 let timerPanelLabelInput = null;
 
 let timerPanelHourSel = null;
@@ -398,6 +406,159 @@ function timerWidgetSync() {
     }
 
     timerWidgetRenderList(list);
+
+    timerWidgetRenderChips(list);
+
+}
+
+
+/* Compact chips that stay visible while the timer maker panel
+   is closed — one per running timer, with pause and stop. */
+
+function timerWidgetRenderChips(list) {
+
+    if (!timerChips) return;
+
+    timerChips.innerHTML = "";
+
+    const panelOpen = timerPanel &&
+        timerPanel.style.display !== "none";
+
+    timerChips.style.display =
+        (!panelOpen && list.length) ? "flex" : "none";
+
+    if (panelOpen || !list.length) return;
+
+    list.forEach((t) => {
+
+        const chip = document.createElement("div");
+
+        Object.assign(chip.style, {
+
+            display: "flex",
+
+            alignItems: "center",
+
+            gap: "6px",
+
+            padding: "6px 8px 6px 12px",
+
+            borderRadius: "999px",
+
+            border: "1px solid rgba(80, 210, 255, 0.5)",
+
+            background: "rgba(10, 20, 40, 0.85)",
+
+            color: "#9fdcff",
+
+            fontSize: "12px",
+
+            backdropFilter: "blur(6px)",
+
+            maxWidth: "220px"
+
+        });
+
+        const name = document.createElement("span");
+
+        name.textContent = t.label || "Timer";
+
+        Object.assign(name.style, {
+
+            overflow: "hidden",
+
+            textOverflow: "ellipsis",
+
+            whiteSpace: "nowrap",
+
+            maxWidth: "90px"
+
+        });
+
+        const time = document.createElement("span");
+
+        time.textContent = timerFmt(t.remainingSec);
+
+        Object.assign(time.style, {
+
+            color: "#eaf7ff",
+
+            fontVariantNumeric: "tabular-nums"
+
+        });
+
+        const toggle = document.createElement("button");
+
+        toggle.textContent = t.paused ? "▶" : "⏸";
+
+        timerChipBtn(toggle);
+
+        toggle.title = t.paused ? "Resume" : "Pause";
+
+        toggle.addEventListener("click", () => {
+
+            if (t.paused) {
+
+                timerResume(t.id);
+
+            } else {
+
+                timerPause(t.id);
+
+            }
+
+        });
+
+        const stop = document.createElement("button");
+
+        stop.textContent = "×";
+
+        timerChipBtn(stop);
+
+        stop.title = "Stop";
+
+        stop.addEventListener("click", () => {
+
+            timerStop(t.id);
+
+        });
+
+        chip.appendChild(name);
+
+        chip.appendChild(time);
+
+        chip.appendChild(toggle);
+
+        chip.appendChild(stop);
+
+        timerChips.appendChild(chip);
+
+    });
+
+}
+
+
+function timerChipBtn(btn) {
+
+    Object.assign(btn.style, {
+
+        padding: "2px 7px",
+
+        borderRadius: "999px",
+
+        cursor: "pointer",
+
+        border: "1px solid rgba(80, 210, 255, 0.35)",
+
+        background: "rgba(80, 210, 255, 0.08)",
+
+        color: "#9fdcff",
+
+        fontSize: "11px",
+
+        lineHeight: "1.4"
+
+    });
 
 }
 
@@ -714,6 +875,8 @@ function timerBuildWidget() {
         timerPanel.style.display =
             timerPanel.style.display === "none" ? "block" : "none";
 
+        timerWidgetSync();
+
     });
 
     document.body.appendChild(timerPill);
@@ -983,6 +1146,35 @@ function timerBuildWidget() {
 
     document.body.appendChild(timerPanel);
 
+    /* Compact chips for running timers, shown while the
+       maker panel is closed. */
+
+    timerChips = document.createElement("div");
+
+    timerChips.id = "aegis-timer-chips";
+
+    Object.assign(timerChips.style, {
+
+        position: "fixed",
+
+        left: "24px",
+
+        bottom: "140px",
+
+        zIndex: "9002",
+
+        display: "none",
+
+        flexDirection: "column",
+
+        gap: "8px",
+
+        alignItems: "flex-start"
+
+    });
+
+    document.body.appendChild(timerChips);
+
     /* Drag the panel by its title bar. */
 
     let dragging = false;
@@ -1043,6 +1235,76 @@ function timerBuildWidget() {
 
     timerWidgetSync();
 
+    timerApplyResponsive();
+
+}
+
+
+/* Mobile layout: shrink the timer pill, lift it clear of the
+   phone's bottom nav bar (uses the safe-area inset), and keep
+   the popup panel inside the viewport. */
+
+function timerApplyResponsive() {
+
+    const mobile = window.innerWidth <= 640;
+
+    if (timerPill) {
+
+        Object.assign(timerPill.style, {
+
+            bottom: mobile
+                ? "calc(env(safe-area-inset-bottom, 0px) + 132px)"
+                : "84px",
+
+            padding: mobile ? "8px 12px" : "10px 16px",
+
+            fontSize: mobile ? "12px" : "14px",
+
+            letterSpacing: mobile ? "1px" : "2px"
+
+        });
+
+    }
+
+    if (timerPanel) {
+
+        Object.assign(timerPanel.style, {
+
+            width: mobile ? "min(300px, calc(100vw - 48px))" : "300px",
+
+            bottom: mobile
+                ? "calc(env(safe-area-inset-bottom, 0px) + 186px)"
+                : "140px"
+
+        });
+
+    }
+
+    if (timerChips) {
+
+        Object.assign(timerChips.style, {
+
+            bottom: mobile
+                ? "calc(env(safe-area-inset-bottom, 0px) + 186px)"
+                : "140px"
+
+        });
+
+    }
+
+}
+
+
+let timerResizeHooked = false;
+
+function timerHookResize() {
+
+    if (timerResizeHooked) return;
+
+    timerResizeHooked = true;
+
+    window.addEventListener("resize", timerApplyResponsive);
+
 }
 
 
@@ -1068,6 +1330,12 @@ function timerDestroyWidget() {
 
     }
 
+    if (timerChips && timerChips.parentNode) {
+
+        timerChips.parentNode.removeChild(timerChips);
+
+    }
+
     timerPill = null;
 
     timerPillTime = null;
@@ -1075,6 +1343,8 @@ function timerDestroyWidget() {
     timerPanel = null;
 
     timerPanelList = null;
+
+    timerChips = null;
 
 }
 
@@ -1100,6 +1370,8 @@ Aegis.register("timer", {
     init() {
 
         timerBuildWidget();
+
+        timerHookResize();
 
         console.log("Timer initialized.");
 

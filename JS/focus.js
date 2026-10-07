@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS FOCUS PROTOCOL v1.4.0
+        AEGIS FOCUS PROTOCOL v1.4.1
 ======================================
 
     One-tap focus mode for AEGIS.
@@ -25,6 +25,8 @@
     - Tells the pet to work alongside during focus (headphones
       + laptop) and celebrate after (works on both pets when linked).
     - Sessions are stored locally, no AI, no backend.
+    - v1.4.1: mobile layout — the FOCUS button shrinks and sits
+      above the phone's bottom nav bar (safe-area aware).
 
 ======================================*/
 
@@ -453,6 +455,47 @@ function focusBuildButton() {
     focusBtn.addEventListener("click", focusOpenSetup);
 
     document.body.appendChild(focusBtn);
+
+    focusApplyResponsive();
+
+}
+
+
+/* Mobile layout: shrink the FOCUS button and lift it clear of
+   the phone's bottom nav bar (uses the safe-area inset). */
+
+function focusApplyResponsive() {
+
+    if (!focusBtn) return;
+
+    const mobile = window.innerWidth <= 640;
+
+    Object.assign(focusBtn.style, {
+
+        bottom: mobile
+            ? "calc(env(safe-area-inset-bottom, 0px) + 76px)"
+            : "24px",
+
+        padding: mobile ? "10px 15px" : "12px 22px",
+
+        fontSize: mobile ? "12px" : "14px",
+
+        letterSpacing: mobile ? "2px" : "3px"
+
+    });
+
+}
+
+
+let focusResizeHooked = false;
+
+function focusHookResize() {
+
+    if (focusResizeHooked) return;
+
+    focusResizeHooked = true;
+
+    window.addEventListener("resize", focusApplyResponsive);
 
 }
 
@@ -1058,6 +1101,8 @@ Aegis.register("focus", {
         focusBuildOverlay();
 
         focusBuildSetupWindow();
+
+        focusHookResize();
 
         /* If OUR timer is stopped out from under us (e.g. the
            timer widget's STOP button on our row), end the session
