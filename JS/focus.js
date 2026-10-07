@@ -22,8 +22,8 @@
 
     INTEGRATION:
     - Broadcasts "focusStarted" / "focusEnded".
-    - Tells the pet to sleep during focus and celebrate
-      after (works on both pets when linked).
+    - Tells the pet to work alongside during focus (headphones
+      + laptop) and celebrate after (works on both pets when linked).
     - Sessions are stored locally, no AI, no backend.
 
 ======================================*/
@@ -234,7 +234,7 @@ function startSeconds(totalSec, label = "") {
 
     });
 
-    Aegis.broadcast("petMood", { mood: "sleep" });
+    Aegis.broadcast("petMood", { mood: "working" });
 
     console.log(`Focus started: ${focusFmt(totalSec)}. (timer backend)`);
 

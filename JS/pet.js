@@ -14,6 +14,7 @@
          orb-sleep-night.png (4 frames — breathing, cozy nighttime look)
          orb-excited.png   (4 frames)
          orb-hungry.png    (3 frames — grumble shiver)
+         orb-working.png   (3 frames — study buddy groove)
        (Transparent PNGs — backgrounds already keyed out.)
 
     DRIVING THE PET:
@@ -77,6 +78,14 @@ const PET_SPRITES = {
     hungry: {
         src: "assets/pet/orb-hungry.png",
         frames: 3,
+        fps: 4
+    },
+
+    /* Working: headphones + laptop. Shown during focus sessions. */
+
+    working: {
+        src: "assets/pet/orb-working.png",
+        frames: 4,
         fps: 4
     },
 
@@ -768,7 +777,8 @@ function setMood(mood, durationMs = 0) {
     if (durationMs > 0 &&
         mood !== "idle" &&
         mood !== "sleep" &&
-        mood !== "sleepNight") {
+        mood !== "sleepNight" &&
+        mood !== "working") {
 
         /* A timed mood always returns to the pet's base mood
            (e.g. "sleep" during focus mode), not hardcoded
