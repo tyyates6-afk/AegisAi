@@ -712,7 +712,7 @@ function scheduleSpreadsheetAutosave(doc){
 }
 
 
-function exportActiveSpreadsheetAsExcel(){
+async function exportActiveSpreadsheetAsExcel(){
 
     const doc =
     getActiveWorkspaceDocument();
@@ -721,11 +721,19 @@ function exportActiveSpreadsheetAsExcel(){
 
     if(typeof XLSX === "undefined"){
 
-        alert(
-            "The Excel export library failed to load. Check your internet connection and try again."
-        );
+        try {
 
-        return;
+            await window.aegisLoadScript(window.AEGIS_CDN.xlsx);
+
+        } catch (error) {
+
+            alert(
+                "The Excel export library failed to load. Check your internet connection and try again."
+            );
+
+            return;
+
+        }
 
     }
 
@@ -748,8 +756,7 @@ function exportActiveSpreadsheetAsExcel(){
 
 }
 
-
-function exportActiveSpreadsheetAsCsv(){
+async function exportActiveSpreadsheetAsCsv(){
 
     const doc =
     getActiveWorkspaceDocument();
@@ -758,11 +765,19 @@ function exportActiveSpreadsheetAsCsv(){
 
     if(typeof XLSX === "undefined"){
 
-        alert(
-            "The export library failed to load. Check your internet connection and try again."
-        );
+        try {
 
-        return;
+            await window.aegisLoadScript(window.AEGIS_CDN.xlsx);
+
+        } catch (error) {
+
+            alert(
+                "The export library failed to load. Check your internet connection and try again."
+            );
+
+            return;
+
+        }
 
     }
 

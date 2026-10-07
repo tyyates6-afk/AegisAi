@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS PRAYER JOURNAL v2.0.0
+        AEGIS PRAYER JOURNAL v2.0.1
 ======================================
 
     A simple prayer journal for AEGIS: log prayer requests,
@@ -33,6 +33,8 @@
 
     - v2.0.0: no more floating 🙏 pill — the journal lives in
       the More hub as a full page, like Planner and Settings.
+    - v2.0.1: prayers added without a title default to the
+      current date and time (e.g. "Oct 7, 2026, 4:51 PM").
 
     Every prayer: { id, title, text, createdAt,
                     status: "active" | "answered",
@@ -187,9 +189,37 @@ function prayerDateLabel(iso) {
 }
 
 
-function prayerCelebrate() {
+/* Prayers added without a title are named for the moment
+   they were added, e.g. "Oct 7, 2026, 4:51 PM". */
 
-    /* POTATO joins the joy when a prayer is answered. */
+function prayerDefaultTitle() {
+
+    try {
+
+        return new Date().toLocaleString(undefined, {
+
+            month: "short",
+
+            day: "numeric",
+
+            year: "numeric",
+
+            hour: "numeric",
+
+            minute: "2-digit"
+
+        });
+
+    } catch (error) {
+
+        return "Prayer";
+
+    }
+
+}
+
+
+function prayerCelebrate() {
 
     try {
 
@@ -324,6 +354,12 @@ function add(text, title) {
     if (!text) return null;
 
     title = String(title || "").trim().slice(0, PRAYER_MAX_TITLE);
+
+    if (!title) {
+
+        title = prayerDefaultTitle();
+
+    }
 
     const p = {
 
@@ -599,7 +635,8 @@ function prayerBuildPage() {
 
     prayerTitleInput = document.createElement("input");
 
-    prayerTitleInput.placeholder = "Title (optional)";
+    prayerTitleInput.placeholder =
+        "Title (optional — defaults to date & time)";
 
     prayerTextInput = document.createElement("textarea");
 
@@ -1159,7 +1196,7 @@ function prayerRenderEditRow(row, p) {
 
 Aegis.register("prayer", {
 
-    version: "2.0.0",
+    version: "2.0.1",
 
 
     add,

@@ -207,10 +207,21 @@ const Aegis = {
         console.log("==========");
         const bootEnd = performance.now();
 
-        console.log(
+                console.log(
             `Boot completed in ${(bootEnd - bootStart).toFixed(2)} ms`
         );
+
+        const bootSplash = document.getElementById("aegis-boot");
+
+        if (bootSplash) {
+
+            bootSplash.classList.add("aegis-boot-done");
+
+            setTimeout(() => bootSplash.remove(), 600);
+
+        }
     },
+    
     
 };
 
