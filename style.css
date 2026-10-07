@@ -2609,7 +2609,7 @@ select{
     height: 64px;
 
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
 
     background: rgba(15, 15, 18, 0.96);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -2675,7 +2675,7 @@ body {
         bottom: 24px;
         transform: translateX(-50%);
 
-        width: 360px;
+        width: 460px;
         height: 60px;
 
         border-radius: 20px;

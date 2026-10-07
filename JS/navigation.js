@@ -75,6 +75,11 @@
                         <span class="aegis-nav-label">Command</span>
                     </button>
 
+                    <button class="aegis-nav-item" data-tab="planner" type="button">
+                        <span class="aegis-nav-icon">📅</span>
+                        <span class="aegis-nav-label">Planner</span>
+                    </button>
+
                     <button class="aegis-nav-item" data-tab="modules" type="button">
                         <span class="aegis-nav-icon">▦</span>
                         <span class="aegis-nav-label">Modules</span>
@@ -84,6 +89,12 @@
                         <span class="aegis-nav-icon">•••</span>
                         <span class="aegis-nav-label">More</span>
                     </button>
+                    
+                    <button class="aegis-nav-item" data-tab="settings" type="button">
+                        <span class="aegis-nav-icon">⚙️</span>
+                        <span class="aegis-nav-label">Settings</span>
+                    </button>
+
                 `;
 
                 document.body.appendChild(nav);
@@ -137,7 +148,7 @@
 
             global.Aegis?.broadcast(`navigation:${pageName}`);
         },
-
+        
         // ==================================
         // MODULES PAGE CONTENT
         // ==================================
@@ -193,8 +204,7 @@
 
                     this.showPage(target);
 
-                    this._activeTab =
-                        target === "more" ? "more" : "home";
+                    this._activeTab = this._tabForPage(target);
 
                     this._updateActiveTab();
                 });
@@ -204,7 +214,7 @@
                 button.addEventListener("click", () => {
                     this.showPage(button.dataset.gotoPage);
 
-                    this._activeTab = "more";
+                    this._activeTab = this._tabForPage(button.dataset.gotoPage);
 
                     this._updateActiveTab();
                 });
@@ -241,7 +251,9 @@
 
         _tabForPage(page) {
             if (page === "home") return "home";
+            if (page === "planner") return "planner";
             if (page === "modules") return "modules";
+            if (page === "settings") return "settings";
             return "more";
         },
 
@@ -276,10 +288,18 @@
 
             if (tab === "home") {
                 this.showPage("home");
+            
+            } else if (tab === "planner") {
+                this.showPage("planner");
+            
             } else if (tab === "modules") {
                 this.showPage("modules");
+            
             } else if (tab === "more") {
                 this.showPage("more");
+            
+            } else if (tab === "settings") {
+                this.showPage("settings");
             }
         },
 

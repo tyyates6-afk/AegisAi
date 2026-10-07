@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS PRAYER JOURNAL v1.0.0
+        AEGIS PRAYER JOURNAL v2.0.0
 ======================================
 
     A simple prayer journal for AEGIS: log prayer requests,
@@ -8,14 +8,15 @@
     SETUP:
     1. Save this file as JS/prayer.js
     2. Add <script src="JS/prayer.js"></script> after core.js
-       (anywhere after core.js works)
+       (anywhere after core.js works — it hooks into the
+       Navigation module at runtime, whatever order they
+       initialize in)
 
     USE:
-    - Tap the 🙏 pill (bottom-left, above the timer pill) to
-      open the journal panel: add a prayer (optional title +
-      text), filter All / Active / Answered, mark answered,
-      reopen, edit, or delete. Draggable by its title bar.
-      Escape closes it.
+    - Open the ••• More tab and tap 🙏 Prayer Journal.
+      Add a prayer (optional title + text), filter All /
+      Active / Answered, search, mark answered, reopen,
+      edit, or delete. ← Back to More returns.
     - Or:
       const id = Aegis.run("prayer", "add",
           "Wisdom for the big decision at work",
@@ -28,11 +29,10 @@
       Aegis.run("prayer", "search", "wisdom");
       Aegis.run("prayer", "count");      // {total, active, answered}
       Aegis.run("prayer", "getStatus");
+      Aegis.run("prayer", "open");        // go to the journal page
 
-    - v1.0.0: mobile layout — the pill shrinks and sits above
-      the phone's bottom nav bar (safe-area aware); the panel
-      fits narrow screens. The pill hides while the timer or
-      prayer panels are open.
+    - v2.0.0: no more floating 🙏 pill — the journal lives in
+      the More hub as a full page, like Planner and Settings.
 
     Every prayer: { id, title, text, createdAt,
                     status: "active" | "answered",
@@ -60,6 +60,8 @@ const PRAYER_MAX_TITLE = 80;
 
 const PRAYER_MAX_TEXT = 2000;
 
+const PRAYER_PAGE_NAME = "prayer";
+
 
 let prayers = [];
 
@@ -67,15 +69,9 @@ let prayerSeq = 0;
 
 let prayerFilter = "all";
 
-let prayerPill = null;
-
-let prayerPanel = null;
-
-let prayerPanelOpen = false;
+let prayerPageEl = null;
 
 let prayerListEl = null;
-
-let prayerBadgeEl = null;
 
 let prayerTitleInput = null;
 
@@ -204,6 +200,120 @@ function prayerCelebrate() {
 }
 
 
+function prayerStyle(el, styles) {
+
+    for (const k in styles) {
+
+        el.style[k] = styles[k];
+
+    }
+
+}
+
+
+/* ---------- navigation ---------- */
+
+
+function prayerNav() {
+
+    try {
+
+        return window.Navigation || null;
+
+    } catch (error) {
+
+        return null;
+
+    }
+
+}
+
+
+/* Show the journal page through the Navigation module when
+   it's ready; fall back to toggling .aegis-page classes
+   directly so the journal works even if Navigation is
+   missing or initializes later. */
+
+function prayerShowPage(name) {
+
+    const nav = prayerNav();
+
+    if (nav && typeof nav.showPage === "function") {
+
+        nav.showPage(name);
+
+        return;
+
+    }
+
+    const pages = document.querySelectorAll
+        ? document.querySelectorAll(".aegis-page")
+        : [];
+
+    Array.prototype.forEach.call(pages, (page) => {
+
+        const on = page.dataset &&
+            page.dataset.page === name;
+
+        if (page.classList) {
+
+            page.classList.toggle("active", !!on);
+
+        }
+
+    });
+
+    try { window.scrollTo(0, 0); } catch (error) {}
+
+}
+
+
+function open() {
+
+    prayerShowPage(PRAYER_PAGE_NAME);
+
+}
+
+
+function prayerGoMore() {
+
+    prayerShowPage("more");
+
+}
+
+
+/* Register the page with Navigation. If Navigation hasn't
+   initialized yet, its _buildDOM will pick the page up from
+   the DOM itself (it re-queries .aegis-page). If it already
+   initialized, push the page into its cached list. */
+
+function prayerHookNavigation() {
+
+    const nav = prayerNav();
+
+    if (!nav || !prayerPageEl) return false;
+
+    try {
+
+        if (nav._els && Array.isArray(nav._els.pages)) {
+
+            if (nav._els.pages.indexOf(prayerPageEl) < 0) {
+
+                nav._els.pages.push(prayerPageEl);
+
+            }
+
+            return true;
+
+        }
+
+    } catch (error) {}
+
+    return false;
+
+}
+
+
 /* ---------- data API ---------- */
 
 
@@ -237,7 +347,7 @@ function add(text, title) {
 
     prayerSave();
 
-    prayerRefreshUI();
+    prayerRenderList();
 
     Aegis.broadcast("prayerAdded", { id: p.id, title: p.title });
 
@@ -299,7 +409,7 @@ function markAnswered(id, note) {
 
     prayerSave();
 
-    prayerRefreshUI();
+    prayerRenderList();
 
     prayerCelebrate();
 
@@ -327,7 +437,7 @@ function reopen(id) {
 
     prayerSave();
 
-    prayerRefreshUI();
+    prayerRenderList();
 
     Aegis.broadcast("prayerReopened", { id: p.id });
 
@@ -371,7 +481,7 @@ function edit(id, changes) {
 
     prayerSave();
 
-    prayerRefreshUI();
+    prayerRenderList();
 
     Aegis.broadcast("prayerEdited", { id: p.id });
 
@@ -390,7 +500,7 @@ function remove(id) {
 
     prayerSave();
 
-    prayerRefreshUI();
+    prayerRenderList();
 
     Aegis.broadcast("prayerRemoved", { id: id });
 
@@ -403,7 +513,7 @@ function search(q) {
 
     prayerSearchQuery = String(q || "").trim().toLowerCase();
 
-    prayerRefreshUI();
+    prayerRenderList();
 
     return list(prayerFilter);
 
@@ -430,335 +540,45 @@ function getStatus() {
 
     return Object.assign(count(), {
 
-        filter: prayerFilter,
-
-        panelOpen: prayerPanelOpen
+        filter: prayerFilter
 
     });
 
 }
 
 
-/* ---------- UI ---------- */
+/* ---------- page UI ---------- */
 
 
-function prayerIsPortraitPhone() {
+function prayerBuildPage() {
 
-    try {
+    prayerPageEl = document.createElement("div");
 
-        return window.matchMedia("(max-width: 640px)").matches;
+    prayerPageEl.className = "aegis-page";
 
-    } catch (error) {
+    prayerPageEl.dataset.page = PRAYER_PAGE_NAME;
 
-        return false;
+    const back = document.createElement("button");
 
-    }
+    back.className = "aegis-page-back";
 
-}
+    back.setAttribute("data-back-to", "more");
 
+    back.textContent = "← Back to More";
 
-function prayerTimerPanelOpen() {
+    back.addEventListener("click", prayerGoMore);
 
-    try {
+    prayerPageEl.appendChild(back);
 
-        const panel = document.getElementById("aegis-timer-panel");
+    const card = document.createElement("section");
 
-        return !!panel && panel.style.display !== "none";
+    card.className = "card";
 
-    } catch (error) {
+    const h2 = document.createElement("h2");
 
-        return false;
+    h2.textContent = "🙏 Prayer Journal";
 
-    }
-
-}
-
-
-function prayerStyle(el, styles) {
-
-    for (const k in styles) {
-
-        el.style[k] = styles[k];
-
-    }
-
-}
-
-
-function prayerBuildPill() {
-
-    prayerPill = document.createElement("button");
-
-    prayerPill.id = "aegis-prayer-pill";
-
-    prayerPill.textContent = "🙏";
-
-    prayerPill.title = "Prayer Journal";
-
-    prayerStyle(prayerPill, {
-
-        position: "fixed",
-
-        left: "24px",
-
-        bottom: "136px",
-
-        zIndex: "9002",
-
-        borderRadius: "999px",
-
-        border: "1px solid rgba(80, 210, 255, 0.5)",
-
-        background: "rgba(10, 20, 40, 0.85)",
-
-        color: "#9fdcff",
-
-        fontSize: "20px",
-
-        padding: "10px 14px",
-
-        cursor: "pointer",
-
-        boxSizing: "border-box"
-
-    });
-
-    prayerBadgeEl = document.createElement("span");
-
-    prayerStyle(prayerBadgeEl, {
-
-        position: "absolute",
-
-        top: "-6px",
-
-        right: "-6px",
-
-        minWidth: "20px",
-
-        height: "20px",
-
-        borderRadius: "999px",
-
-        background: "rgba(80, 210, 255, 0.9)",
-
-        color: "#06121f",
-
-        fontSize: "11px",
-
-        fontWeight: "bold",
-
-        display: "none",
-
-        alignItems: "center",
-
-        justifyContent: "center",
-
-        padding: "0 5px",
-
-        boxSizing: "border-box"
-
-    });
-
-    prayerPill.appendChild(prayerBadgeEl);
-
-    prayerPill.addEventListener("click", () => togglePanel());
-
-    document.body.appendChild(prayerPill);
-
-    prayerApplyMobile();
-
-    window.addEventListener("resize", prayerApplyMobile);
-
-}
-
-
-function prayerApplyMobile() {
-
-    if (!prayerPill || !prayerPanel) return;
-
-    const mobile = prayerIsPortraitPhone();
-
-    if (mobile) {
-
-        prayerStyle(prayerPill, {
-
-            padding: "6px 10px",
-
-            fontSize: "11px",
-
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 186px)"
-
-        });
-
-        prayerStyle(prayerPanel, {
-
-            left: "12px",
-
-            right: "12px",
-
-            width: "auto",
-
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 240px)"
-
-        });
-
-    } else {
-
-        prayerStyle(prayerPill, {
-
-            padding: "10px 14px",
-
-            fontSize: "20px",
-
-            bottom: "136px"
-
-        });
-
-        prayerStyle(prayerPanel, {
-
-            left: "24px",
-
-            right: "auto",
-
-            width: "340px",
-
-            bottom: "196px"
-
-        });
-
-    }
-
-}
-
-
-function prayerUpdatePill() {
-
-    if (!prayerPill) return;
-
-    const c = count();
-
-    if (prayerBadgeEl) {
-
-        if (c.active > 0) {
-
-            prayerBadgeEl.textContent = String(c.active);
-
-            prayerBadgeEl.style.display = "flex";
-
-        } else {
-
-            prayerBadgeEl.style.display = "none";
-
-        }
-
-    }
-
-    /* Hide while the timer panel or the prayer panel is open —
-       same convention as the timer chips. */
-
-    const hide = prayerPanelOpen || prayerTimerPanelOpen();
-
-    prayerPill.style.display = hide ? "none" : "";
-
-}
-
-
-function prayerBuildPanel() {
-
-    prayerPanel = document.createElement("div");
-
-    prayerPanel.id = "aegis-prayer-panel";
-
-    prayerStyle(prayerPanel, {
-
-        position: "fixed",
-
-        left: "24px",
-
-        bottom: "196px",
-
-        width: "340px",
-
-        maxWidth: "92vw",
-
-        maxHeight: "60vh",
-
-        display: "none",
-
-        flexDirection: "column",
-
-        borderRadius: "16px",
-
-        border: "1px solid rgba(80, 210, 255, 0.4)",
-
-        background: "rgba(8, 16, 32, 0.96)",
-
-        color: "#9fdcff",
-
-        zIndex: "9004",
-
-        overflow: "hidden",
-
-        boxSizing: "border-box"
-
-    });
-
-
-    const bar = document.createElement("div");
-
-    prayerStyle(bar, {
-
-        padding: "10px 14px",
-
-        fontWeight: "bold",
-
-        letterSpacing: "2px",
-
-        fontSize: "13px",
-
-        cursor: "move",
-
-        borderBottom: "1px solid rgba(80, 210, 255, 0.2)",
-
-        display: "flex",
-
-        justifyContent: "space-between",
-
-        alignItems: "center"
-
-    });
-
-    const title = document.createElement("span");
-
-    title.textContent = "🙏 PRAYER JOURNAL";
-
-    const close = document.createElement("button");
-
-    close.textContent = "✕";
-
-    prayerStyle(close, {
-
-        background: "transparent",
-
-        border: "none",
-
-        color: "#9fdcff",
-
-        cursor: "pointer",
-
-        fontSize: "14px"
-
-    });
-
-    close.addEventListener("click", () => closePanel());
-
-    bar.appendChild(title);
-
-    bar.appendChild(close);
-
-    prayerPanel.appendChild(bar);
-
-    prayerMakeDraggable(prayerPanel, bar);
+    card.appendChild(h2);
 
 
     /* Add form */
@@ -767,15 +587,13 @@ function prayerBuildPanel() {
 
     prayerStyle(form, {
 
-        padding: "10px 14px",
-
-        borderBottom: "1px solid rgba(80, 210, 255, 0.12)",
-
         display: "flex",
 
         flexDirection: "column",
 
-        gap: "8px"
+        gap: "8px",
+
+        marginBottom: "12px"
 
     });
 
@@ -783,49 +601,11 @@ function prayerBuildPanel() {
 
     prayerTitleInput.placeholder = "Title (optional)";
 
-    prayerStyle(prayerTitleInput, {
-
-        borderRadius: "8px",
-
-        border: "1px solid rgba(80, 210, 255, 0.3)",
-
-        background: "rgba(2, 8, 20, 0.8)",
-
-        color: "#eaf7ff",
-
-        padding: "8px 10px",
-
-        fontSize: "13px",
-
-        boxSizing: "border-box"
-
-    });
-
     prayerTextInput = document.createElement("textarea");
 
     prayerTextInput.placeholder = "What are you praying for?";
 
     prayerTextInput.rows = 2;
-
-    prayerStyle(prayerTextInput, {
-
-        borderRadius: "8px",
-
-        border: "1px solid rgba(80, 210, 255, 0.3)",
-
-        background: "rgba(2, 8, 20, 0.8)",
-
-        color: "#eaf7ff",
-
-        padding: "8px 10px",
-
-        fontSize: "13px",
-
-        resize: "vertical",
-
-        boxSizing: "border-box"
-
-    });
 
     const addBtn = document.createElement("button");
 
@@ -868,8 +648,7 @@ function prayerBuildPanel() {
 
             setTimeout(() => {
 
-                prayerTextInput.style.border =
-                    "1px solid rgba(80, 210, 255, 0.3)";
+                prayerTextInput.style.border = "";
 
             }, 1200);
 
@@ -883,7 +662,7 @@ function prayerBuildPanel() {
 
     form.appendChild(addBtn);
 
-    prayerPanel.appendChild(form);
+    card.appendChild(form);
 
 
     /* Filter tabs + search */
@@ -896,9 +675,11 @@ function prayerBuildPanel() {
 
         gap: "6px",
 
-        padding: "10px 14px 4px 14px",
+        alignItems: "center",
 
-        alignItems: "center"
+        marginBottom: "10px",
+
+        flexWrap: "wrap"
 
     });
 
@@ -934,7 +715,7 @@ function prayerBuildPanel() {
 
             prayerFilter = f;
 
-            prayerRefreshUI();
+            prayerRenderList();
 
         });
 
@@ -944,25 +725,13 @@ function prayerBuildPanel() {
 
     prayerSearchInput = document.createElement("input");
 
-    prayerSearchInput.placeholder = "Search";
+    prayerSearchInput.placeholder = "Search prayers";
 
     prayerStyle(prayerSearchInput, {
 
         flex: "1",
 
-        borderRadius: "999px",
-
-        border: "1px solid rgba(80, 210, 255, 0.25)",
-
-        background: "rgba(2, 8, 20, 0.8)",
-
-        color: "#eaf7ff",
-
-        padding: "5px 10px",
-
-        fontSize: "12px",
-
-        boxSizing: "border-box"
+        minWidth: "120px"
 
     });
 
@@ -974,7 +743,7 @@ function prayerBuildPanel() {
 
     tabs.appendChild(prayerSearchInput);
 
-    prayerPanel.appendChild(tabs);
+    card.appendChild(tabs);
 
 
     /* List */
@@ -983,31 +752,27 @@ function prayerBuildPanel() {
 
     prayerStyle(prayerListEl, {
 
-        overflowY: "auto",
-
-        padding: "6px 14px 14px 14px",
-
         display: "flex",
 
         flexDirection: "column",
 
-        gap: "10px"
+        gap: "12px"
 
     });
 
-    prayerPanel.appendChild(prayerListEl);
+    card.appendChild(prayerListEl);
 
+    prayerPageEl.appendChild(card);
 
-    document.body.appendChild(prayerPanel);
-
-    prayerApplyMobile();
+    document.body.appendChild(prayerPageEl);
 
 
     document.addEventListener("keydown", (e) => {
 
-        if (e.key === "Escape" && prayerPanelOpen) {
+        if (e.key === "Escape" &&
+            prayerPageEl.classList.contains("active")) {
 
-            closePanel();
+            prayerGoMore();
 
         }
 
@@ -1016,49 +781,54 @@ function prayerBuildPanel() {
 }
 
 
-function prayerMakeDraggable(panel, handle) {
+/* Add the 🙏 entry to the More hub. The hub is static HTML,
+   so this works whether or not Navigation initialized. */
 
-    let offX = 0;
+function prayerAddMoreEntry() {
 
-    let offY = 0;
+    try {
 
-    let dragging = false;
+        const hubList = document.querySelector(".aegis-more-list");
 
-    handle.addEventListener("pointerdown", (e) => {
+        if (!hubList) return false;
 
-        dragging = true;
+        if (hubList.querySelector('[data-goto-page="prayer"]')) {
 
-        offX = e.clientX - panel.offsetLeft;
-
-        offY = e.clientY - panel.offsetTop;
-
-        if (handle.setPointerCapture) {
-
-            try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+            return true;
 
         }
 
-    });
+        const item = document.createElement("button");
 
-    handle.addEventListener("pointermove", (e) => {
+        item.className = "aegis-more-item";
 
-        if (!dragging) return;
+        item.setAttribute("data-goto-page", PRAYER_PAGE_NAME);
 
-        panel.style.left = (e.clientX - offX) + "px";
+        item.textContent = "🙏 Prayer Journal";
 
-        panel.style.top = (e.clientY - offY) + "px";
+        item.addEventListener("click", open);
 
-        panel.style.bottom = "auto";
+        /* Sit with the other pages, above the dashboard tools. */
 
-        panel.style.right = "auto";
+        const divider = hubList.querySelector("hr");
 
-    });
+        if (divider) {
 
-    handle.addEventListener("pointerup", () => {
+            hubList.insertBefore(item, divider);
 
-        dragging = false;
+        } else {
 
-    });
+            hubList.appendChild(item);
+
+        }
+
+        return true;
+
+    } catch (error) {
+
+        return false;
+
+    }
 
 }
 
@@ -1106,25 +876,15 @@ function prayerRenderList() {
 
     if (items.length === 0) {
 
-        const empty = document.createElement("div");
+        const empty = document.createElement("p");
+
+        empty.className = "empty-state";
 
         empty.textContent = prayerSearchQuery
             ? "No prayers match your search."
             : (prayerFilter === "answered"
                 ? "No answered prayers yet."
                 : "No prayers here yet. Add one above.");
-
-        prayerStyle(empty, {
-
-            color: "rgba(159, 220, 255, 0.4)",
-
-            fontSize: "13px",
-
-            textAlign: "center",
-
-            padding: "18px 0"
-
-        });
 
         prayerListEl.appendChild(empty);
 
@@ -1181,7 +941,7 @@ function prayerRenderRow(p) {
 
         color: "#eaf7ff",
 
-        fontSize: "13px",
+        fontSize: "14px",
 
         fontWeight: "bold",
 
@@ -1227,7 +987,7 @@ function prayerRenderRow(p) {
 
         color: "rgba(234, 247, 255, 0.85)",
 
-        fontSize: "13px",
+        fontSize: "14px",
 
         whiteSpace: "pre-wrap"
 
@@ -1356,29 +1116,7 @@ function prayerRenderEditRow(row, p) {
 
     textIn.rows = 3;
 
-    [titleIn, textIn].forEach((el) => {
-
-        prayerStyle(el, {
-
-            borderRadius: "8px",
-
-            border: "1px solid rgba(80, 210, 255, 0.3)",
-
-            background: "rgba(2, 8, 20, 0.8)",
-
-            color: "#eaf7ff",
-
-            padding: "8px 10px",
-
-            fontSize: "13px",
-
-            boxSizing: "border-box",
-
-            width: "100%"
-
-        });
-
-    });
+    prayerStyle(textIn, { width: "100%" });
 
     const actions = document.createElement("div");
 
@@ -1392,11 +1130,7 @@ function prayerRenderEditRow(row, p) {
 
     actions.appendChild(prayerRowButton("SAVE", () => {
 
-        if (edit(p.id, { title: titleIn.value, text: textIn.value })) {
-
-            /* list re-renders on edit */
-
-        } else {
+        if (!edit(p.id, { title: titleIn.value, text: textIn.value })) {
 
             textIn.style.border =
                 "1px solid rgba(255, 90, 90, 0.8)";
@@ -1420,91 +1154,12 @@ function prayerRenderEditRow(row, p) {
 }
 
 
-function prayerRefreshUI() {
-
-    prayerUpdatePill();
-
-    if (prayerPanelOpen) {
-
-        prayerRenderList();
-
-        /* Highlight the active filter tab. */
-
-        try {
-
-            const tabs = prayerPanel.querySelectorAll
-                ? prayerPanel.querySelectorAll("[data-filter]")
-                : [];
-
-            Array.prototype.forEach.call(tabs, (b) => {
-
-                const on = b.dataset.filter === prayerFilter;
-
-                b.style.background = on
-                    ? "rgba(80, 210, 255, 0.15)"
-                    : "transparent";
-
-            });
-
-        } catch (error) {}
-
-    }
-
-}
-
-
-/* ---------- panel open / close ---------- */
-
-
-function openPanel() {
-
-    if (!prayerPanel) return;
-
-    prayerPanelOpen = true;
-
-    prayerPanel.style.display = "flex";
-
-    prayerRenderList();
-
-    prayerUpdatePill();
-
-}
-
-
-function closePanel() {
-
-    if (!prayerPanel) return;
-
-    prayerPanelOpen = false;
-
-    prayerPanel.style.display = "none";
-
-    prayerUpdatePill();
-
-}
-
-
-function togglePanel() {
-
-    if (prayerPanelOpen) {
-
-        closePanel();
-
-    } else {
-
-        openPanel();
-
-    }
-
-}
-
-
 /* ---------- module ---------- */
 
 
 Aegis.register("prayer", {
 
-    version: "1.0.0",
+    version: "2.0.0",
 
 
     add,
@@ -1527,22 +1182,39 @@ Aegis.register("prayer", {
 
     getStatus,
 
-    openPanel,
-
-    closePanel,
-
-    togglePanel,
+    open,
 
 
     init() {
 
         prayerLoad();
 
-        prayerBuildPill();
+        prayerBuildPage();
 
-        prayerBuildPanel();
+        prayerAddMoreEntry();
 
-        prayerUpdatePill();
+        prayerRenderList();
+
+        /* Navigation may init before or after this module —
+           hook up now, and retry briefly if it's not ready. */
+
+        if (!prayerHookNavigation()) {
+
+            let attempts = 0;
+
+            const retry = setInterval(() => {
+
+                attempts += 1;
+
+                if (prayerHookNavigation() || attempts >= 20) {
+
+                    clearInterval(retry);
+
+                }
+
+            }, 250);
+
+        }
 
         console.log("Prayer Journal initialized.");
 
@@ -1551,30 +1223,36 @@ Aegis.register("prayer", {
 
     refresh() {
 
-        prayerRefreshUI();
+        prayerRenderList();
 
     },
 
 
     shutdown() {
 
-        if (prayerPill && prayerPill.parentNode) {
+        if (prayerPageEl && prayerPageEl.parentNode) {
 
-            prayerPill.parentNode.removeChild(prayerPill);
-
-        }
-
-        if (prayerPanel && prayerPanel.parentNode) {
-
-            prayerPanel.parentNode.removeChild(prayerPanel);
+            prayerPageEl.parentNode.removeChild(prayerPageEl);
 
         }
 
-        prayerPill = null;
+        try {
 
-        prayerPanel = null;
+            const entry = document.querySelector(
+                '.aegis-more-list [data-goto-page="prayer"]'
+            );
 
-        prayerPanelOpen = false;
+            if (entry && entry.parentNode) {
+
+                entry.parentNode.removeChild(entry);
+
+            }
+
+        } catch (error) {}
+
+        prayerPageEl = null;
+
+        prayerListEl = null;
 
         console.log("Prayer Journal shut down.");
 
@@ -1588,8 +1266,6 @@ Aegis.register("prayer", {
             online: true,
 
             version: this.version,
-
-            panelOpen: prayerPanelOpen,
 
             total: prayers.length
 
