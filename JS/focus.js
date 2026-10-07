@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS FOCUS PROTOCOL v1.4.1
+        AEGIS FOCUS PROTOCOL v1.4.2
 ======================================
 
     One-tap focus mode for AEGIS.
@@ -27,6 +27,8 @@
     - Sessions are stored locally, no AI, no backend.
     - v1.4.1: mobile layout — the FOCUS button shrinks and sits
       above the phone's bottom nav bar (safe-area aware).
+    - v1.4.2: smaller still in portrait; landscape (and
+      desktop) keep the full-size buttons.
 
 ======================================*/
 
@@ -464,11 +466,18 @@ function focusBuildButton() {
 /* Mobile layout: shrink the FOCUS button and lift it clear of
    the phone's bottom nav bar (uses the safe-area inset). */
 
+function focusIsMobileLayout() {
+
+    return window.innerWidth <= 640;
+
+}
+
+
 function focusApplyResponsive() {
 
     if (!focusBtn) return;
 
-    const mobile = window.innerWidth <= 640;
+    const mobile = focusIsMobileLayout();
 
     Object.assign(focusBtn.style, {
 
@@ -476,11 +485,11 @@ function focusApplyResponsive() {
             ? "calc(env(safe-area-inset-bottom, 0px) + 76px)"
             : "24px",
 
-        padding: mobile ? "10px 15px" : "12px 22px",
+        padding: mobile ? "8px 12px" : "12px 22px",
 
-        fontSize: mobile ? "12px" : "14px",
+        fontSize: mobile ? "11px" : "14px",
 
-        letterSpacing: mobile ? "2px" : "3px"
+        letterSpacing: mobile ? "1px" : "3px"
 
     });
 

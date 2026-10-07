@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS TIMER v2.0.2
+        AEGIS TIMER v2.0.3
 ======================================
 
     Multiple simultaneous countdowns for AEGIS, with a mini
@@ -31,6 +31,8 @@
     - v2.0.2: running timers stay visible as compact chips
       (label + live time + pause + stop) while the maker
       panel is closed.
+    - v2.0.3: smaller still in portrait; landscape (and
+      desktop) keep the full-size pill and panel.
 
     The id may be omitted from pause / resume / stop /
     getStatus — it then targets the most recently started
@@ -433,15 +435,17 @@ function timerWidgetRenderChips(list) {
 
         const chip = document.createElement("div");
 
+        const chipMobile = timerIsMobileLayout();
+
         Object.assign(chip.style, {
 
             display: "flex",
 
             alignItems: "center",
 
-            gap: "6px",
+            gap: chipMobile ? "5px" : "6px",
 
-            padding: "6px 8px 6px 12px",
+            padding: chipMobile ? "5px 7px 5px 10px" : "6px 8px 6px 12px",
 
             borderRadius: "999px",
 
@@ -451,7 +455,7 @@ function timerWidgetRenderChips(list) {
 
             color: "#9fdcff",
 
-            fontSize: "12px",
+            fontSize: chipMobile ? "11px" : "12px",
 
             backdropFilter: "blur(6px)",
 
@@ -1244,9 +1248,16 @@ function timerBuildWidget() {
    phone's bottom nav bar (uses the safe-area inset), and keep
    the popup panel inside the viewport. */
 
+function timerIsMobileLayout() {
+
+    return window.innerWidth <= 640;
+
+}
+
+
 function timerApplyResponsive() {
 
-    const mobile = window.innerWidth <= 640;
+    const mobile = timerIsMobileLayout();
 
     if (timerPill) {
 
@@ -1256,11 +1267,11 @@ function timerApplyResponsive() {
                 ? "calc(env(safe-area-inset-bottom, 0px) + 132px)"
                 : "84px",
 
-            padding: mobile ? "8px 12px" : "10px 16px",
+            padding: mobile ? "6px 10px" : "10px 16px",
 
-            fontSize: mobile ? "12px" : "14px",
+            fontSize: mobile ? "11px" : "14px",
 
-            letterSpacing: mobile ? "1px" : "2px"
+            letterSpacing: mobile ? "0px" : "2px"
 
         });
 
