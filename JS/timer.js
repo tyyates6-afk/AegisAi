@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS TIMER v2.0.3
+        AEGIS TIMER v2.0.4
 ======================================
 
     Multiple simultaneous countdowns for AEGIS, with a mini
@@ -33,6 +33,8 @@
       panel is closed.
     - v2.0.3: smaller still in portrait; landscape (and
       desktop) keep the full-size pill and panel.
+    - v2.0.4: shorter pill and chips everywhere — tighter
+      padding so they hug their content.
 
     The id may be omitted from pause / resume / stop /
     getStatus — it then targets the most recently started
@@ -445,7 +447,7 @@ function timerWidgetRenderChips(list) {
 
             gap: chipMobile ? "5px" : "6px",
 
-            padding: chipMobile ? "5px 7px 5px 10px" : "6px 8px 6px 12px",
+            padding: chipMobile ? "4px 6px 4px 8px" : "5px 7px 5px 10px",
 
             borderRadius: "999px",
 
@@ -838,9 +840,9 @@ function timerBuildWidget() {
 
         alignItems: "center",
 
-        gap: "8px",
+        gap: "6px",
 
-        padding: "10px 16px",
+        padding: "8px 12px",
 
         borderRadius: "999px",
 
@@ -852,7 +854,7 @@ function timerBuildWidget() {
 
         fontSize: "14px",
 
-        letterSpacing: "2px",
+        letterSpacing: "1px",
 
         cursor: "pointer",
 
@@ -1267,11 +1269,11 @@ function timerApplyResponsive() {
                 ? "calc(env(safe-area-inset-bottom, 0px) + 132px)"
                 : "84px",
 
-            padding: mobile ? "6px 10px" : "10px 16px",
+            padding: mobile ? "5px 8px" : "8px 12px",
 
             fontSize: mobile ? "11px" : "14px",
 
-            letterSpacing: mobile ? "0px" : "2px"
+            letterSpacing: mobile ? "0px" : "1px"
 
         });
 
@@ -1362,7 +1364,7 @@ function timerDestroyWidget() {
 
 Aegis.register("timer", {
 
-    version: "2.0.0",
+    version: "2.0.4",
 
 
     start: timerStart,

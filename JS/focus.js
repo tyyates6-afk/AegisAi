@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS FOCUS PROTOCOL v1.4.2
+        AEGIS FOCUS PROTOCOL v1.4.3
 ======================================
 
     One-tap focus mode for AEGIS.
@@ -29,6 +29,8 @@
       above the phone's bottom nav bar (safe-area aware).
     - v1.4.2: smaller still in portrait; landscape (and
       desktop) keep the full-size buttons.
+    - v1.4.3: shorter buttons everywhere — tighter padding so
+      FOCUS hugs its label instead of stretching wide.
 
 ======================================*/
 
@@ -434,7 +436,7 @@ function focusBuildButton() {
 
         zIndex: "9001",
 
-        padding: "12px 22px",
+        padding: "10px 14px",
 
         borderRadius: "999px",
 
@@ -446,7 +448,7 @@ function focusBuildButton() {
 
         fontSize: "14px",
 
-        letterSpacing: "3px",
+        letterSpacing: "2px",
 
         cursor: "pointer",
 
@@ -485,11 +487,11 @@ function focusApplyResponsive() {
             ? "calc(env(safe-area-inset-bottom, 0px) + 76px)"
             : "24px",
 
-        padding: mobile ? "8px 12px" : "12px 22px",
+        padding: mobile ? "6px 10px" : "10px 14px",
 
         fontSize: mobile ? "11px" : "14px",
 
-        letterSpacing: mobile ? "1px" : "3px"
+        letterSpacing: mobile ? "1px" : "2px"
 
     });
 
@@ -1083,7 +1085,7 @@ function focusBuildOverlay() {
 
 Aegis.register("focus", {
 
-    version: "1.4.0",
+    version: "1.4.3",
 
 
     start: focusStart,
