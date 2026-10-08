@@ -878,7 +878,11 @@ function hbRefreshInner() {
     /* Stats as one literal string (no helper calls) — the
        probe proved simple literal innerHTML works here. */
 
-    hbStatsEl.innerHTML =
+    let statsHTML = "";
+
+    try {
+
+        statsHTML =
         '<div style="display:flex;gap:8px;margin-bottom:14px">' +
         '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
         'border-radius:12px;background:rgba(80,210,255,0.07);' +
@@ -902,6 +906,35 @@ function hbRefreshInner() {
         '</div><div style="font-size:10px;letter-spacing:1px;' +
         'color:rgba(159,220,255,0.6);margin-top:2px">BEST STREAK</div></div>' +
         "</div>";
+
+    } catch (buildErr) {
+
+        try {
+
+            console.log("habits: stats HTML build FAILED: " + buildErr.message);
+
+        } catch (e) {}
+
+        statsHTML = "";
+
+    }
+
+    try {
+
+        hbStatsEl.innerHTML = statsHTML;
+
+        console.log("habits: stats set, kids=" + hbStatsEl.children.length +
+            ", htmlLen=" + statsHTML.length);
+
+    } catch (setErr) {
+
+        try {
+
+            console.log("habits: stats SET FAILED: " + setErr.message);
+
+        } catch (e) {}
+
+    }
 
     /* Habit rows — also HTML strings, wired via the
        delegated click handler on the card. */
@@ -1182,7 +1215,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.11",
+    version: "1.1.12",
 
     name: "Habit Tracker",
 
