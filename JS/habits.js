@@ -1026,7 +1026,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.2",
+    version: "1.1.3",
 
     name: "Habit Tracker",
 
@@ -1076,6 +1076,18 @@ Aegis.register("habits", {
 
                     clearInterval(retry);
 
+                    try {
+
+                        console.log("habits diag: placed on retry", {
+
+                            stats: hbStatsEl ? hbStatsEl.children.length : -1,
+
+                            list: hbListEl ? hbListEl.children.length : -1
+
+                        });
+
+                    } catch (inner) {}
+
                 }
 
             }, 250);
@@ -1083,6 +1095,31 @@ Aegis.register("habits", {
         }
 
         refresh();
+
+        /* Temporary diagnostic: prove what refresh() actually
+           painted, so a silent render failure can't hide. */
+
+        try {
+
+            console.log("habits diag: after refresh", {
+
+                hasCard: !!hbCardEl,
+
+                hasStats: !!hbStatsEl,
+
+                hasList: !!hbListEl,
+
+                statsKids: hbStatsEl ? hbStatsEl.children.length : -1,
+
+                listKids: hbListEl ? hbListEl.children.length : -1,
+
+                cardInDOM: hbCardEl ? document.contains(hbCardEl) : false,
+
+                gridNow: !!hbGrid()
+
+            });
+
+        } catch (diagErr) {}
 
         console.log("Habit Tracker initialized.");
 
