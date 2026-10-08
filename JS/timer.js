@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS TIMER v2.0.4
+        AEGIS TIMER v2.0.5
 ======================================
 
     Multiple simultaneous countdowns for AEGIS, with a mini
@@ -35,6 +35,9 @@
       desktop) keep the full-size pill and panel.
     - v2.0.4: shorter pill and chips everywhere — tighter
       padding so they hug their content.
+    - v2.0.5: width:auto on the timer pill defeats dashboard
+      stylesheet rules that stretch buttons full-width (the
+      real cause of the full-width stretch on Ty's phone).
 
     The id may be omitted from pause / resume / stop /
     getStatus — it then targets the most recently started
@@ -835,6 +838,13 @@ function timerBuildWidget() {
         bottom: "84px",
 
         zIndex: "9001",
+
+        /* width:auto defeats any dashboard stylesheet rule that
+           stretches buttons full-width (e.g. a global button
+           width:100% for the dashboard widgets). Inline style beats
+           any non-!important stylesheet rule. */
+
+        width: "auto",
 
         display: "flex",
 

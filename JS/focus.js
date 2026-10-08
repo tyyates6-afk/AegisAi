@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS FOCUS PROTOCOL v1.4.3
+        AEGIS FOCUS PROTOCOL v1.4.4
 ======================================
 
     One-tap focus mode for AEGIS.
@@ -31,6 +31,9 @@
       desktop) keep the full-size buttons.
     - v1.4.3: shorter buttons everywhere — tighter padding so
       FOCUS hugs its label instead of stretching wide.
+    - v1.4.4: width:auto on the FOCUS button defeats dashboard
+      stylesheet rules that stretch buttons full-width (the
+      real cause of the full-width stretch on Ty's phone).
 
 ======================================*/
 
@@ -435,6 +438,13 @@ function focusBuildButton() {
         bottom: "24px",
 
         zIndex: "9001",
+
+        /* width:auto defeats any dashboard stylesheet rule that
+           stretches buttons full-width (e.g. a global button
+           width:100% for the dashboard widgets). Inline style beats
+           any non-!important stylesheet rule. */
+
+        width: "auto",
 
         padding: "10px 14px",
 
