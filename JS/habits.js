@@ -59,7 +59,12 @@ function hbLoad() {
 
         const list = JSON.parse(raw);
 
-        return Array.isArray(list) ? list : [];
+        if (!Array.isArray(list)) return [];
+
+        /* Drop corrupt entries (null, non-objects) so one bad
+           habit can't break the whole render. */
+
+        return list.filter((h) => h && typeof h === "object");
 
     } catch (error) {
 
@@ -333,7 +338,7 @@ function getWeekCheckins() {
 
     habits.forEach((h) => {
 
-        if (!h.days) return;
+        if (!h || !h.days) return;
 
         Object.keys(h.days).forEach((key) => {
 
@@ -1177,7 +1182,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.9",
+    version: "1.1.10",
 
     name: "Habit Tracker",
 
