@@ -45,6 +45,54 @@ function todayKey() {
     return dayKey(new Date());
 }
 
+function freqOf(h) {
+    const f = h && h.frequency;
+    return (f === "weekly" || f === "monthly") ? f : "daily";
+}
+
+function weekStart(d) {
+    const dt = d instanceof Date ? d : new Date(d);
+    const dow = (dt.getDay() + 6) % 7;
+    const m = new Date(dt);
+    m.setHours(0, 0, 0, 0);
+    m.setDate(dt.getDate() - dow);
+    return m;
+}
+
+function monthStart(d) {
+    const dt = d instanceof Date ? d : new Date(d);
+    return new Date(dt.getFullYear(), dt.getMonth(), 1);
+}
+
+function monthKey(d) {
+    const dt = d instanceof Date ? d : new Date(d);
+    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0");
+}
+
+/* Period key for toggling: daily = exact day, weekly = Monday, monthly = 1st. */
+function periodToggleKey(date, freq) {
+    if (freq === "weekly") return dayKey(weekStart(date));
+    if (freq === "monthly") return dayKey(monthStart(date));
+    return dayKey(date);
+}
+
+/* Was the habit done at any point in the period starting at `start`? */
+function doneInPeriod(h, start, freq) {
+    if (!h || !h.days) return false;
+    if (freq === "daily") return !!h.days[dayKey(start)];
+    if (freq === "weekly") {
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            if (h.days[dayKey(d)]) return true;
+        }
+        return false;
+    }
+    /* monthly */
+    const mk = monthKey(start);
+    return Object.keys(h.days).some((k) => k.substring(0, 7) === mk);
+}
+
 function esc(s) {
     return String(s == null ? "" : s)
         .replace(/&/g, "&amp;")
@@ -57,12 +105,34 @@ function esc(s) {
 
 function getStreak(h) {
     if (!h || !h.days) return 0;
+    const freq = freqOf(h);
+    if (freq === "daily") {
+        let n = 0;
+        const d = new Date();
+        if (!h.days[dayKey(d)]) d.setDate(d.getDate() - 1);
+        while (h.days[dayKey(d)]) {
+            n += 1;
+            d.setDate(d.getDate() - 1);
+        }
+        return n;
+    }
+    if (freq === "weekly") {
+        let n = 0;
+        let ws = weekStart(new Date());
+        if (!doneInPeriod(h, ws, "weekly")) ws.setDate(ws.getDate() - 7);
+        while (doneInPeriod(h, ws, "weekly")) {
+            n += 1;
+            ws.setDate(ws.getDate() - 7);
+        }
+        return n;
+    }
+    /* monthly */
     let n = 0;
-    const d = new Date();
-    if (!h.days[dayKey(d)]) d.setDate(d.getDate() - 1);
-    while (h.days[dayKey(d)]) {
+    let ms = monthStart(new Date());
+    if (!doneInPeriod(h, ms, "monthly")) ms.setMonth(ms.getMonth() - 1);
+    while (doneInPeriod(h, ms, "monthly")) {
         n += 1;
-        d.setDate(d.getDate() - 1);
+        ms.setMonth(ms.getMonth() - 1);
     }
     return n;
 }
@@ -123,6 +193,26 @@ function buildCard() {
     input.placeholder = "New habit (e.g. Read 10 pages)";
     style(input, { flex: "1" });
     form.appendChild(input);
+
+    const freqSel = document.createElement("select");
+    freqSel.id = "habitFreq";
+    [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"]].forEach(([v, label]) => {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = label;
+        freqSel.appendChild(o);
+    });
+    style(freqSel, {
+        background: "rgba(80,210,255,0.06)",
+        border: "1px solid rgba(80,210,255,0.25)",
+        borderRadius: "10px",
+        color: "#9fdcff",
+        padding: "8px 6px",
+        fontSize: "12px",
+        outline: "none",
+        cursor: "pointer"
+    });
+    form.appendChild(freqSel);
 
     const btn = document.createElement("button");
     btn.textContent = "ADD";
@@ -233,27 +323,47 @@ function renderStats(habits) {
     el.appendChild(wrap);
 }
 
-function weekDots(habit) {
+function freqLabel(freq) {
+    return freq === "weekly" ? "weekly" : freq === "monthly" ? "monthly" : "daily";
+}
+
+function periodDots(habit) {
     const row = document.createElement("div");
     style(row, { display: "flex", gap: "4px" });
 
+    const freq = freqOf(habit);
     const now = new Date();
-    const dow = (now.getDay() + 6) % 7; // Monday-first
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - dow);
 
     for (let i = 0; i < 7; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        const key = dayKey(d);
-        const done = !!(habit.days && habit.days[key]);
-        const isToday = key === todayKey();
+        let start, toggleK, label, isCurrent;
+        if (freq === "weekly") {
+            start = weekStart(now);
+            start.setDate(start.getDate() - (6 - i) * 7);
+            toggleK = dayKey(start);
+            label = "Week of " + toggleK;
+            isCurrent = i === 6;
+        } else if (freq === "monthly") {
+            start = monthStart(now);
+            start.setMonth(start.getMonth() - (6 - i));
+            toggleK = dayKey(start);
+            label = start.toLocaleString("default", { month: "short", year: "numeric" });
+            isCurrent = i === 6;
+        } else {
+            const monday = weekStart(now);
+            start = new Date(monday);
+            start.setDate(monday.getDate() + i);
+            toggleK = dayKey(start);
+            label = toggleK;
+            isCurrent = toggleK === todayKey();
+        }
+
+        const done = doneInPeriod(habit, start, freq);
 
         const dot = document.createElement("button");
         dot.setAttribute("data-habit", habit.id);
-        dot.setAttribute("data-day", key);
+        dot.setAttribute("data-day", toggleK);
         dot.setAttribute("data-act", "dot");
-        dot.title = key + (done ? " (done)" : "");
+        dot.title = label + (done ? " (done)" : "");
         style(dot, {
             width: "14px",
             height: "14px",
@@ -262,7 +372,7 @@ function weekDots(habit) {
             background: done ? "#50d2ff" : "transparent",
             cursor: "pointer",
             padding: "0",
-            outline: isToday ? "2px solid rgba(80,210,255,0.6)" : "none",
+            outline: isCurrent ? "2px solid rgba(80,210,255,0.6)" : "none",
             outlineOffset: "1px"
         });
         row.appendChild(dot);
@@ -293,7 +403,24 @@ function habitRow(habit) {
     });
     row.appendChild(name);
 
-    row.appendChild(weekDots(habit));
+    const freq = freqOf(habit);
+    if (freq !== "daily") {
+        const badge = document.createElement("span");
+        badge.textContent = freqLabel(freq);
+        style(badge, {
+            fontSize: "9px",
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            color: "rgba(159,220,255,0.55)",
+            border: "1px solid rgba(80,210,255,0.3)",
+            borderRadius: "999px",
+            padding: "2px 7px",
+            whiteSpace: "nowrap"
+        });
+        row.appendChild(badge);
+    }
+
+    row.appendChild(periodDots(habit));
 
     const streak = document.createElement("span");
     streak.textContent = "🔥 " + getStreak(habit);
@@ -352,6 +479,16 @@ function render() {
 
 /* ---------- actions ---------- */
 
+function selectedFreq() {
+    try {
+        const sel = document.getElementById("habitFreq");
+        const v = sel ? sel.value : "daily";
+        return (v === "weekly" || v === "monthly") ? v : "daily";
+    } catch (e) {
+        return "daily";
+    }
+}
+
 function addHabit(name) {
     const clean = String(name == null ? "" : name).trim();
     if (!clean) return null;
@@ -359,6 +496,7 @@ function addHabit(name) {
     const habit = {
         id: "h" + Date.now() + Math.floor(Math.random() * 1000),
         name: clean,
+        frequency: selectedFreq(),
         days: {},
         createdAt: new Date().toISOString()
     };
@@ -385,7 +523,10 @@ function toggleDay(id, key) {
 }
 
 function checkToday(id) {
-    toggleDay(id, todayKey());
+    const habits = load();
+    const h = habits.find((x) => x.id === id);
+    const freq = freqOf(h);
+    toggleDay(id, periodToggleKey(new Date(), freq));
 }
 
 function removeHabit(id) {
@@ -436,13 +577,13 @@ function onCardClick(e) {
 
 if (typeof Aegis !== "undefined" && Aegis.register) {
     Aegis.register("habits", {
-        version: "2.0.0",
+        version: "2.1.0",
         name: "Habit Tracker",
 
         init() {
             buildCard();
             render();
-            try { console.log("Habit Tracker v2.0.0 initialized."); } catch (e) {}
+            try { console.log("Habit Tracker v2.1.0 initialized."); } catch (e) {}
         },
 
         refresh() { render(); },
@@ -465,7 +606,7 @@ if (typeof Aegis !== "undefined" && Aegis.register) {
             const habits = load();
             return {
                 online: !!cardEl(),
-                version: "2.0.0",
+                version: "2.1.0",
                 count: habits.length,
                 weekCheckins: getWeekCheckins(habits)
             };
