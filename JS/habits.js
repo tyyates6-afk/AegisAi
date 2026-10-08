@@ -830,37 +830,50 @@ function hbStartRenameById(id) {
 
 function hbRefreshInner() {
 
-    /* Re-query the live DOM: the cached element references can go
-       stale if the dashboard rebuilds the card. The IDs are the
-       source of truth. */
+    /* Destroy-and-rebuild: the dashboard inserts extra nodes into
+       our card and the original element objects may be corrupted
+       (innerHTML silently no-ops on them). Fresh elements every
+       refresh sidesteps all of that. */
 
-    const liveStats = document.getElementById("habitStats");
+    try {
 
-    const liveList = document.getElementById("habitList");
+        const oldStats = document.getElementById("habitStats");
 
-    if (liveStats && liveStats !== hbStatsEl) {
+        if (oldStats) oldStats.remove();
 
-        try {
+        const oldList = document.getElementById("habitList");
 
-            console.log("habits: stats element reference was stale, adopting live element");
+        if (oldList) oldList.remove();
 
-        } catch (e) {}
+    } catch (e) {}
 
-        hbStatsEl = liveStats;
+    hbStatsEl = document.createElement("div");
 
-    }
+    hbStatsEl.id = "habitStats";
 
-    if (liveList && liveList !== hbListEl) {
+    hbListEl = document.createElement("div");
 
-        try {
+    hbListEl.id = "habitList";
 
-            console.log("habits: list element reference was stale, adopting live element");
+    try {
 
-        } catch (e) {}
+        /* Insert stats right after the H2, list at the end. */
 
-        hbListEl = liveList;
+        const h2 = hbCardEl ? hbCardEl.querySelector("h2") : null;
 
-    }
+        if (h2 && h2.parentNode) {
+
+            h2.after(hbStatsEl);
+
+        } else if (hbCardEl) {
+
+            hbCardEl.prepend(hbStatsEl);
+
+        }
+
+        if (hbCardEl) hbCardEl.appendChild(hbListEl);
+
+    } catch (e) {}
 
     if (!hbListEl || !hbStatsEl) return;
 
@@ -1215,7 +1228,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.12",
+    version: "1.1.13",
 
     name: "Habit Tracker",
 
