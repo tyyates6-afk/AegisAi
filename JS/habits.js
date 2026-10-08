@@ -1182,7 +1182,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.10",
+    version: "1.1.11",
 
     name: "Habit Tracker",
 
@@ -1300,6 +1300,70 @@ Aegis.register("habits", {
     refresh() {
 
         refresh();
+
+    },
+
+
+    debugRender() {
+
+        const habits = hbLoad();
+
+        const best = habits.reduce(
+            (m, h) => Math.max(m, getStreak(h)), 0);
+
+        const html =
+            '<div style="display:flex;gap:8px;margin-bottom:14px">' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
+            'border-radius:12px;background:rgba(80,210,255,0.07);' +
+            'border:1px solid rgba(80,210,255,0.25)">' +
+            '<div style="font-size:20px;font-weight:bold;color:#9fdcff">' +
+            habits.length +
+            '</div><div style="font-size:10px;letter-spacing:1px;' +
+            'color:rgba(159,220,255,0.6);margin-top:2px">HABITS</div></div>' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
+            'border-radius:12px;background:rgba(80,210,255,0.07);' +
+            'border:1px solid rgba(80,210,255,0.25)">' +
+            '<div style="font-size:20px;font-weight:bold;color:#9fdcff">' +
+            getWeekCheckins() +
+            '</div><div style="font-size:10px;letter-spacing:1px;' +
+            'color:rgba(159,220,255,0.6);margin-top:2px">THIS WEEK</div></div>' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
+            'border-radius:12px;background:rgba(80,210,255,0.07);' +
+            'border:1px solid rgba(80,210,255,0.25)">' +
+            '<div style="font-size:20px;font-weight:bold;color:#ffb35c">\u{1F525} ' +
+            best +
+            '</div><div style="font-size:10px;letter-spacing:1px;' +
+            'color:rgba(159,220,255,0.6);margin-top:2px">BEST STREAK</div></div>' +
+            "</div>";
+
+        const testDiv = document.createElement("div");
+
+        let testKids = -1;
+
+        let testError = null;
+
+        try {
+
+            testDiv.innerHTML = html;
+
+            testKids = testDiv.children.length;
+
+        } catch (e) {
+
+            testError = e.message;
+
+        }
+
+        return {
+            htmlLength: html.length,
+            htmlHead: html.substring(0, 150),
+            testKids: testKids,
+            testError: testError,
+            liveKids: hbStatsEl ? hbStatsEl.children.length : -1,
+            habitsCount: habits.length,
+            weekCheckins: getWeekCheckins(),
+            best: best
+        };
 
     },
 
