@@ -819,11 +819,32 @@ function hbRefreshInner() {
     const best = habits.reduce(
         (m, h) => Math.max(m, getStreak(h)), 0);
 
+    /* Stats as one literal string (no helper calls) — the
+       probe proved simple literal innerHTML works here. */
+
     hbStatsEl.innerHTML =
         '<div style="display:flex;gap:8px;margin-bottom:14px">' +
-        hbStatHTML("HABITS", habits.length, "#9fdcff") +
-        hbStatHTML("THIS WEEK", getWeekCheckins(), "#9fdcff") +
-        hbStatHTML("BEST STREAK", "\u{1F525} " + best, "#ffb35c") +
+        '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
+        'border-radius:12px;background:rgba(80,210,255,0.07);' +
+        'border:1px solid rgba(80,210,255,0.25)">' +
+        '<div style="font-size:20px;font-weight:bold;color:#9fdcff">' +
+        habits.length +
+        '</div><div style="font-size:10px;letter-spacing:1px;' +
+        'color:rgba(159,220,255,0.6);margin-top:2px">HABITS</div></div>' +
+        '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
+        'border-radius:12px;background:rgba(80,210,255,0.07);' +
+        'border:1px solid rgba(80,210,255,0.25)">' +
+        '<div style="font-size:20px;font-weight:bold;color:#9fdcff">' +
+        getWeekCheckins() +
+        '</div><div style="font-size:10px;letter-spacing:1px;' +
+        'color:rgba(159,220,255,0.6);margin-top:2px">THIS WEEK</div></div>' +
+        '<div style="flex:1;min-width:80px;text-align:center;padding:10px 6px;' +
+        'border-radius:12px;background:rgba(80,210,255,0.07);' +
+        'border:1px solid rgba(80,210,255,0.25)">' +
+        '<div style="font-size:20px;font-weight:bold;color:#ffb35c">\u{1F525} ' +
+        best +
+        '</div><div style="font-size:10px;letter-spacing:1px;' +
+        'color:rgba(159,220,255,0.6);margin-top:2px">BEST STREAK</div></div>' +
         "</div>";
 
     /* Habit rows — also HTML strings, wired via the
@@ -1072,7 +1093,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.5",
+    version: "1.1.7",
 
     name: "Habit Tracker",
 
