@@ -22,6 +22,12 @@
         v1.1.2: refresh() failures now render a visible
                 error inside the card instead of failing
                 silently.
+        v1.1.3: temporary render diagnostics.
+        v1.1.4: DOM write-method probe.
+        v1.1.5: renders stats + habit rows via innerHTML
+                with one delegated click handler, after
+                proving appendChild silently drops nodes in
+                this host page while innerHTML works.
 
 ======================================*/
 
@@ -615,6 +621,189 @@ function refresh() {
 }
 
 
+function hbEscape(s) {
+
+    return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+}
+
+
+function hbStatHTML(label, value, accent) {
+
+    return '<div style="flex:1;min-width:80px;text-align:center;' +
+        "padding:10px 6px;border-radius:12px;" +
+        "background:rgba(80,210,255,0.07);" +
+        'border:1px solid rgba(80,210,255,0.25)">' +
+        '<div style="font-size:20px;font-weight:bold;color:' +
+        (accent || "#9fdcff") + '">' + hbEscape(value) + "</div>" +
+        '<div style="font-size:10px;letter-spacing:1px;' +
+        'color:rgba(159,220,255,0.6);margin-top:2px">' +
+        hbEscape(label) + "</div></div>";
+
+}
+
+
+/* One delegated click handler for the whole card (attached
+   once in hbBuildCardEl). innerHTML rendering + delegation
+   keeps every button working without per-node listeners. */
+
+function hbOnCardClick(e) {
+
+    let t = null;
+
+    try {
+
+        t = e.target && e.target.closest
+            ? e.target.closest("[data-action]")
+            : null;
+
+    } catch (err) {}
+
+    if (!t || !hbCardEl || !hbCardEl.contains(t)) return;
+
+    const id = t.getAttribute("data-habit");
+
+    if (!id) return;
+
+    const action = t.getAttribute("data-action");
+
+    if (action === "toggle") {
+
+        toggle(id);
+
+    } else if (action === "day") {
+
+        toggleDay(id, t.getAttribute("data-day"));
+
+    } else if (action === "rename") {
+
+        hbStartRenameById(id);
+
+    } else if (action === "delete") {
+
+        try {
+
+            if (confirm("Delete this habit?")) remove(id);
+
+        } catch (err) {}
+
+    }
+
+}
+
+
+function hbDayDotHTML(habit, date, isToday) {
+
+    const key = hbDayKey(date);
+
+    const done = !!(habit.days && habit.days[key]);
+
+    let title = "";
+
+    try {
+
+        title = date.toLocaleDateString([], {
+            weekday: "short", month: "short", day: "numeric"
+        });
+
+    } catch (err) {}
+
+    return '<button data-action="day" data-habit="' + habit.id +
+        '" data-day="' + key + '" title="' + hbEscape(title) +
+        '" style="width:22px;height:22px;border-radius:50%;' +
+        "border:1px solid " + (isToday
+            ? "rgba(80,210,255,0.9)"
+            : "rgba(80,210,255,0.35)") + ";" +
+        "background:" + (done
+            ? "rgba(80,210,255,0.55)"
+            : "transparent") + ";" +
+        'cursor:pointer;padding:0;flex-shrink:0"></button>';
+
+}
+
+
+function hbStartRenameById(id) {
+
+    const habit = hbFind(hbLoad(), id);
+
+    if (!habit || !hbListEl) return;
+
+    let nameEl = null;
+
+    try {
+
+        nameEl = hbListEl.querySelector(
+            '[data-habit="' + id + '"] [data-role="name"]');
+
+    } catch (err) {}
+
+    if (!nameEl) return;
+
+    const input = document.createElement("input");
+
+    input.value = habit.name;
+
+    hbStyle(input, {
+
+        flex: "1",
+
+        fontSize: "13px",
+
+        background: "rgba(10, 20, 40, 0.9)",
+
+        border: "1px solid rgba(80, 210, 255, 0.5)",
+
+        borderRadius: "8px",
+
+        color: "#9fdcff",
+
+        padding: "4px 8px"
+
+    });
+
+    const commit = () => {
+
+        rename(habit.id, input.value);
+
+    };
+
+    input.addEventListener("keydown", (ev) => {
+
+        if (ev.key === "Enter") commit();
+
+        if (ev.key === "Escape") refresh();
+
+        ev.stopPropagation();
+
+    });
+
+    input.addEventListener("blur", commit);
+
+    try {
+
+        nameEl.replaceWith(input);
+
+    } catch (err) {
+
+        return;
+
+    }
+
+    try {
+
+        input.focus();
+
+        input.select();
+
+    } catch (err) {}
+
+}
+
+
 function hbRefreshInner() {
 
     if (!hbListEl || !hbStatsEl) return;
@@ -623,219 +812,83 @@ function hbRefreshInner() {
 
     const today = hbTodayKey();
 
-    /* Stats header. */
-
-    hbStatsEl.innerHTML = "";
-
-    const row = document.createElement("div");
-
-    hbStyle(row, {
-
-        display: "flex",
-
-        gap: "8px",
-
-        marginBottom: "14px"
-
-    });
+    /* Stats header — built as an HTML string. (The
+       createElement/appendChild chain proved unreliable in
+       this host page; innerHTML works.) */
 
     const best = habits.reduce(
         (m, h) => Math.max(m, getStreak(h)), 0);
 
-    row.appendChild(hbStat("HABITS", habits.length));
+    hbStatsEl.innerHTML =
+        '<div style="display:flex;gap:8px;margin-bottom:14px">' +
+        hbStatHTML("HABITS", habits.length, "#9fdcff") +
+        hbStatHTML("THIS WEEK", getWeekCheckins(), "#9fdcff") +
+        hbStatHTML("BEST STREAK", "\u{1F525} " + best, "#ffb35c") +
+        "</div>";
 
-    row.appendChild(hbStat("THIS WEEK", getWeekCheckins()));
-
-    row.appendChild(hbStat("BEST STREAK", "🔥 " + best, "#ffb35c"));
-
-    hbStatsEl.appendChild(row);
-
-    /* Habit rows. */
-
-    hbListEl.innerHTML = "";
+    /* Habit rows — also HTML strings, wired via the
+       delegated click handler on the card. */
 
     if (!habits.length) {
 
-        const empty = document.createElement("div");
-
-        empty.textContent =
-            "No habits yet — add your first one above.";
-
-        hbStyle(empty, {
-
-            fontSize: "12px",
-
-            color: "rgba(159, 220, 255, 0.6)",
-
-            padding: "8px 0"
-
-        });
-
-        hbListEl.appendChild(empty);
+        hbListEl.innerHTML =
+            '<div style="font-size:12px;' +
+            'color:rgba(159,220,255,0.6);padding:8px 0">' +
+            "No habits yet — add your first one above.</div>";
 
         return;
 
     }
 
+    let html = "";
+
     habits.forEach((h) => {
 
         const done = !!(h.days && h.days[today]);
 
-        const card = document.createElement("div");
-
-        hbStyle(card, {
-
-            padding: "10px 12px",
-
-            borderRadius: "14px",
-
-            background: "rgba(80, 210, 255, 0.05)",
-
-            border: "1px solid rgba(80, 210, 255, 0.2)",
-
-            marginBottom: "10px"
-
-        });
-
-        const top = document.createElement("div");
-
-        hbStyle(top, {
-
-            display: "flex",
-
-            alignItems: "center",
-
-            gap: "10px",
-
-            marginBottom: "8px"
-
-        });
-
-        const box = document.createElement("button");
-
-        box.textContent = done ? "☑" : "☐";
-
-        hbStyle(box, {
-
-            fontSize: "22px",
-
-            background: "transparent",
-
-            border: "none",
-
-            cursor: "pointer",
-
-            padding: "0",
-
-            width: "auto",
-
-            color: done ? "#7dffb0" : "#9fdcff"
-
-        });
-
-        box.addEventListener("click", () => toggle(h.id));
-
-        const name = document.createElement("span");
-
-        name.textContent = h.name;
-
-        hbStyle(name, {
-
-            flex: "1",
-
-            fontSize: "14px",
-
-            fontWeight: "bold",
-
-            color: done ? "rgba(159, 220, 255, 0.55)" : "#9fdcff",
-
-            textDecoration: done ? "line-through" : "none"
-
-        });
-
-        const edit = hbGhostBtn();
-
-        edit.textContent = "✏️";
-
-        edit.title = "Rename";
-
-        edit.addEventListener("click", () => {
-
-            hbStartRename(h, name);
-
-        });
-
-        const streak = document.createElement("span");
-
         const n = getStreak(h);
 
-        streak.textContent = n > 0 ? "🔥 " + n : "";
+        html += '<div data-habit="' + h.id + '" style="' +
+            "padding:10px 12px;border-radius:14px;" +
+            "background:rgba(80,210,255,0.05);" +
+            "border:1px solid rgba(80,210,255,0.2);" +
+            'margin-bottom:10px">';
 
-        hbStyle(streak, {
+        html += '<div style="display:flex;align-items:center;' +
+            'gap:10px;margin-bottom:8px">';
 
-            fontSize: "12px",
+        html += '<button data-action="toggle" data-habit="' + h.id +
+            '" style="font-size:22px;background:transparent;' +
+            "border:none;cursor:pointer;padding:0;width:auto;" +
+            "color:" + (done ? "#7dffb0" : "#9fdcff") + '">' +
+            (done ? "\u2611" : "\u2610") + "</button>";
 
-            color: "#ffb35c"
+        html += '<span data-role="name" style="flex:1;font-size:14px;' +
+            "font-weight:bold;color:" +
+            (done ? "rgba(159,220,255,0.55)" : "#9fdcff") + ";" +
+            "text-decoration:" + (done ? "line-through" : "none") +
+            '">' + hbEscape(h.name) + "</span>";
 
-        });
+        html += '<button data-action="rename" data-habit="' + h.id +
+            '" title="Rename" style="background:transparent;' +
+            "border:none;cursor:pointer;padding:2px;width:auto;" +
+            'font-size:14px;color:rgba(159,220,255,0.55)">\u{1F4DD}</button>';
 
-        const del = hbGhostBtn();
+        html += '<span style="font-size:12px;color:#ffb35c">' +
+            (n > 0 ? "\u{1F525} " + n : "") + "</span>";
 
-        del.textContent = "×";
+        html += '<button data-action="delete" data-habit="' + h.id +
+            '" title="Delete" style="background:transparent;' +
+            "border:none;cursor:pointer;padding:2px;width:auto;" +
+            'font-size:18px;color:rgba(255,120,120,0.7)">\u00D7</button>';
 
-        del.title = "Delete";
-
-        hbStyle(del, {
-
-            color: "rgba(255, 120, 120, 0.7)",
-
-            fontSize: "18px"
-
-        });
-
-        del.addEventListener("click", () => {
-
-            if (confirm("Delete this habit?")) remove(h.id);
-
-        });
-
-        top.appendChild(box);
-
-        top.appendChild(name);
-
-        top.appendChild(edit);
-
-        top.appendChild(streak);
-
-        top.appendChild(del);
-
-        card.appendChild(top);
+        html += "</div>";
 
         /* 7-day dots. */
 
-        const labels = document.createElement("div");
+        let labels = "";
 
-        hbStyle(labels, {
-
-            display: "flex",
-
-            gap: "8px",
-
-            marginBottom: "2px"
-
-        });
-
-        const dots = document.createElement("div");
-
-        hbStyle(dots, {
-
-            display: "flex",
-
-            gap: "8px",
-
-            alignItems: "center"
-
-        });
+        let dots = "";
 
         for (let i = 6; i >= 0; i--) {
 
@@ -843,37 +896,25 @@ function hbRefreshInner() {
 
             d.setDate(d.getDate() - i);
 
-            dots.appendChild(hbDayDot(h, d, i === 0));
+            dots += hbDayDotHTML(h, d, i === 0);
 
-            const lab = document.createElement("span");
-
-            lab.textContent = "SMTWTFS"[d.getDay()];
-
-            hbStyle(lab, {
-
-                width: "22px",
-
-                textAlign: "center",
-
-                fontSize: "9px",
-
-                color: "rgba(159, 220, 255, 0.45)",
-
-                flexShrink: "0"
-
-            });
-
-            labels.appendChild(lab);
+            labels += '<span style="width:22px;text-align:center;' +
+                'font-size:9px;color:rgba(159,220,255,0.45);' +
+                'flex-shrink:0">' + "SMTWTFS"[d.getDay()] + "</span>";
 
         }
 
-        card.appendChild(labels);
+        html += '<div style="display:flex;gap:8px;margin-bottom:2px">' +
+            labels + "</div>";
 
-        card.appendChild(dots);
+        html += '<div style="display:flex;gap:8px;align-items:center">' +
+            dots + "</div>";
 
-        hbListEl.appendChild(card);
+        html += "</div>";
 
     });
+
+    hbListEl.innerHTML = html;
 
 }
 
@@ -978,6 +1019,11 @@ function hbBuildCardEl() {
 
     hbCardEl.appendChild(hbListEl);
 
+    /* Delegated clicks for every habit row button (the rows
+       themselves are rendered via innerHTML). */
+
+    hbCardEl.addEventListener("click", hbOnCardClick);
+
     return true;
 
 }
@@ -1026,7 +1072,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.4",
+    version: "1.1.5",
 
     name: "Habit Tracker",
 
