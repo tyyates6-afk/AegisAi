@@ -14,7 +14,7 @@
          orb-sleep-night.png (4 frames — breathing, cozy nighttime look)
          orb-excited.png   (4 frames)
          orb-hungry.png    (3 frames — grumble shiver)
-         orb-working.png   (3 frames — study buddy groove)
+         orb-working.png   (4 frames — study buddy groove)
        (Transparent PNGs — backgrounds already keyed out.)
 
     DRIVING THE PET:
@@ -114,6 +114,68 @@ const PET_LINK_URL = "ws://127.0.0.1:17373";
 const PET_LINK_ID =
     "pet-" + Math.random().toString(36).slice(2, 10);
 
+const PET_LINK_ENABLED_KEY = "aegisPetLinkEnabled";
+
+
+function isPetLinkEnabled() {
+
+    try {
+
+        const raw = localStorage.getItem(PET_LINK_ENABLED_KEY);
+
+        /* Default ON unless explicitly turned off. */
+
+        return raw === null ? true : raw !== "0";
+
+    } catch (error) {
+
+        return true;
+
+    }
+
+}
+
+
+function setPetLinkEnabled(enabled) {
+
+    try {
+
+        localStorage.setItem(PET_LINK_ENABLED_KEY, enabled ? "1" : "0");
+
+    } catch (error) {}
+
+    if (enabled) {
+
+        petLinkConnect();
+
+    } else {
+
+        /* Tear down any live socket and stop retrying. */
+
+        petLinked = false;
+
+        if (petSocket) {
+
+            const s = petSocket;
+
+            petSocket = null;
+
+            try { s.close(); } catch (error) {}
+
+        }
+
+    }
+
+    try {
+
+        Aegis.broadcast("petLinkToggled", { enabled: !!enabled });
+
+    } catch (error) {}
+
+    return !!enabled;
+
+}
+
 let petSocket = null;
 
 let petLinked = false;
@@ -148,6 +210,8 @@ function petLinkRetry() {
 
     setTimeout(() => {
 
+        if (!isPetLinkEnabled()) return;
+
         petSocket = null;
 
         petLinkConnect();
@@ -157,7 +221,82 @@ function petLinkRetry() {
 }
 
 
+function petInjectLinkSetting() {
+
+    try {
+
+        const page = document.querySelector('[data-page="settings"]');
+
+        if (!page || document.getElementById("petLinkSettingCard")) return;
+
+        const card = document.createElement("section");
+
+        card.className = "card";
+
+        card.id = "petLinkSettingCard";
+
+        const enabled = isPetLinkEnabled();
+
+        card.innerHTML =
+            "<h2>\u{1F43E} Desktop Pet</h2>" +
+            '<p class="empty-state">Link to the desktop POTATO app ' +
+            "(WebSocket to this device). Turn off to stop connection attempts.</p>" +
+            '<label style="display:flex;align-items:center;gap:10px;' +
+            'font-size:14px;cursor:pointer">' +
+            '<input type="checkbox" id="petLinkToggle"' +
+            (enabled ? " checked" : "") +
+            ' style="width:20px;height:20px;accent-color:#50d2ff">' +
+            "<span>Desktop pet link enabled</span>" +
+            "</label>" +
+            '<p class="empty-state" id="petLinkStatus" style="margin-top:8px">' +
+            (enabled ? "Link is on — will connect when the desktop app runs." :
+                "Link is off — no connection attempts.") +
+            "</p>";
+
+        /* Insert after the System card so it's near the top. */
+
+        const sys = page.querySelector("#systemSettings");
+
+        if (sys && sys.parentNode === page) {
+
+            page.insertBefore(card, sys.nextSibling);
+
+        } else {
+
+            page.appendChild(card);
+
+        }
+
+        const toggle = card.querySelector("#petLinkToggle");
+
+        const status = card.querySelector("#petLinkStatus");
+
+        if (toggle) {
+
+            toggle.addEventListener("change", () => {
+
+                const on = setPetLinkEnabled(toggle.checked);
+
+                if (status) {
+
+                    status.textContent = on ?
+                        "Link is on — will connect when the desktop app runs." :
+                        "Link is off — no connection attempts.";
+
+                }
+
+            });
+
+        }
+
+    } catch (error) {}
+
+}
+
+
 function petLinkConnect() {
+
+    if (!isPetLinkEnabled()) return;
 
     if (petSocket) return;
 
@@ -1122,7 +1261,7 @@ function petDestroy() {
 
 Aegis.register("pet", {
 
-    version: "1.0.0",
+    version: "1.1.0",
 
 
     setMood,
@@ -1197,6 +1336,8 @@ Aegis.register("pet", {
 
         console.log("Pet initialized.");
 
+        petInjectLinkSetting();
+
         petLinkConnect();
 
     },
@@ -1238,7 +1379,21 @@ Aegis.register("pet", {
 
             meals: petHungerMeals.slice()
 
-        };
+        }
+
+    },
+
+
+    isPetLinkEnabled() {
+
+        return isPetLinkEnabled();
+
+    },
+
+
+    setPetLinkEnabled(enabled) {
+
+        return setPetLinkEnabled(!!enabled);
 
     }
 
