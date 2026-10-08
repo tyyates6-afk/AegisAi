@@ -1026,7 +1026,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.3",
+    version: "1.1.4",
 
     name: "Habit Tracker",
 
@@ -1122,6 +1122,21 @@ Aegis.register("habits", {
         } catch (diagErr) {}
 
         console.log("Habit Tracker initialized.");
+
+        /* One-line DOM sanity check: if appendChild works but
+           innerHTML doesn't (or vice versa), this reveals it. */
+
+        try {
+
+            if (hbStatsEl && hbStatsEl.children.length === 0) {
+
+                hbStatsEl.innerHTML =
+                    '<div style="color:#ff9a8a;font-size:12px">' +
+                    '⚠️ stats div is empty after render</div>';
+
+            }
+
+        } catch (diagErr2) {}
 
     },
 
