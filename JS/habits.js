@@ -1,4 +1,4 @@
-/* Habit Tracker v2.0.0 — clean rebuild.
+/* Habit Tracker v2.2.0 — clean rebuild.
    Full-width dashboard card under Dashboard on the Home page.
    Stats header, 7-day dots, inline rename. localStorage only.
    Render pattern follows prayer.js: createElement + appendChild,
@@ -13,6 +13,9 @@ const CARD_ID = "card-habits";
 const STATS_ID = "habitStats";
 const LIST_ID = "habitList";
 const INPUT_ID = "habitInput";
+
+/* Selected frequency for the add form ("daily" | "weekly" | "monthly"). */
+let hbSelectedFreq = "daily";
 
 /* ---------- storage ---------- */
 
@@ -186,33 +189,70 @@ function buildCard() {
     card.appendChild(stats);
 
     const form = document.createElement("div");
-    style(form, { display: "flex", gap: "8px", marginBottom: "14px" });
+    style(form, { display: "flex", flexDirection: "column", gap: "10px", marginBottom: "14px" });
 
+    /* Row 1: big full-width name input. */
     const input = document.createElement("input");
     input.id = INPUT_ID;
     input.placeholder = "New habit (e.g. Read 10 pages)";
-    style(input, { flex: "1" });
-    form.appendChild(input);
-
-    const freqSel = document.createElement("select");
-    freqSel.id = "habitFreq";
-    [["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"]].forEach(([v, label]) => {
-        const o = document.createElement("option");
-        o.value = v;
-        o.textContent = label;
-        freqSel.appendChild(o);
-    });
-    style(freqSel, {
+    style(input, {
+        width: "100%",
+        boxSizing: "border-box",
+        padding: "12px 14px",
+        fontSize: "14px",
         background: "rgba(80,210,255,0.06)",
         border: "1px solid rgba(80,210,255,0.25)",
-        borderRadius: "10px",
-        color: "#9fdcff",
-        padding: "8px 6px",
-        fontSize: "12px",
-        outline: "none",
-        cursor: "pointer"
+        borderRadius: "12px",
+        color: "#dff2ff",
+        outline: "none"
     });
-    form.appendChild(freqSel);
+    form.appendChild(input);
+
+    /* Row 2: frequency toggle buttons (nav-bar pill style) + ADD. */
+    const freqRow = document.createElement("div");
+    style(freqRow, { display: "flex", gap: "8px", alignItems: "stretch" });
+    form.appendChild(freqRow);
+
+    const freqBtns = {};
+    ["daily", "weekly", "monthly"].forEach((freq) => {
+        const b = document.createElement("button");
+        b.textContent = freq.charAt(0).toUpperCase() + freq.slice(1);
+        b.setAttribute("data-freq", freq);
+        b.type = "button";
+        style(b, {
+            flex: "1",
+            borderRadius: "999px",
+            border: "1px solid rgba(80,210,255,0.4)",
+            padding: "9px 4px",
+            fontSize: "12px",
+            letterSpacing: "1px",
+            cursor: "pointer",
+            width: "auto",
+            transition: "background 0.15s, color 0.15s"
+        });
+        b.addEventListener("click", () => {
+            hbSelectedFreq = freq;
+            paintFreqBtns();
+        });
+        freqRow.appendChild(b);
+        freqBtns[freq] = b;
+    });
+
+    function paintFreqBtns() {
+        ["daily", "weekly", "monthly"].forEach((freq) => {
+            const b = freqBtns[freq];
+            const active = freq === hbSelectedFreq;
+            style(b, {
+                background: active ? "#50d2ff" : "rgba(80,210,255,0.08)",
+                color: active ? "#06121f" : "#9fdcff",
+                fontWeight: active ? "bold" : "normal",
+                border: active
+                    ? "1px solid #50d2ff"
+                    : "1px solid rgba(80,210,255,0.4)"
+            });
+        });
+    }
+    paintFreqBtns();
 
     const btn = document.createElement("button");
     btn.textContent = "ADD";
@@ -221,14 +261,15 @@ function buildCard() {
         border: "1px solid rgba(80, 210, 255, 0.5)",
         background: "rgba(80, 210, 255, 0.12)",
         color: "#9fdcff",
-        padding: "8px 14px",
+        padding: "9px 18px",
         fontSize: "12px",
         letterSpacing: "1px",
         cursor: "pointer",
-        width: "auto"
+        width: "auto",
+        fontWeight: "bold"
     });
     btn.addEventListener("click", doAdd);
-    form.appendChild(btn);
+    freqRow.appendChild(btn);
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") doAdd();
@@ -480,13 +521,9 @@ function render() {
 /* ---------- actions ---------- */
 
 function selectedFreq() {
-    try {
-        const sel = document.getElementById("habitFreq");
-        const v = sel ? sel.value : "daily";
-        return (v === "weekly" || v === "monthly") ? v : "daily";
-    } catch (e) {
-        return "daily";
-    }
+    return (hbSelectedFreq === "weekly" || hbSelectedFreq === "monthly")
+        ? hbSelectedFreq
+        : "daily";
 }
 
 function addHabit(name) {
@@ -577,13 +614,13 @@ function onCardClick(e) {
 
 if (typeof Aegis !== "undefined" && Aegis.register) {
     Aegis.register("habits", {
-        version: "2.1.0",
+        version: "2.2.0",
         name: "Habit Tracker",
 
         init() {
             buildCard();
             render();
-            try { console.log("Habit Tracker v2.1.0 initialized."); } catch (e) {}
+            try { console.log("Habit Tracker v2.2.0 initialized."); } catch (e) {}
         },
 
         refresh() { render(); },
@@ -606,7 +643,7 @@ if (typeof Aegis !== "undefined" && Aegis.register) {
             const habits = load();
             return {
                 online: !!cardEl(),
-                version: "2.1.0",
+                version: "2.2.0",
                 count: habits.length,
                 weekCheckins: getWeekCheckins(habits)
             };
