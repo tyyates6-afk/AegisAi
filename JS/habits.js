@@ -137,7 +137,26 @@ function add(name) {
 
     list.push(habit);
 
+    try {
+
+        console.log("habits: saving list with " + list.length + " habit(s)");
+
+    } catch (e) {}
+
     hbSave(list);
+
+    try {
+
+        const verify = localStorage.getItem(HABITS_STORE_KEY);
+
+        console.log("habits: save verified: " +
+            (verify ? "PRESENT (" + verify.length + " chars)" : "MISSING!"));
+
+    } catch (e) {
+
+        console.log("habits: save verify FAILED: " + e.message);
+
+    }
 
     refresh();
 
@@ -806,6 +825,38 @@ function hbStartRenameById(id) {
 
 function hbRefreshInner() {
 
+    /* Re-query the live DOM: the cached element references can go
+       stale if the dashboard rebuilds the card. The IDs are the
+       source of truth. */
+
+    const liveStats = document.getElementById("habitStats");
+
+    const liveList = document.getElementById("habitList");
+
+    if (liveStats && liveStats !== hbStatsEl) {
+
+        try {
+
+            console.log("habits: stats element reference was stale, adopting live element");
+
+        } catch (e) {}
+
+        hbStatsEl = liveStats;
+
+    }
+
+    if (liveList && liveList !== hbListEl) {
+
+        try {
+
+            console.log("habits: list element reference was stale, adopting live element");
+
+        } catch (e) {}
+
+        hbListEl = liveList;
+
+    }
+
     if (!hbListEl || !hbStatsEl) return;
 
     const habits = hbLoad();
@@ -970,6 +1021,8 @@ function hbBuildCardEl() {
 
     hbStatsEl = document.createElement("div");
 
+    hbStatsEl.id = "habitStats";
+
     hbCardEl.appendChild(hbStatsEl);
 
     const form = document.createElement("div");
@@ -1018,7 +1071,36 @@ function hbBuildCardEl() {
 
     const doAdd = () => {
 
-        if (add(hbInputEl.value)) hbInputEl.value = "";
+        const val = hbInputEl ? hbInputEl.value : "(no input el)";
+
+        try {
+
+            console.log("habits: ADD clicked, input=" + JSON.stringify(val));
+
+        } catch (e) {}
+
+        const id = add(val);
+
+        try {
+
+            console.log("habits: add() returned " + JSON.stringify(id));
+
+        } catch (e) {}
+
+        if (id) hbInputEl.value = "";
+
+        try {
+
+            const stored = localStorage.getItem(HABITS_STORE_KEY);
+
+            console.log("habits: storage after add: " +
+                (stored ? stored.substring(0, 200) : "(empty/null)"));
+
+        } catch (e) {
+
+            console.log("habits: storage read FAILED: " + e.message);
+
+        }
 
     };
 
@@ -1037,6 +1119,8 @@ function hbBuildCardEl() {
     hbCardEl.appendChild(form);
 
     hbListEl = document.createElement("div");
+
+    hbListEl.id = "habitList";
 
     hbCardEl.appendChild(hbListEl);
 
@@ -1093,7 +1177,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.7",
+    version: "1.1.9",
 
     name: "Habit Tracker",
 
