@@ -16,6 +16,9 @@
                 backfill, inline rename.
         v1.1.0: moved out of the More hub onto the home
                 dashboard as a full-width card.
+        v1.1.1: registers the card in the dashboard layout
+                and re-pins it last, so renderLayout() can't
+                strand it at the top of the grid.
 
 ======================================*/
 
@@ -821,7 +824,9 @@ function refresh() {
 }
 
 
-function hbBuildCard() {
+function hbBuildCardEl() {
+
+    if (hbCardEl) return true;
 
     hbCardEl = document.createElement("div");
 
@@ -919,24 +924,55 @@ function hbBuildCard() {
 
     hbCardEl.appendChild(hbListEl);
 
+    return true;
+
+}
+
+
+/* Put the card last in the grid and register it in the
+   dashboard's layout, so a later renderLayout() keeps it
+   at the bottom instead of stranding it at the top. */
+
+function hbPlaceCard() {
+
     const grid = hbGrid();
 
-    if (grid) {
+    if (!grid || !hbCardEl) return false;
 
-        grid.appendChild(hbCardEl);
+    try {
 
-        return true;
+        const D = (typeof Dashboard !== "undefined")
+            ? Dashboard
+            : null;
 
-    }
+        if (D && Array.isArray(D.layout)) {
 
-    return false;
+            if (D.layout.indexOf(HABITS_CARD_ID) < 0) {
+
+                D.layout.push(HABITS_CARD_ID);
+
+                if (typeof D.saveLayout === "function") {
+
+                    D.saveLayout();
+
+                }
+
+            }
+
+        }
+
+    } catch (error) {}
+
+    grid.appendChild(hbCardEl);
+
+    return true;
 
 }
 
 
 Aegis.register("habits", {
 
-    version: "1.1.0",
+    version: "1.1.1",
 
     name: "Habit Tracker",
 
@@ -966,10 +1002,15 @@ Aegis.register("habits", {
 
     init() {
 
-        /* The dashboard grid may not exist yet when modules
-           init — retry briefly until it does. */
+        hbBuildCardEl();
 
-        if (!hbBuildCard()) {
+        /* The dashboard grid may not exist yet when modules
+           init — retry briefly until it does. Placing also
+           registers the card in the dashboard layout, so a
+           later renderLayout() keeps it at the bottom
+           instead of stranding it at the top. */
+
+        if (!hbPlaceCard()) {
 
             let attempts = 0;
 
@@ -977,7 +1018,7 @@ Aegis.register("habits", {
 
                 attempts += 1;
 
-                if (hbBuildCard() || attempts >= 20) {
+                if (hbPlaceCard() || attempts >= 20) {
 
                     clearInterval(retry);
 
