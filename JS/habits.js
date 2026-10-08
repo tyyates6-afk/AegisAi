@@ -19,6 +19,9 @@
         v1.1.1: registers the card in the dashboard layout
                 and re-pins it last, so renderLayout() can't
                 strand it at the top of the grid.
+        v1.1.2: refresh() failures now render a visible
+                error inside the card instead of failing
+                silently.
 
 ======================================*/
 
@@ -563,6 +566,57 @@ function hbStartRename(habit, nameEl) {
 
 function refresh() {
 
+    try {
+
+        hbRefreshInner();
+
+    } catch (error) {
+
+        /* If anything goes wrong, say so IN the card instead
+           of failing silently. */
+
+        try {
+
+            if (hbListEl) {
+
+                hbListEl.innerHTML = "";
+
+                const warn = document.createElement("div");
+
+                warn.textContent = "⚠️ Habit error: " +
+                    (error && error.message
+                        ? error.message
+                        : String(error));
+
+                hbStyle(warn, {
+
+                    fontSize: "12px",
+
+                    color: "#ff9a8a",
+
+                    padding: "8px 0"
+
+                });
+
+                hbListEl.appendChild(warn);
+
+            }
+
+        } catch (inner) {}
+
+        try {
+
+            console.error("habits refresh failed:", error);
+
+        } catch (inner) {}
+
+    }
+
+}
+
+
+function hbRefreshInner() {
+
     if (!hbListEl || !hbStatsEl) return;
 
     const habits = hbLoad();
@@ -972,7 +1026,7 @@ function hbPlaceCard() {
 
 Aegis.register("habits", {
 
-    version: "1.1.1",
+    version: "1.1.2",
 
     name: "Habit Tracker",
 
