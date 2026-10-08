@@ -1,22 +1,33 @@
 /*======================================
 
-        AEGIS HABIT TRACKER v0.1.0
+        AEGIS HABIT TRACKER v1.1.0
 
-        STAND-IN module (unpolished). Add habits, check them
-        off each day, watch streaks grow. Everything lives in
-        localStorage ("aegisHabits").
+        Add habits, check them off each day, watch streaks
+        grow. Week-at-a-glance dots, tap any dot to fix a
+        missed day, rename inline, stats header.
 
-        Page lives in the More hub, like Prayer Journal.
+        Everything lives in localStorage ("aegisHabits").
+
+        Lives on the HOME page as a dashboard card
+        (#card-habits in .dashboard-grid) — not in More.
+
+        v0.1.0: stand-in — add/toggle/delete + streaks.
+        v1.0.0: polished — stats header, 7-day dots with
+                backfill, inline rename.
+        v1.1.0: moved out of the More hub onto the home
+                dashboard as a full-width card.
 
 ======================================*/
 
 
-const HABITS_PAGE = "habits";
+const HABITS_CARD_ID = "card-habits";
 
 const HABITS_STORE_KEY = "aegisHabits";
 
 
-let hbPageEl = null;
+let hbCardEl = null;
+
+let hbStatsEl = null;
 
 let hbListEl = null;
 
@@ -79,6 +90,19 @@ function hbTodayKey() {
 }
 
 
+function hbFind(list, id) {
+
+    for (let i = 0; i < list.length; i++) {
+
+        if (list[i].id === id) return list[i];
+
+    }
+
+    return null;
+
+}
+
+
 function add(name) {
 
     name = String(name || "").trim();
@@ -116,17 +140,17 @@ function add(name) {
 }
 
 
-function toggle(id) {
+function toggleDay(id, key) {
 
     const list = hbLoad();
 
-    const habit = list.find((h) => h.id === id);
+    const habit = hbFind(list, id);
 
     if (!habit) return false;
 
     if (!habit.days) habit.days = {};
 
-    const key = hbTodayKey();
+    key = key || hbTodayKey();
 
     if (habit.days[key]) {
 
@@ -144,7 +168,43 @@ function toggle(id) {
 
     try {
 
-        Aegis.broadcast("habitToggled", { id: id });
+        Aegis.broadcast("habitToggled", { id: id, day: key });
+
+    } catch (error) {}
+
+    return true;
+
+}
+
+
+function toggle(id) {
+
+    return toggleDay(id, hbTodayKey());
+
+}
+
+
+function rename(id, name) {
+
+    name = String(name || "").trim();
+
+    if (!name) return false;
+
+    const list = hbLoad();
+
+    const habit = hbFind(list, id);
+
+    if (!habit) return false;
+
+    habit.name = name;
+
+    hbSave(list);
+
+    refresh();
+
+    try {
+
+        Aegis.broadcast("habitRenamed", { id: id });
 
     } catch (error) {}
 
@@ -224,140 +284,73 @@ function list() {
 }
 
 
-/* ---------- nav glue ---------- */
+function getWeekCheckins() {
 
+    const habits = hbLoad();
 
-function hbNav() {
+    const start = new Date();
 
-    try {
+    start.setHours(0, 0, 0, 0);
 
-        if (typeof Aegis !== "undefined" &&
-            Aegis.getModule) {
+    const dow = (start.getDay() + 6) % 7;
 
-            const mod = Aegis.getModule("navigation");
+    start.setDate(start.getDate() - dow);
 
-            if (mod && mod.api) return mod.api;
+    const startKey = hbDayKey(start);
 
-        }
+    let n = 0;
 
-    } catch (error) {}
+    habits.forEach((h) => {
 
-    return null;
+        if (!h.days) return;
 
-}
+        Object.keys(h.days).forEach((key) => {
 
+            if (key >= startKey) n += 1;
 
-function hbShowPage(name) {
-
-    const nav = hbNav();
-
-    if (nav && typeof nav.showPage === "function") {
-
-        nav.showPage(name);
-
-        return;
-
-    }
-
-    const pages = document.querySelectorAll
-        ? document.querySelectorAll(".aegis-page")
-        : [];
-
-    Array.prototype.forEach.call(pages, (page) => {
-
-        const on = page.dataset &&
-            page.dataset.page === name;
-
-        if (page.classList) {
-
-            page.classList.toggle("active", !!on);
-
-        }
+        });
 
     });
 
-}
-
-
-function hbGoMore() {
-
-    hbShowPage("more");
+    return n;
 
 }
 
 
-function hbHookNavigation() {
+/* ---------- dashboard card ---------- */
 
-    const nav = hbNav();
 
-    if (!nav || !hbPageEl) return false;
+function hbGrid() {
 
     try {
 
-        if (nav._els && Array.isArray(nav._els.pages)) {
+        return document.querySelector(".dashboard-grid");
 
-            if (nav._els.pages.indexOf(hbPageEl) < 0) {
+    } catch (error) {
 
-                nav._els.pages.push(hbPageEl);
+        return null;
 
-            }
+    }
 
-            return true;
+}
+
+
+/* Scroll the card into view (the "open" action now that
+   there is no separate page). */
+
+function open() {
+
+    refresh();
+
+    try {
+
+        if (hbCardEl && hbCardEl.scrollIntoView) {
+
+            hbCardEl.scrollIntoView({ behavior: "smooth" });
 
         }
 
     } catch (error) {}
-
-    return false;
-
-}
-
-
-function hbAddMoreEntry() {
-
-    try {
-
-        const hubList = document.querySelector(".aegis-more-list");
-
-        if (!hubList) return false;
-
-        if (hubList.querySelector(
-            '[data-goto-page="' + HABITS_PAGE + '"]'
-        )) {
-
-            return true;
-
-        }
-
-        const item = document.createElement("button");
-
-        item.className = "aegis-more-item";
-
-        item.setAttribute("data-goto-page", HABITS_PAGE);
-
-        item.textContent = "✅ Habit Tracker";
-
-        item.addEventListener("click", open);
-
-        const divider = hubList.querySelector("hr");
-
-        if (divider) {
-
-            hubList.insertBefore(item, divider);
-
-        } else {
-
-            hubList.appendChild(item);
-
-        }
-
-        return true;
-
-    } catch (error) {
-
-        return false;
-
-    }
 
 }
 
@@ -373,27 +366,236 @@ function hbStyle(el, styles) {
 }
 
 
-/* ---------- page ---------- */
+function hbGhostBtn() {
+
+    const b = document.createElement("button");
+
+    hbStyle(b, {
+
+        background: "transparent",
+
+        border: "none",
+
+        cursor: "pointer",
+
+        padding: "2px",
+
+        width: "auto",
+
+        fontSize: "14px",
+
+        color: "rgba(159, 220, 255, 0.55)"
+
+    });
+
+    return b;
+
+}
 
 
-function open() {
+function hbStat(label, value, accent) {
 
-    refresh();
+    const box = document.createElement("div");
 
-    hbShowPage(HABITS_PAGE);
+    hbStyle(box, {
+
+        flex: "1",
+
+        minWidth: "80px",
+
+        textAlign: "center",
+
+        padding: "10px 6px",
+
+        borderRadius: "12px",
+
+        background: "rgba(80, 210, 255, 0.07)",
+
+        border: "1px solid rgba(80, 210, 255, 0.25)"
+
+    });
+
+    const v = document.createElement("div");
+
+    v.textContent = String(value);
+
+    hbStyle(v, {
+
+        fontSize: "20px",
+
+        fontWeight: "bold",
+
+        color: accent || "#9fdcff"
+
+    });
+
+    const l = document.createElement("div");
+
+    l.textContent = label;
+
+    hbStyle(l, {
+
+        fontSize: "10px",
+
+        letterSpacing: "1px",
+
+        color: "rgba(159, 220, 255, 0.6)",
+
+        marginTop: "2px"
+
+    });
+
+    box.appendChild(v);
+
+    box.appendChild(l);
+
+    return box;
+
+}
+
+
+function hbDayDot(habit, date, isToday) {
+
+    const key = hbDayKey(date);
+
+    const done = !!(habit.days && habit.days[key]);
+
+    const dot = document.createElement("button");
+
+    dot.title = date.toLocaleDateString([], {
+
+        weekday: "short",
+
+        month: "short",
+
+        day: "numeric"
+
+    });
+
+    hbStyle(dot, {
+
+        width: "22px",
+
+        height: "22px",
+
+        borderRadius: "50%",
+
+        border: "1px solid " + (isToday
+            ? "rgba(80, 210, 255, 0.9)"
+            : "rgba(80, 210, 255, 0.35)"),
+
+        background: done
+            ? "rgba(80, 210, 255, 0.55)"
+            : "transparent",
+
+        cursor: "pointer",
+
+        padding: "0",
+
+        flexShrink: "0"
+
+    });
+
+    dot.addEventListener("click", () => toggleDay(habit.id, key));
+
+    return dot;
+
+}
+
+
+function hbStartRename(habit, nameEl) {
+
+    const input = document.createElement("input");
+
+    input.value = habit.name;
+
+    hbStyle(input, {
+
+        flex: "1",
+
+        fontSize: "13px",
+
+        background: "rgba(10, 20, 40, 0.9)",
+
+        border: "1px solid rgba(80, 210, 255, 0.5)",
+
+        borderRadius: "8px",
+
+        color: "#9fdcff",
+
+        padding: "4px 8px"
+
+    });
+
+    const commit = () => {
+
+        rename(habit.id, input.value);
+
+    };
+
+    input.addEventListener("keydown", (e) => {
+
+        if (e.key === "Enter") commit();
+
+        if (e.key === "Escape") refresh();
+
+        e.stopPropagation();
+
+    });
+
+    input.addEventListener("blur", commit);
+
+    nameEl.replaceWith(input);
+
+    try {
+
+        input.focus();
+
+        input.select();
+
+    } catch (error) {}
 
 }
 
 
 function refresh() {
 
-    if (!hbListEl) return;
-
-    hbListEl.innerHTML = "";
+    if (!hbListEl || !hbStatsEl) return;
 
     const habits = hbLoad();
 
     const today = hbTodayKey();
+
+    /* Stats header. */
+
+    hbStatsEl.innerHTML = "";
+
+    const row = document.createElement("div");
+
+    hbStyle(row, {
+
+        display: "flex",
+
+        gap: "8px",
+
+        marginBottom: "14px"
+
+    });
+
+    const best = habits.reduce(
+        (m, h) => Math.max(m, getStreak(h)), 0);
+
+    row.appendChild(hbStat("HABITS", habits.length));
+
+    row.appendChild(hbStat("THIS WEEK", getWeekCheckins()));
+
+    row.appendChild(hbStat("BEST STREAK", "🔥 " + best, "#ffb35c"));
+
+    hbStatsEl.appendChild(row);
+
+    /* Habit rows. */
+
+    hbListEl.innerHTML = "";
 
     if (!habits.length) {
 
@@ -420,9 +622,27 @@ function refresh() {
 
     habits.forEach((h) => {
 
-        const row = document.createElement("div");
+        const done = !!(h.days && h.days[today]);
 
-        hbStyle(row, {
+        const card = document.createElement("div");
+
+        hbStyle(card, {
+
+            padding: "10px 12px",
+
+            borderRadius: "14px",
+
+            background: "rgba(80, 210, 255, 0.05)",
+
+            border: "1px solid rgba(80, 210, 255, 0.2)",
+
+            marginBottom: "10px"
+
+        });
+
+        const top = document.createElement("div");
+
+        hbStyle(top, {
 
             display: "flex",
 
@@ -430,21 +650,17 @@ function refresh() {
 
             gap: "10px",
 
-            padding: "8px 0",
-
-            borderBottom: "1px solid rgba(80, 210, 255, 0.12)"
+            marginBottom: "8px"
 
         });
 
         const box = document.createElement("button");
 
-        const done = !!(h.days && h.days[today]);
-
         box.textContent = done ? "☑" : "☐";
 
         hbStyle(box, {
 
-            fontSize: "20px",
+            fontSize: "22px",
 
             background: "transparent",
 
@@ -454,7 +670,9 @@ function refresh() {
 
             padding: "0",
 
-            width: "auto"
+            width: "auto",
+
+            color: done ? "#7dffb0" : "#9fdcff"
 
         });
 
@@ -468,7 +686,9 @@ function refresh() {
 
             flex: "1",
 
-            fontSize: "13px",
+            fontSize: "14px",
+
+            fontWeight: "bold",
 
             color: done ? "rgba(159, 220, 255, 0.55)" : "#9fdcff",
 
@@ -476,11 +696,23 @@ function refresh() {
 
         });
 
+        const edit = hbGhostBtn();
+
+        edit.textContent = "✏️";
+
+        edit.title = "Rename";
+
+        edit.addEventListener("click", () => {
+
+            hbStartRename(h, name);
+
+        });
+
         const streak = document.createElement("span");
 
         const n = getStreak(h);
 
-        streak.textContent = "🔥 " + n;
+        streak.textContent = n > 0 ? "🔥 " + n : "";
 
         hbStyle(streak, {
 
@@ -490,23 +722,17 @@ function refresh() {
 
         });
 
-        const del = document.createElement("button");
+        const del = hbGhostBtn();
 
         del.textContent = "×";
 
+        del.title = "Delete";
+
         hbStyle(del, {
-
-            background: "transparent",
-
-            border: "none",
 
             color: "rgba(255, 120, 120, 0.7)",
 
-            fontSize: "16px",
-
-            cursor: "pointer",
-
-            width: "auto"
+            fontSize: "18px"
 
         });
 
@@ -516,50 +742,114 @@ function refresh() {
 
         });
 
-        row.appendChild(box);
+        top.appendChild(box);
 
-        row.appendChild(name);
+        top.appendChild(name);
 
-        row.appendChild(streak);
+        top.appendChild(edit);
 
-        row.appendChild(del);
+        top.appendChild(streak);
 
-        hbListEl.appendChild(row);
+        top.appendChild(del);
+
+        card.appendChild(top);
+
+        /* 7-day dots. */
+
+        const labels = document.createElement("div");
+
+        hbStyle(labels, {
+
+            display: "flex",
+
+            gap: "8px",
+
+            marginBottom: "2px"
+
+        });
+
+        const dots = document.createElement("div");
+
+        hbStyle(dots, {
+
+            display: "flex",
+
+            gap: "8px",
+
+            alignItems: "center"
+
+        });
+
+        for (let i = 6; i >= 0; i--) {
+
+            const d = new Date();
+
+            d.setDate(d.getDate() - i);
+
+            dots.appendChild(hbDayDot(h, d, i === 0));
+
+            const lab = document.createElement("span");
+
+            lab.textContent = "SMTWTFS"[d.getDay()];
+
+            hbStyle(lab, {
+
+                width: "22px",
+
+                textAlign: "center",
+
+                fontSize: "9px",
+
+                color: "rgba(159, 220, 255, 0.45)",
+
+                flexShrink: "0"
+
+            });
+
+            labels.appendChild(lab);
+
+        }
+
+        card.appendChild(labels);
+
+        card.appendChild(dots);
+
+        hbListEl.appendChild(card);
 
     });
 
 }
 
 
-function hbBuildPage() {
+function hbBuildCard() {
 
-    hbPageEl = document.createElement("div");
+    hbCardEl = document.createElement("div");
 
-    hbPageEl.className = "aegis-page";
+    hbCardEl.className = "dashboard-card full-card";
 
-    hbPageEl.dataset.page = HABITS_PAGE;
+    hbCardEl.id = HABITS_CARD_ID;
 
-    const back = document.createElement("button");
-
-    back.className = "aegis-page-back";
-
-    back.setAttribute("data-back-to", "more");
-
-    back.textContent = "← Back to More";
-
-    back.addEventListener("click", hbGoMore);
-
-    hbPageEl.appendChild(back);
-
-    const card = document.createElement("section");
-
-    card.className = "card";
+    hbCardEl.setAttribute("data-widget", "habits");
 
     const h2 = document.createElement("h2");
 
     h2.textContent = "✅ Habit Tracker";
 
-    card.appendChild(h2);
+    hbStyle(h2, {
+
+        fontSize: "16px",
+
+        color: "#9fdcff",
+
+        margin: "0 0 10px"
+
+    });
+
+    hbCardEl.appendChild(h2);
+
+    hbStatsEl = document.createElement("div");
+
+    hbCardEl.appendChild(hbStatsEl);
 
     const form = document.createElement("div");
 
@@ -569,7 +859,7 @@ function hbBuildPage() {
 
         gap: "8px",
 
-        marginBottom: "12px"
+        marginBottom: "14px"
 
     });
 
@@ -623,35 +913,49 @@ function hbBuildPage() {
 
     form.appendChild(addBtn);
 
-    card.appendChild(form);
+    hbCardEl.appendChild(form);
 
     hbListEl = document.createElement("div");
 
-    card.appendChild(hbListEl);
+    hbCardEl.appendChild(hbListEl);
 
-    hbPageEl.appendChild(card);
+    const grid = hbGrid();
 
-    document.body.appendChild(hbPageEl);
+    if (grid) {
+
+        grid.appendChild(hbCardEl);
+
+        return true;
+
+    }
+
+    return false;
 
 }
 
 
 Aegis.register("habits", {
 
-    version: "0.1.0",
+    version: "1.1.0",
 
-    name: "Habit Tracker (stand-in)",
+    name: "Habit Tracker",
 
 
     add,
 
     toggle,
 
+    toggleDay,
+
+    rename,
+
     remove,
 
     getStreak,
 
     getStreaks,
+
+    getWeekCheckins,
 
     list,
 
@@ -662,13 +966,10 @@ Aegis.register("habits", {
 
     init() {
 
-        hbBuildPage();
+        /* The dashboard grid may not exist yet when modules
+           init — retry briefly until it does. */
 
-        hbAddMoreEntry();
-
-        refresh();
-
-        if (!hbHookNavigation()) {
+        if (!hbBuildCard()) {
 
             let attempts = 0;
 
@@ -676,7 +977,7 @@ Aegis.register("habits", {
 
                 attempts += 1;
 
-                if (hbHookNavigation() || attempts >= 20) {
+                if (hbBuildCard() || attempts >= 20) {
 
                     clearInterval(retry);
 
@@ -686,7 +987,9 @@ Aegis.register("habits", {
 
         }
 
-        console.log("Habit Tracker (stand-in) initialized.");
+        refresh();
+
+        console.log("Habit Tracker initialized.");
 
     },
 
@@ -700,30 +1003,21 @@ Aegis.register("habits", {
 
     shutdown() {
 
-        if (hbPageEl && hbPageEl.parentNode) {
+        if (hbCardEl && hbCardEl.parentNode) {
 
-            hbPageEl.parentNode.removeChild(hbPageEl);
+            hbCardEl.parentNode.removeChild(hbCardEl);
 
         }
 
-        try {
+        hbCardEl = null;
 
-            const entry = document.querySelector(
-                '.aegis-more-list [data-goto-page="' +
-                HABITS_PAGE + '"]'
-            );
+        hbStatsEl = null;
 
-            if (entry && entry.parentNode) {
+        hbListEl = null;
 
-                entry.parentNode.removeChild(entry);
+        hbInputEl = null;
 
-            }
-
-        } catch (error) {}
-
-        hbPageEl = null;
-
-        console.log("Habit Tracker (stand-in) shut down.");
+        console.log("Habit Tracker shut down.");
 
     },
 
