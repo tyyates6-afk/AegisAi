@@ -1,7 +1,7 @@
 /*======================================
-        AEGIS BRAIN v1.0.0
+        AEGIS BRAIN v2.0.0
 ======================================
-OpenAI-powered conversational core for AEGIS.
+Dual-provider conversational core for AEGIS.
 
 WHAT IT DOES
 - Connects to the Command Bar through
@@ -15,19 +15,31 @@ WHAT IT DOES
 - Speaks replies through the voice module.
   Toggle with: Aegis.run("brain","setSpeakReplies",false)
 
+PROVIDERS (v2.0.0)
+- openai (default): direct browser calls to
+  api.openai.com. Key in localStorage.
+- claude: routes through your Supabase edge
+  function (claude-chat). The Anthropic key
+  lives server-side in Supabase — the browser
+  only ever sees your function URL.
+
+Switch in Settings > Brain, or:
+  Aegis.run("brain", "setProvider", "claude")
+
 SETUP
 1. Save this file as JS/brain.js
 2. In index.html, add AFTER commandBar.js:
      <script src="JS/brain.js"></script>
-3. In the browser console (once):
-     localStorage.setItem("openAiApiKey", "sk-...")
-   Optional model override:
-     localStorage.setItem("openAiModel", "gpt-4o-mini")
+3. Add brainSettings.js the same way for the
+   Settings UI (optional but recommended).
+4. OpenAI: paste your key in Settings > Brain.
+5. Claude: deploy supabase/functions/claude-chat,
+   set ANTHROPIC_API_KEY as a Supabase secret,
+   paste the function URL in Settings > Brain.
 
-The key is never hardcoded. It lives in
-localStorage and only ever goes to
-api.openai.com — same pattern the voice
-module already uses for ElevenLabs.
+The OpenAI key lives in localStorage and only
+ever goes to api.openai.com — same pattern the
+voice module already uses for ElevenLabs.
 
 This module registers with Aegis Core and is
 initialized automatically by Aegis.initModules().
@@ -46,7 +58,7 @@ initialized automatically by Aegis.initModules().
 
         name: "brain",
 
-        version: "1.0.0",
+        version: "2.0.0",
 
 
         // ==================================
@@ -62,9 +74,19 @@ initialized automatically by Aegis.initModules().
 
         _config: {
 
+            provider:
+                localStorage.getItem("brainProvider") ||
+                "openai",
+
             model:
                 localStorage.getItem("openAiModel") ||
                 "gpt-4o-mini",
+
+            claudeModel:
+                localStorage.getItem("claudeModel") ||
+                "claude-sonnet-4-5",
+
+            claudeMaxTokens: 1024,
 
             temperature: 0.7,
 
@@ -205,6 +227,79 @@ initialized automatically by Aegis.initModules().
         },
 
 
+        getProvider() {
+
+            return this._config.provider;
+        },
+
+
+        setProvider(provider) {
+
+            const p =
+                provider === "claude"
+                    ? "claude"
+                    : "openai";
+
+            if (p !== this._config.provider) {
+
+                this._config.provider = p;
+
+                localStorage.setItem(
+                    "brainProvider",
+                    p
+                );
+
+                // History formats differ per
+                // provider — start fresh.
+                this._history = [];
+            }
+
+            return (
+                "Brain provider set to " +
+                p +
+                "."
+            );
+        },
+
+
+        getClaudeProxyUrl() {
+
+            return (
+                localStorage.getItem(
+                    "claudeProxyUrl"
+                ) || ""
+            );
+        },
+
+
+        setClaudeProxyUrl(url) {
+
+            localStorage.setItem(
+                "claudeProxyUrl",
+                url
+            );
+
+            return "Claude proxy URL saved.";
+        },
+
+
+        setClaudeModel(model) {
+
+            this._config.claudeModel = model;
+
+            localStorage.setItem(
+                "claudeModel",
+                model
+            );
+
+            return (
+                "Claude model set to " +
+                model +
+                "."
+            );
+        },
+
+
         setSpeakReplies(on) {
 
             this._config.speakReplies =
@@ -235,14 +330,24 @@ initialized automatically by Aegis.initModules().
 
             return {
 
+                provider:
+                    this._config.provider,
+
                 model:
-                    this._config.model,
+                    this._config.provider ===
+                    "claude"
+                        ? this._config
+                              .claudeModel
+                        : this._config.model,
 
                 historyLength:
                     this._history.length,
 
                 keySet:
-                    !!this.getApiKey(),
+                    this._config.provider ===
+                    "claude"
+                        ? !!this.getClaudeProxyUrl()
+                        : !!this.getApiKey(),
 
                 commandBarConnected:
                     this._connected,
@@ -301,13 +406,25 @@ initialized automatically by Aegis.initModules().
 
         async _handle(text, context) {
 
-            if (!this.getApiKey()) {
+            const provider = this._config.provider;
+
+            if (provider === "claude") {
+
+                if (!this.getClaudeProxyUrl()) {
+
+                    return [
+                        "No Claude proxy URL is set.",
+                        "Open Settings > Brain, paste your",
+                        "Cloudflare Worker URL, and try again."
+                    ].join("\n");
+                }
+
+            } else if (!this.getApiKey()) {
 
                 return [
                     "No OpenAI API key is set.",
-                    "In the browser console, run:",
-                    'localStorage.setItem("openAiApiKey", "sk-...")',
-                    "then reload and ask me again."
+                    "Open Settings > Brain and paste your",
+                    "API key, then ask me again."
                 ].join("\n");
 
             }
@@ -339,17 +456,27 @@ initialized automatically by Aegis.initModules().
 
 
                 const reply =
-                    await this._think(context);
+                    provider === "claude"
+                        ? await this._thinkClaude(
+                              text,
+                              context
+                          )
+                        : await this._think(
+                              context
+                          );
 
 
-                this._history.push({
+                if (provider !== "claude") {
 
-                    role: "assistant",
-                    content: reply
+                    this._history.push({
 
-                });
+                        role: "assistant",
+                        content: reply
 
-                this._trimHistory();
+                    });
+
+                    this._trimHistory();
+                }
 
 
                 if (
@@ -373,7 +500,11 @@ initialized automatically by Aegis.initModules().
 
                 return (
                     "Something went wrong " +
-                    "reaching OpenAI: " +
+                    "reaching " +
+                    (provider === "claude"
+                        ? "Claude"
+                        : "OpenAI") +
+                    ": " +
                     error.message
                 );
 
@@ -441,9 +572,27 @@ initialized automatically by Aegis.initModules().
                     const call of toolCalls
                 ) {
 
+                    let toolArgs = {};
+
+                    try {
+
+                        toolArgs = JSON.parse(
+                            (call.function &&
+                                call.function
+                                    .arguments) ||
+                            "{}"
+                        );
+
+                    } catch (error) {
+
+                        toolArgs = {};
+                    }
+
                     const result =
                         await this._runTool(
-                            call,
+                            call.function &&
+                                call.function.name,
+                            toolArgs,
                             context
                         );
 
@@ -534,6 +683,321 @@ initialized automatically by Aegis.initModules().
 
 
             return response.json();
+        },
+
+
+        // ==================================
+        // CLAUDE (via Supabase edge fn)
+        // ==================================
+
+        _claudeSystemPrompt() {
+
+            const now = new Date();
+
+            return [
+                "You are AEGIS — Always Evolving " +
+                "General Intelligence Service.",
+
+                "You are Ty's personal AI assistant, " +
+                "in the spirit of Jarvis: capable, " +
+                "calm, a little witty, never robotic.",
+
+                "Keep replies short and conversational " +
+                "unless Ty asks for detail. He reads " +
+                "on his phone.",
+
+                "You run inside Ty's AEGIS dashboard app. " +
+                "You can act on the app through tools: use " +
+                "aegis_run to operate modules (weather, " +
+                "reminders, calendar, bible, etc.) and " +
+                "aegis_status to see what is online.",
+
+                "When you use a tool, briefly say what " +
+                "you did in plain words.",
+
+                "Current date and time: " +
+                now.toLocaleString() +
+                "."
+            ].join(" ");
+        },
+
+
+        _claudeTools() {
+
+            return [
+                {
+                    name: "aegis_run",
+
+                    description:
+                        "Run a command on an AEGIS " +
+                        "module. Use this when Ty asks " +
+                        "AEGIS to DO something (refresh " +
+                        "the weather, check reminders, " +
+                        "report system status, etc).",
+
+                    input_schema: {
+
+                        type: "object",
+
+                        properties: {
+
+                            module: {
+
+                                type: "string",
+
+                                description:
+                                    "Module name, e.g. weather, " +
+                                    "reminders, calendar, bible"
+                            },
+
+                            method: {
+
+                                type: "string",
+
+                                description:
+                                    "Method to call on the module, " +
+                                    "e.g. refresh, status"
+                            },
+
+                            args: {
+
+                                type: "array",
+
+                                items: {
+                                    type: "string"
+                                },
+
+                                description:
+                                    "Arguments for the method"
+                            }
+                        },
+
+                        required: [
+                            "module",
+                            "method"
+                        ]
+                    }
+                },
+
+                {
+                    name: "aegis_status",
+
+                    description:
+                        "List the registered AEGIS " +
+                        "modules and their online status.",
+
+                    input_schema: {
+
+                        type: "object",
+
+                        properties: {}
+                    }
+                }
+            ];
+        },
+
+
+        async _callClaude(messages, noTools) {
+
+            const proxyUrl =
+                this.getClaudeProxyUrl().replace(
+                    /\/$/,
+                    ""
+                );
+
+            const body = {
+
+                model:
+                    this._config.claudeModel,
+
+                max_tokens:
+                    this._config
+                        .claudeMaxTokens,
+
+                system:
+                    this._claudeSystemPrompt(),
+
+                messages: messages
+
+            };
+
+            if (!noTools) {
+
+                body.tools =
+                    this._claudeTools();
+            }
+
+            const response = await fetch(
+                proxyUrl,
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body: JSON.stringify(body)
+
+                }
+            );
+
+            if (!response.ok) {
+
+                const errText =
+                    await response.text();
+
+                throw new Error(
+                    "Claude " +
+                    response.status +
+                    ": " +
+                    errText.slice(0, 200)
+                );
+            }
+
+            return response.json();
+        },
+
+
+        async _thinkClaude(text, context) {
+
+            // Working messages in Claude's native
+            // format. Simple text history is kept
+            // in _history; tool blocks stay local
+            // to this turn.
+            const messages = this._history.map(
+                (m) => ({
+                    role: m.role,
+                    content: m.content
+                })
+            );
+
+            for (
+                let round = 0;
+                round <
+                this._config.maxToolRounds;
+                round++
+            ) {
+
+                const data =
+                    await this._callClaude(
+                        messages,
+                        false
+                    );
+
+                const blocks =
+                    (data &&
+                        data.content) ||
+                    [];
+
+                const textParts = blocks
+                    .filter(
+                        (b) =>
+                            b.type === "text"
+                    )
+                    .map((b) => b.text || "");
+
+                const toolUses = blocks.filter(
+                    (b) =>
+                        b.type === "tool_use"
+                );
+
+                // Keep the full assistant turn
+                // (text + tool_use blocks) so
+                // tool_results line up.
+                messages.push({
+
+                    role: "assistant",
+
+                    content: blocks
+
+                });
+
+                if (!toolUses.length) {
+
+                    const reply =
+                        textParts.join("");
+
+                    this._history.push({
+
+                        role: "assistant",
+
+                        content: reply
+
+                    });
+
+                    this._trimHistory();
+
+                    return reply;
+                }
+
+                const toolResults = [];
+
+                for (
+                    const tu of toolUses
+                ) {
+
+                    const result =
+                        await this._runTool(
+                            tu.name,
+                            tu.input || {},
+                            context
+                        );
+
+                    toolResults.push({
+
+                        type: "tool_result",
+
+                        tool_use_id: tu.id,
+
+                        content: String(
+                            result
+                        )
+
+                    });
+                }
+
+                messages.push({
+
+                    role: "user",
+
+                    content: toolResults
+
+                });
+            }
+
+            // Out of tool rounds — final answer,
+            // no more tools.
+            const data =
+                await this._callClaude(
+                    messages,
+                    true
+                );
+
+            const reply = (
+                (data && data.content) ||
+                []
+            )
+                .filter(
+                    (b) => b.type === "text"
+                )
+                .map((b) => b.text || "")
+                .join("");
+
+            this._history.push({
+
+                role: "assistant",
+
+                content: reply
+
+            });
+
+            this._trimHistory();
+
+            return reply;
         },
 
 
@@ -716,30 +1180,11 @@ initialized automatically by Aegis.initModules().
         },
 
 
-        async _runTool(call, context) {
+        async _runTool(name, args, context) {
 
-            const name =
-                call.function &&
-                call.function.name;
-
-
-            let args = {};
-
-            try {
-
-                args = JSON.parse(
-                    call.function.arguments ||
-                    "{}"
-                );
-
-            } catch (error) {
-
-                return (
-                    "Bad arguments: " +
-                    error.message
-                );
+            if (!args || typeof args !== "object") {
+                args = {};
             }
-
 
             try {
 
