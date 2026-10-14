@@ -298,7 +298,7 @@ function prayerShowPage(name) {
 }
 
 
-function open() {
+function prOpen() {
 
     prayerShowPage(PRAYER_PAGE_NAME);
 
@@ -315,7 +315,7 @@ function prayerGoMore() {
 /* Register the page with Navigation. If Navigation hasn't
    initialized yet, its _buildDOM will pick the page up from
    the DOM itself (it re-queries .aegis-page). If it already
-   initialized, push the page into its cached list. */
+   initialized, push the page into its cached prList. */
 
 function prayerHookNavigation() {
 
@@ -392,7 +392,7 @@ function add(text, title) {
 }
 
 
-function list(filter) {
+function prList(filter) {
 
     filter = filter || prayerFilter || "all";
 
@@ -551,7 +551,7 @@ function search(q) {
 
     prayerRenderList();
 
-    return list(prayerFilter);
+    return prList(prayerFilter);
 
 }
 
@@ -572,7 +572,7 @@ function count() {
 }
 
 
-function getStatus() {
+function prGetStatus() {
 
     return Object.assign(count(), {
 
@@ -843,7 +843,7 @@ function prayerAddMoreEntry() {
 
         item.textContent = "🙏 Prayer Journal";
 
-        item.addEventListener("click", open);
+        item.addEventListener("click", prOpen);
 
         /* Sit with the other pages, above the dashboard tools. */
 
@@ -909,7 +909,7 @@ function prayerRenderList() {
 
     prayerListEl.innerHTML = "";
 
-    const items = list(prayerFilter);
+    const items = prList(prayerFilter);
 
     if (items.length === 0) {
 
@@ -1201,7 +1201,7 @@ Aegis.register("prayer", {
 
     add,
 
-    list,
+    list: prList,
 
     get,
 
@@ -1217,9 +1217,9 @@ Aegis.register("prayer", {
 
     count,
 
-    getStatus,
+    getStatus: prGetStatus,
 
-    open,
+    open: prOpen,
 
 
     init() {

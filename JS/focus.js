@@ -1,60 +1,98 @@
 /*======================================
+        AEGIS FOCUS PROTOCOL v1.4.4
+======================================
 
-        AEGIS FOCUS TRACKER v1.0.0
+    One-tap focus mode for AEGIS.
 
-        Polished module. Reads the session log the Focus
-        module already keeps in localStorage
-        ("aegisFocusSessions") — {startedAt, minutes, label,
-        completed} — and turns it into a real tracker page:
+    SETUP:
+    1. Save this file as JS/focus.js
+    2. Save timer.js as JS/timer.js
+    3. Add <script src="JS/timer.js"></script> after core.js,
+       then <script src="JS/focus.js"></script> after that.
+       (Focus uses the timer module as its countdown backend.)
 
-        - Stats header: this-week minutes, week sessions,
-          best day-streak, all-time minutes
-        - 7-day bar chart (CSS, no libs)
-        - Top labels by minutes
-        - Full session history grouped by day, with
-          per-session delete and two-tap clear-all
+    USE:
+    - Tap the FOCUS button (bottom-left) to open the in-app
+      setup window: editable label, hours / minutes / seconds
+      dropdowns, Start / Cancel. Draggable by its title bar.
+    - Or: Aegis.run("focus", "start", 25, "Bible study")
+    - Or: Aegis.run("focus", "startSeconds", 90, "Quick sprint")
+    - Aegis.run("focus", "stop")
+    - Aegis.run("focus", "getWeekMinutes")
 
-        Backward compatible with the v0.1.0 stand-in and
-        the focus.js session shape. Same localStorage
-        key/shape; nothing to migrate.
-
-        Page lives in the More hub, like Prayer Journal.
-        Refreshes automatically when a focus session ends.
-
-        Cache-busted filename (focus-tracker-1.0.0.js) so
-        phones with stale caches pick it up.
+    INTEGRATION:
+    - Broadcasts "focusStarted" / "focusEnded".
+    - Tells the pet to work alongside during focus (headphones
+      + laptop) and celebrate after (works on both pets when linked).
+    - Sessions are stored locally, no AI, no backend.
+    - v1.4.1: mobile layout — the FOCUS button shrinks and sits
+      above the phone's bottom nav bar (safe-area aware).
+    - v1.4.2: smaller still in portrait; landscape (and
+      desktop) keep the full-size buttons.
+    - v1.4.3: shorter buttons everywhere — tighter padding so
+      FOCUS hugs its label instead of stretching wide.
+    - v1.4.4: width:auto on the FOCUS button defeats dashboard
+      stylesheet rules that stretch buttons full-width (the
+      real cause of the full-width stretch on Ty's phone).
 
 ======================================*/
 
 
-const FT_PAGE = "focustracker";
-
-const FT_STORE_KEY = "aegisFocusSessions";
+const FOCUS_STORE_KEY = "aegisFocusSessions";
 
 
-let ftPageEl = null;
+let focusActive = false;
 
-let ftStatsEl = null;
+let focusPaused = false;
 
-let ftChartEl = null;
+let focusLabel = "";
 
-let ftLabelsEl = null;
+let focusTotalSec = 0;
 
-let ftListEl = null;
+let focusRemainingSec = 0;
 
-let ftEmptyHintEl = null;
+let focusStartedAt = null;
 
-let ftClearSlotEl = null;
+let focusBtn = null;
+
+let focusOverlay = null;
+
+let focusTimeEl = null;
+
+let focusLabelEl = null;
+
+let focusPauseBtn = null;
+
+let focusSetupWin = null;
+
+let focusSetupLabelInput = null;
+
+let focusSetupHourSel = null;
+
+let focusSetupMinSel = null;
+
+let focusSetupSecSel = null;
+
+let focusSetupTimeRow = null;
+
+/* True while focusFinish is running its own timer stop, so the
+   "timerStopped" listener doesn't re-enter on our own stop. */
+
+let focusFinishing = false;
+
+let focusTimerStopUnsub = null;
+
+/* The timer module's id for this session — focus only ever
+   touches its own timer, even when several are running. */
+
+let focusTimerId = null;
 
 
-/* ==================== data ==================== */
-
-
-function ftLoadSessions() {
+function focusLoadSessions() {
 
     try {
 
-        const raw = localStorage.getItem(FT_STORE_KEY);
+        const raw = localStorage.getItem(FOCUS_STORE_KEY);
 
         if (!raw) return [];
 
@@ -71,569 +109,655 @@ function ftLoadSessions() {
 }
 
 
-function ftSaveSessions(list) {
+function focusSaveSession(entry) {
 
     try {
 
-        localStorage.setItem(FT_STORE_KEY, JSON.stringify(list));
+        const list = focusLoadSessions();
+
+        list.push(entry);
+
+        localStorage.setItem(
+            FOCUS_STORE_KEY,
+            JSON.stringify(list)
+        );
 
     } catch (error) {}
 
 }
 
 
-function ftDayKey(d) {
+function focusFmt(sec) {
 
-    const dt = d instanceof Date ? d : new Date(d);
+    const m = Math.floor(sec / 60);
 
-    if (isNaN(dt.getTime())) return null;
+    const s = sec % 60;
 
-    return dt.getFullYear() + "-" +
-        String(dt.getMonth() + 1).padStart(2, "0") + "-" +
-        String(dt.getDate()).padStart(2, "0");
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 
 }
 
 
-function ftTodayKey() {
+function focusRender() {
 
-    return ftDayKey(new Date());
+    if (focusTimeEl) {
 
-}
-
-
-function ftWeekStart() {
-
-    const d = new Date();
-
-    d.setHours(0, 0, 0, 0);
-
-    /* Monday as week start. */
-
-    const dow = (d.getDay() + 6) % 7;
-
-    d.setDate(d.getDate() - dow);
-
-    return d;
-
-}
-
-
-function ftOnDay(s, key) {
-
-    return !!(s && ftDayKey(s.startedAt) === key);
-
-}
-
-
-function getToday() {
-
-    const key = ftTodayKey();
-
-    const list = ftLoadSessions().filter((s) => ftOnDay(s, key));
-
-    return {
-
-        sessions: list.length,
-
-        minutes: list.reduce((t, s) => t + (s.minutes || 0), 0),
-
-        completed: list.filter((s) => s.completed).length
-
-    };
-
-}
-
-
-function getWeek() {
-
-    const start = ftWeekStart().getTime();
-
-    const list = ftLoadSessions().filter((s) => {
-
-        const t = new Date(s && s.startedAt).getTime();
-
-        return !isNaN(t) && t >= start;
-
-    });
-
-    return {
-
-        sessions: list.length,
-
-        minutes: list.reduce((t, s) => t + (s.minutes || 0), 0),
-
-        completed: list.filter((s) => s.completed).length
-
-    };
-
-}
-
-
-function getAllTime() {
-
-    const list = ftLoadSessions();
-
-    return {
-
-        sessions: list.length,
-
-        minutes: list.reduce((t, s) => t + (s.minutes || 0), 0),
-
-        completed: list.filter((s) => s.completed).length
-
-    };
-
-}
-
-
-/* Consecutive calendar days (ending today, or yesterday if
-   today has no completed session yet) with at least one
-   completed focus session. */
-
-function getStreak() {
-
-    const completedDays = {};
-
-    ftLoadSessions().forEach((s) => {
-
-        if (s && s.completed) {
-
-            const key = ftDayKey(s.startedAt);
-
-            if (key) completedDays[key] = true;
-
-        }
-
-    });
-
-    let streak = 0;
-
-    const d = new Date();
-
-    d.setHours(0, 0, 0, 0);
-
-    /* If today has nothing completed yet, the streak may
-       still be alive through yesterday. */
-
-    if (!completedDays[ftDayKey(d)]) {
-
-        d.setDate(d.getDate() - 1);
+        focusTimeEl.textContent = focusFmt(focusRemainingSec);
 
     }
 
-    while (completedDays[ftDayKey(d)]) {
-
-        streak += 1;
-
-        d.setDate(d.getDate() - 1);
-
-    }
-
-    return streak;
+    document.title = focusActive
+        ? `⏱ ${focusFmt(focusRemainingSec)} — AEGIS`
+        : "AEGIS";
 
 }
 
 
-/* Minutes per day for the last n days, oldest first.
-   [{key, label("Mon"), minutes}]. */
+/* The timer module calls this every second with the time left. */
 
-function getDailyMinutes(n) {
+function focusTimerTick(remainingSec) {
 
-    const days = [];
+    focusRemainingSec = remainingSec;
 
-    const now = new Date();
-
-    now.setHours(0, 0, 0, 0);
-
-    for (let i = n - 1; i >= 0; i--) {
-
-        const d = new Date(now);
-
-        d.setDate(d.getDate() - i);
-
-        days.push({
-
-            key: ftDayKey(d),
-
-            label: d.toLocaleDateString([], { weekday: "short" }),
-
-            minutes: 0
-
-        });
-
-    }
-
-    const byKey = {};
-
-    days.forEach((day) => { byKey[day.key] = day; });
-
-    ftLoadSessions().forEach((s) => {
-
-        const key = s && ftDayKey(s.startedAt);
-
-        if (key && byKey[key]) {
-
-            byKey[key].minutes += (s.minutes || 0);
-
-        }
-
-    });
-
-    return days;
+    focusRender();
 
 }
 
 
-/* Top labels by minutes within the current week,
-   [{label, minutes}]. */
+function focusShowOverlay() {
 
-function getTopLabels(limit) {
+    focusOverlay.style.display = "flex";
 
-    const start = ftWeekStart().getTime();
-
-    const byLabel = {};
-
-    ftLoadSessions().forEach((s) => {
-
-        if (!s) return;
-
-        const t = new Date(s.startedAt).getTime();
-
-        if (isNaN(t) || t < start) return;
-
-        const name = (s.label || "untitled").trim() || "untitled";
-
-        byLabel[name] = (byLabel[name] || 0) + (s.minutes || 0);
-
-    });
-
-    return Object.keys(byLabel)
-
-        .map((name) => ({ label: name, minutes: byLabel[name] }))
-
-        .sort((a, b) => b.minutes - a.minutes)
-
-        .slice(0, limit || 3);
+    focusBtn.style.display = "none";
 
 }
 
 
-function list() {
+function focusHideOverlay() {
 
-    return ftLoadSessions().slice().reverse();
+    focusOverlay.style.display = "none";
 
-}
+    focusBtn.style.display = "flex";
 
-
-/* ==================== nav glue ==================== */
-
-
-function ftNav() {
-
-    try {
-
-        if (typeof Aegis !== "undefined" && Aegis.getModule) {
-
-            const mod = Aegis.getModule("navigation");
-
-            if (mod && mod.api) return mod.api;
-
-        }
-
-    } catch (error) {}
-
-    return null;
+    document.title = "AEGIS";
 
 }
 
 
-function ftShowPage(name) {
+function startSeconds(totalSec, label = "") {
 
-    const nav = ftNav();
+    if (focusActive) return;
 
-    if (nav && typeof nav.showPage === "function") {
+    focusCloseSetup();
 
-        nav.showPage(name);
+    totalSec = Math.max(1, Math.round(totalSec) || 1500);
+
+    if (!Aegis.modules.timer) {
+
+        console.error(
+            "Focus: timer module not loaded — " +
+            "add <script src=\"JS/timer.js\"></script> before focus.js."
+        );
 
         return;
 
     }
 
-    const pages = document.querySelectorAll
-        ? document.querySelectorAll(".aegis-page")
-        : [];
+    focusActive = true;
 
-    Array.prototype.forEach.call(pages, (page) => {
+    focusPaused = false;
 
-        const on = page.dataset && page.dataset.page === name;
+    focusLabel = String(label || "").slice(0, 60);
 
-        if (page.classList) {
+    focusTotalSec = totalSec;
 
-            page.classList.toggle("active", !!on);
+    focusRemainingSec = totalSec;
 
-        }
+    focusStartedAt = new Date().toISOString();
+
+    focusLabelEl.textContent = focusLabel || "Focus session";
+
+    focusPauseBtn.textContent = "Pause";
+
+    focusShowOverlay();
+
+    focusRender();
+
+    focusTimerId = Aegis.run("timer", "start", totalSec, {
+
+        onTick: focusTimerTick,
+
+        onDone: () => focusFinish(true),
+
+        label: focusLabel || "Focus"
+
+    });
+
+    Aegis.broadcast("focusStarted", {
+
+        seconds: totalSec,
+
+        minutes: Math.round(totalSec / 60),
+
+        label: focusLabel
+
+    });
+
+    Aegis.broadcast("petMood", { mood: "working" });
+
+    console.log(`Focus started: ${focusFmt(totalSec)}. (timer backend)`);
+
+}
+
+
+function focusStart(minutes = 25, label = "") {
+
+    startSeconds(
+        Math.max(1, Math.round(minutes) || 25) * 60,
+        label
+    );
+
+}
+
+
+function focusPause() {
+
+    if (!focusActive || focusPaused) return;
+
+    if (Aegis.modules.timer && focusTimerId) {
+
+        Aegis.run("timer", "pause", focusTimerId);
+
+    }
+
+    focusPaused = true;
+
+    focusPauseBtn.textContent = "Resume";
+
+    focusRender();
+
+}
+
+
+function focusResume() {
+
+    if (!focusActive || !focusPaused) return;
+
+    if (Aegis.modules.timer && focusTimerId) {
+
+        Aegis.run("timer", "resume", focusTimerId);
+
+    }
+
+    focusPaused = false;
+
+    focusPauseBtn.textContent = "Pause";
+
+    focusRender();
+
+}
+
+
+function focusFinish(completed) {
+
+    if (!focusActive) return;
+
+    focusFinishing = true;
+
+    if (Aegis.modules.timer && focusTimerId) {
+
+        Aegis.run("timer", "stop", focusTimerId);
+
+    }
+
+    focusTimerId = null;
+
+    const elapsedSec = focusTotalSec - focusRemainingSec;
+
+    focusSaveSession({
+
+        startedAt: focusStartedAt,
+
+        minutes: Math.round(elapsedSec / 60),
+
+        label: focusLabel,
+
+        completed: !!completed
+
+    });
+
+    focusActive = false;
+
+    focusPaused = false;
+
+    if (completed) {
+
+        focusTimeEl.textContent = "Done.";
+
+        focusLabelEl.textContent =
+            focusLabel || "Focus session";
+
+        /* Wake the pet first (base mood back to idle), then
+           celebrate — the timed happy reverts to idle on its
+           own instead of being canceled instantly. */
+
+        Aegis.broadcast("petMood", { mood: "idle" });
+
+        Aegis.broadcast("petMood", {
+            mood: "happy",
+            duration: 5000
+        });
+
+        setTimeout(focusHideOverlay, 2500);
+
+    } else {
+
+        focusHideOverlay();
+
+        Aegis.broadcast("petMood", { mood: "idle" });
+
+    }
+
+    Aegis.broadcast("focusEnded", {
+
+        minutes: Math.round(elapsedSec / 60),
+
+        label: focusLabel,
+
+        completed: !!completed
+
+    });
+
+    document.title = "AEGIS";
+
+    focusFinishing = false;
+
+}
+
+
+function focusStop() {
+
+    focusFinish(false);
+
+}
+
+
+function focusGetStatus() {
+
+    return {
+
+        active: focusActive,
+
+        paused: focusPaused,
+
+        label: focusLabel,
+
+        remainingSec: focusRemainingSec,
+
+        totalSec: focusTotalSec
+
+    };
+
+}
+
+
+function getSessions() {
+
+    return focusLoadSessions();
+
+}
+
+
+function getWeekMinutes() {
+
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    return focusLoadSessions()
+        .filter((s) => {
+
+            return new Date(s.startedAt).getTime() >= weekAgo;
+
+        })
+        .reduce((sum, s) => sum + (s.minutes || 0), 0);
+
+}
+
+
+function focusBuildButton() {
+
+    focusBtn = document.createElement("button");
+
+    focusBtn.textContent = "FOCUS";
+
+    Object.assign(focusBtn.style, {
+
+        position: "fixed",
+
+        left: "24px",
+
+        bottom: "24px",
+
+        zIndex: "9001",
+
+        /* width:auto defeats any dashboard stylesheet rule that
+           stretches buttons full-width (e.g. a global button
+           width:100% for the dashboard widgets). Inline style beats
+           any non-!important stylesheet rule. */
+
+        width: "auto",
+
+        padding: "10px 14px",
+
+        borderRadius: "999px",
+
+        border: "1px solid rgba(80, 210, 255, 0.5)",
+
+        background: "rgba(10, 20, 40, 0.85)",
+
+        color: "#9fdcff",
+
+        fontSize: "14px",
+
+        letterSpacing: "2px",
+
+        cursor: "pointer",
+
+        backdropFilter: "blur(6px)"
+
+    });
+
+    focusBtn.addEventListener("click", focusOpenSetup);
+
+    document.body.appendChild(focusBtn);
+
+    focusApplyResponsive();
+
+}
+
+
+/* Mobile layout: shrink the FOCUS button and lift it clear of
+   the phone's bottom nav bar (uses the safe-area inset). */
+
+function focusIsMobileLayout() {
+
+    return window.innerWidth <= 640;
+
+}
+
+
+function focusApplyResponsive() {
+
+    if (!focusBtn) return;
+
+    const mobile = focusIsMobileLayout();
+
+    Object.assign(focusBtn.style, {
+
+        bottom: mobile
+            ? "calc(env(safe-area-inset-bottom, 0px) + 76px)"
+            : "24px",
+
+        padding: mobile ? "6px 10px" : "10px 14px",
+
+        fontSize: mobile ? "11px" : "14px",
+
+        letterSpacing: mobile ? "1px" : "2px"
 
     });
 
 }
 
 
-function ftGoMore() {
+let focusResizeHooked = false;
 
-    ftShowPage("more");
+function focusHookResize() {
 
-}
+    if (focusResizeHooked) return;
 
+    focusResizeHooked = true;
 
-function ftHookNavigation() {
-
-    const nav = ftNav();
-
-    if (!nav || !ftPageEl) return false;
-
-    try {
-
-        if (nav._els && Array.isArray(nav._els.pages)) {
-
-            if (nav._els.pages.indexOf(ftPageEl) < 0) {
-
-                nav._els.pages.push(ftPageEl);
-
-            }
-
-            return true;
-
-        }
-
-    } catch (error) {}
-
-    return false;
+    window.addEventListener("resize", focusApplyResponsive);
 
 }
 
 
-function ftAddMoreEntry() {
+function focusOpenSetup() {
 
-    try {
+    if (focusActive) return;
 
-        const hubList = document.querySelector(".aegis-more-list");
+    focusSetupWin.style.display = "block";
 
-        if (!hubList) return false;
+    focusSetupLabelInput.value = "";
 
-        if (hubList.querySelector(
-            '[data-goto-page="' + FT_PAGE + '"]'
-        )) {
-
-            return true;
-
-        }
-
-        const item = document.createElement("button");
-
-        item.className = "aegis-more-item";
-
-        item.setAttribute("data-goto-page", FT_PAGE);
-
-        item.textContent = "📊 Focus Tracker";
-
-        item.addEventListener("click", open);
-
-        const divider = hubList.querySelector("hr");
-
-        if (divider) {
-
-            hubList.insertBefore(item, divider);
-
-        } else {
-
-            hubList.appendChild(item);
-
-        }
-
-        return true;
-
-    } catch (error) {
-
-        return false;
-
-    }
+    setTimeout(() => focusSetupLabelInput.focus(), 0);
 
 }
 
 
-function ftStyle(el, styles) {
+/* In-app setup window — replaces the old native prompt()
+   popups. A small editable panel with a label field,
+   hours / minutes / seconds dropdowns, and Start / Cancel.
+   Draggable by its title bar. */
 
-    try {
+function focusStyleActionBtn(btn, primary) {
 
-        Object.assign(el.style, styles);
-
-    } catch (error) {}
-
-}
-
-
-function ftEl(tag, text, styles) {
-
-    const el = document.createElement(tag);
-
-    if (text !== undefined && text !== null) {
-
-        el.textContent = text;
-
-    }
-
-    if (styles) ftStyle(el, styles);
-
-    return el;
-
-}
-
-
-/* ==================== page ==================== */
-
-
-function ftStat(label, value) {
-
-    const box = ftEl("div", null, {
+    Object.assign(btn.style, {
 
         flex: "1",
 
-        minWidth: "72px",
+        padding: "12px 0",
 
-        textAlign: "center",
+        borderRadius: "999px",
 
-        padding: "10px 6px",
+        cursor: "pointer",
 
-        borderRadius: "12px",
+        fontSize: "13px",
 
-        background: "rgba(80, 210, 255, 0.07)",
+        letterSpacing: "2px",
 
-        border: "1px solid rgba(80, 210, 255, 0.25)"
+        color: "#9fdcff",
+
+        border: "1px solid rgba(80, 210, 255, 0.5)",
+
+        background: primary
+            ? "rgba(80, 210, 255, 0.2)"
+            : "transparent"
 
     });
 
-    const v = ftEl("div", String(value), {
+}
 
-        fontSize: "22px",
 
-        fontWeight: "bold",
+function focusCloseSetup() {
+
+    if (focusSetupWin) {
+
+        focusSetupWin.style.display = "none";
+
+    }
+
+}
+
+
+function focusSetupTotalSec() {
+
+    const h = parseInt(focusSetupHourSel.value, 10) || 0;
+
+    const m = parseInt(focusSetupMinSel.value, 10) || 0;
+
+    const s = parseInt(focusSetupSecSel.value, 10) || 0;
+
+    return h * 3600 + m * 60 + s;
+
+}
+
+
+function focusSetupStart() {
+
+    const totalSec = focusSetupTotalSec();
+
+    if (totalSec < 1) {
+
+        /* Nudge: flash the dropdowns instead of starting a 0s session. */
+
+        [focusSetupHourSel, focusSetupMinSel, focusSetupSecSel].forEach((sel) => {
+
+            sel.style.border = "1px solid rgba(255, 90, 90, 0.8)";
+
+            setTimeout(() => {
+
+                sel.style.border = "1px solid rgba(80, 210, 255, 0.3)";
+
+            }, 800);
+
+        });
+
+        return;
+
+    }
+
+    const label = focusSetupLabelInput.value.trim();
+
+    focusCloseSetup();
+
+    startSeconds(totalSec, label);
+
+}
+
+
+function focusBuildSetupWindow() {
+
+    focusSetupWin = document.createElement("div");
+
+    Object.assign(focusSetupWin.style, {
+
+        position: "fixed",
+
+        left: "50%",
+
+        top: "50%",
+
+        transform: "translate(-50%, -50%)",
+
+        zIndex: "9002",
+
+        display: "none",
+
+        width: "340px",
+
+        padding: "0 24px 24px",
+
+        borderRadius: "16px",
+
+        border: "1px solid rgba(80, 210, 255, 0.4)",
+
+        background: "rgba(8, 16, 32, 0.96)",
+
+        backdropFilter: "blur(10px)",
+
+        boxShadow: "0 0 60px rgba(80, 210, 255, 0.25)",
 
         color: "#9fdcff"
 
     });
 
-    const l = ftEl("div", label, {
+    const handle = document.createElement("div");
 
-        fontSize: "10px",
+    handle.textContent = "FOCUS PROTOCOL";
 
-        letterSpacing: "1px",
+    Object.assign(handle.style, {
 
-        color: "rgba(159, 220, 255, 0.6)",
+        fontSize: "12px",
 
-        marginTop: "2px"
+        letterSpacing: "5px",
+
+        color: "rgba(159, 220, 255, 0.7)",
+
+        textAlign: "center",
+
+        padding: "16px 0",
+
+        cursor: "grab",
+
+        userSelect: "none"
 
     });
 
-    box.appendChild(v);
+    const labelTitle = document.createElement("div");
 
-    box.appendChild(l);
+    labelTitle.textContent = "What are you focusing on?";
 
-    return box;
-
-}
-
-
-function ftSectionTitle(text) {
-
-    return ftEl("h3", text, {
+    Object.assign(labelTitle.style, {
 
         fontSize: "13px",
 
-        color: "#9fdcff",
-
-        margin: "14px 0 8px"
+        marginBottom: "8px"
 
     });
 
-}
+    focusSetupLabelInput = document.createElement("input");
 
+    focusSetupLabelInput.type = "text";
 
-function ftRenderStats() {
+    focusSetupLabelInput.placeholder = "e.g. Bible study";
 
-    ftStatsEl.innerHTML = "";
+    focusSetupLabelInput.maxLength = 60;
 
-    const week = getWeek();
+    Object.assign(focusSetupLabelInput.style, {
 
-    const streak = getStreak();
+        width: "100%",
 
-    const all = getAllTime();
+        boxSizing: "border-box",
 
-    const row = ftEl("div", null, {
+        padding: "10px 12px",
+
+        borderRadius: "10px",
+
+        border: "1px solid rgba(80, 210, 255, 0.3)",
+
+        background: "rgba(2, 8, 20, 0.8)",
+
+        color: "#eaf7ff",
+
+        fontSize: "14px",
+
+        outline: "none",
+
+        marginBottom: "16px"
+
+    });
+
+    const minTitle = document.createElement("div");
+
+    minTitle.textContent = "How long?";
+
+    Object.assign(minTitle.style, {
+
+        fontSize: "13px",
+
+        marginBottom: "8px"
+
+    });
+
+    /* Three dropdowns — hours, minutes, seconds. */
+
+    focusSetupTimeRow = document.createElement("div");
+
+    Object.assign(focusSetupTimeRow.style, {
 
         display: "flex",
 
         gap: "8px",
 
-        marginBottom: "4px"
+        marginBottom: "20px"
 
     });
 
-    row.appendChild(ftStat("WEEK (MIN)", week.minutes));
+    function focusMakeTimeSelect(max, label, def) {
 
-    row.appendChild(ftStat("WEEK SESSIONS", week.sessions));
+        const wrap = document.createElement("div");
 
-    row.appendChild(ftStat("BEST STREAK", streak + "d"));
-
-    ftStatsEl.appendChild(row);
-
-    const row2 = ftEl("div", null, {
-
-        display: "flex",
-
-        gap: "8px",
-
-        marginBottom: "4px"
-
-    });
-
-    row2.appendChild(ftStat("WEEK DONE", week.completed));
-
-    row2.appendChild(ftStat("ALL-TIME (MIN)", all.minutes));
-
-    row2.appendChild(ftStat("ALL SESSIONS", all.sessions));
-
-    ftStatsEl.appendChild(row2);
-
-}
-
-
-function ftRenderChart() {
-
-    ftChartEl.innerHTML = "";
-
-    const days = getDailyMinutes(7);
-
-    const max = Math.max.apply(null,
-        days.map((d) => d.minutes).concat([1]));
-
-    const wrap = ftEl("div", null, {
-
-        display: "flex",
-
-        alignItems: "flex-end",
-
-        gap: "6px",
-
-        height: "110px",
-
-        padding: "6px 2px 0"
-
-    });
-
-    days.forEach((day) => {
-
-        const col = ftEl("div", null, {
+        Object.assign(wrap.style, {
 
             flex: "1",
 
@@ -641,639 +765,429 @@ function ftRenderChart() {
 
             flexDirection: "column",
 
-            alignItems: "center",
-
-            justifyContent: "flex-end",
-
-            height: "100%"
+            gap: "4px"
 
         });
 
-        const val = day.minutes > 0 ? String(day.minutes) : "";
+        const sel = document.createElement("select");
 
-        const vlabel = ftEl("div", val, {
+        for (let v = 0; v <= max; v++) {
 
-            fontSize: "9px",
+            const opt = document.createElement("option");
 
-            color: "rgba(159, 220, 255, 0.75)",
+            opt.value = String(v);
 
-            marginBottom: "2px",
+            opt.textContent = String(v).padStart(2, "0");
 
-            minHeight: "11px"
-
-        });
-
-        const bar = ftEl("div", null, {
-
-            width: "70%",
-
-            borderRadius: "5px",
-
-            background: day.minutes > 0
-                ? "linear-gradient(180deg, #50d2ff, #1e7fb8)"
-                : "rgba(80, 210, 255, 0.10)",
-
-            height: Math.max(day.minutes / max * 76, 4) + "px"
-
-        });
-
-        const dlabel = ftEl("div", day.label, {
-
-            fontSize: "9px",
-
-            color: "rgba(159, 220, 255, 0.55)",
-
-            marginTop: "3px"
-
-        });
-
-        col.appendChild(vlabel);
-
-        col.appendChild(bar);
-
-        col.appendChild(dlabel);
-
-        wrap.appendChild(col);
-
-    });
-
-    ftChartEl.appendChild(wrap);
-
-}
-
-
-function ftRenderLabels() {
-
-    ftLabelsEl.innerHTML = "";
-
-    const tops = getTopLabels(3);
-
-    if (!tops.length) {
-
-        ftLabelsEl.appendChild(ftEl("div",
-            "No labeled sessions this week yet.", {
-
-                fontSize: "12px",
-
-                color: "rgba(159, 220, 255, 0.6)",
-
-                padding: "2px 0 4px"
-
-            }));
-
-        return;
-
-    }
-
-    tops.forEach((t, i) => {
-
-        const row = ftEl("div", null, {
-
-            display: "flex",
-
-            justifyContent: "space-between",
-
-            fontSize: "12px",
-
-            color: "#9fdcff",
-
-            padding: "5px 0",
-
-            borderBottom: "1px solid rgba(80, 210, 255, 0.12)"
-
-        });
-
-        row.appendChild(ftEl("span",
-            (i + 1) + ". " + t.label));
-
-        row.appendChild(ftEl("span", t.minutes + " min"));
-
-        ftLabelsEl.appendChild(row);
-
-    });
-
-}
-
-
-function ftFormatTime(ts) {
-
-    const d = new Date(ts);
-
-    if (isNaN(d.getTime())) return "";
-
-    let h = d.getHours();
-
-    const m = String(d.getMinutes()).padStart(2, "0");
-
-    const ap = h >= 12 ? "PM" : "AM";
-
-    h = h % 12 || 12;
-
-    return h + ":" + m + " " + ap;
-
-}
-
-
-function ftDeleteSession(indexFromEnd) {
-
-    /* indexFromEnd: 0 = newest. */
-
-    const list = ftLoadSessions();
-
-    const idx = list.length - 1 - indexFromEnd;
-
-    if (idx < 0 || idx >= list.length) return;
-
-    list.splice(idx, 1);
-
-    ftSaveSessions(list);
-
-    refresh();
-
-}
-
-
-let ftClearArmed = false;
-
-let ftClearTimer = null;
-
-
-function ftRenderList() {
-
-    ftListEl.innerHTML = "";
-
-    const sessions = list();
-
-    if (!sessions.length) {
-
-        ftEmptyHintEl.textContent =
-            "No focus sessions yet — hit FOCUS and get one in.";
-
-        ftEmptyHintEl.style.display = "";
-
-        return;
-
-    }
-
-    ftEmptyHintEl.style.display = "none";
-
-    let lastDay = null;
-
-    sessions.forEach((s, i) => {
-
-        const dayKey = ftDayKey(s.startedAt);
-
-        const d = new Date(s.startedAt);
-
-        const dayLabel = isNaN(d.getTime())
-            ? "Unknown date"
-            : d.toLocaleDateString([], {
-
-                weekday: "short",
-
-                month: "short",
-
-                day: "numeric"
-
-            });
-
-        if (dayKey !== lastDay) {
-
-            lastDay = dayKey;
-
-            ftListEl.appendChild(ftSectionTitle(dayLabel));
+            sel.appendChild(opt);
 
         }
 
-        const row = ftEl("div", null, {
+        sel.value = String(def);
 
-            display: "flex",
-
-            alignItems: "center",
-
-            gap: "8px",
-
-            fontSize: "12px",
-
-            color: "#9fdcff",
-
-            padding: "6px 0",
-
-            borderBottom: "1px solid rgba(80, 210, 255, 0.12)"
-
-        });
-
-        const badge = ftEl("span", s.completed ? "✓" : "◐", {
-
-            fontSize: "13px",
-
-            color: s.completed ? "#7dffa8" : "#ffd37d",
-
-            minWidth: "16px",
-
-            textAlign: "center"
-
-        });
-
-        const mid = ftEl("span", null, { flex: "1" });
-
-        mid.appendChild(ftEl("span",
-            ftFormatTime(s.startedAt) + "  " +
-            ((s.label || "untitled").trim() || "untitled"), {
-
-                display: "block"
-
-            }));
-
-        const right = ftEl("span", (s.minutes || 0) + " min", {
-
-            color: "rgba(159, 220, 255, 0.7)"
-
-        });
-
-        const del = ftEl("button", "×", {
-
-            background: "transparent",
-
-            border: "none",
-
-            color: "rgba(255, 120, 120, 0.65)",
-
-            fontSize: "15px",
-
-            cursor: "pointer",
-
-            padding: "2px 6px",
-
-            width: "auto"
-
-        });
-
-        del.setAttribute("aria-label", "Delete session");
-
-        del.addEventListener("click", () => ftDeleteSession(i));
-
-        row.appendChild(badge);
-
-        row.appendChild(mid);
-
-        row.appendChild(right);
-
-        row.appendChild(del);
-
-        ftListEl.appendChild(row);
-
-    });
-
-}
-
-
-function ftDisarmClear() {
-
-    ftClearArmed = false;
-
-    if (ftClearTimer) {
-
-        clearTimeout(ftClearTimer);
-
-        ftClearTimer = null;
-
-    }
-
-    refresh();
-
-}
-
-
-function ftClearButton() {
-
-    const btn = ftEl("button",
-        ftClearArmed ? "Tap again to wipe all history" : "Clear history", {
+        Object.assign(sel.style, {
 
             width: "100%",
 
-            marginTop: "14px",
+            boxSizing: "border-box",
 
-            padding: "9px",
+            padding: "10px 8px",
 
             borderRadius: "10px",
 
-            border: "1px solid " + (ftClearArmed
-                ? "rgba(255, 120, 120, 0.7)"
-                : "rgba(255, 120, 120, 0.3)"),
+            border: "1px solid rgba(80, 210, 255, 0.3)",
 
-            background: ftClearArmed
-                ? "rgba(255, 120, 120, 0.15)"
-                : "transparent",
+            background: "rgba(2, 8, 20, 0.8)",
 
-            color: "rgba(255, 150, 150, 0.9)",
+            color: "#eaf7ff",
 
-            fontSize: "12px",
+            fontSize: "14px",
+
+            outline: "none",
 
             cursor: "pointer"
 
         });
 
-    btn.addEventListener("click", () => {
+        const cap = document.createElement("div");
 
-        if (!ftClearArmed) {
+        cap.textContent = label;
 
-            ftClearArmed = true;
+        Object.assign(cap.style, {
 
-            refresh();
+            fontSize: "10px",
 
-            ftClearTimer = setTimeout(ftDisarmClear, 4000);
+            letterSpacing: "3px",
 
-            return;
+            color: "rgba(159, 220, 255, 0.5)",
 
-        }
+            textAlign: "center"
 
-        ftDisarmClear();
+        });
 
-        ftSaveSessions([]);
+        wrap.appendChild(sel);
 
-        refresh();
+        wrap.appendChild(cap);
 
-    });
+        focusSetupTimeRow.appendChild(wrap);
 
-    return btn;
-
-}
-
-
-/* ==================== refresh + page ==================== */
-
-
-function open() {
-
-    refresh();
-
-    ftShowPage(FT_PAGE);
-
-}
-
-
-function refresh() {
-
-    if (!ftStatsEl) return;
-
-    ftRenderStats();
-
-    ftRenderChart();
-
-    ftRenderLabels();
-
-    ftRenderList();
-
-    /* Rebuild the clear button here so its armed/disarmed
-       state is always visible. */
-
-    if (ftClearSlotEl) {
-
-        ftClearSlotEl.innerHTML = "";
-
-        ftClearSlotEl.appendChild(ftClearButton());
+        return sel;
 
     }
 
-}
+    focusSetupHourSel = focusMakeTimeSelect(23, "HRS", 0);
 
+    focusSetupMinSel = focusMakeTimeSelect(59, "MIN", 25);
 
-function ftBuildPage() {
+    focusSetupSecSel = focusMakeTimeSelect(59, "SEC", 0);
 
-    ftPageEl = document.createElement("div");
+    const btnRow = document.createElement("div");
 
-    ftPageEl.className = "aegis-page";
-
-    ftPageEl.dataset.page = FT_PAGE;
-
-    const back = document.createElement("button");
-
-    back.className = "aegis-page-back";
-
-    back.setAttribute("data-back-to", "more");
-
-    back.textContent = "← Back to More";
-
-    back.addEventListener("click", ftGoMore);
-
-    ftPageEl.appendChild(back);
-
-    const card = document.createElement("section");
-
-    card.className = "card";
-
-    const h2 = document.createElement("h2");
-
-    h2.textContent = "📊 Focus Tracker";
-
-    card.appendChild(h2);
-
-    /* Row: title + refresh button. */
-
-    const headRow = ftEl("div", null, {
+    Object.assign(btnRow.style, {
 
         display: "flex",
 
-        alignItems: "center",
-
-        justifyContent: "space-between",
-
-        marginBottom: "6px"
+        gap: "10px"
 
     });
 
-    const refresher = ftEl("button", "↻ Refresh", {
+    const startBtn = document.createElement("button");
 
-        width: "auto",
+    startBtn.textContent = "START";
 
-        padding: "6px 12px",
+    focusStyleActionBtn(startBtn, true);
 
-        borderRadius: "10px",
+    startBtn.addEventListener("click", focusSetupStart);
 
-        border: "1px solid rgba(80, 210, 255, 0.35)",
+    const cancelBtn = document.createElement("button");
 
-        background: "rgba(80, 210, 255, 0.08)",
+    cancelBtn.textContent = "CANCEL";
 
-        color: "#9fdcff",
+    focusStyleActionBtn(cancelBtn, false);
 
-        fontSize: "12px",
+    cancelBtn.addEventListener("click", focusCloseSetup);
 
-        cursor: "pointer"
+    btnRow.appendChild(startBtn);
 
-    });
+    btnRow.appendChild(cancelBtn);
 
-    refresher.addEventListener("click", refresh);
+    focusSetupWin.appendChild(handle);
 
-    headRow.appendChild(ftEl("span", "Your focus history", {
+    focusSetupWin.appendChild(labelTitle);
 
-        fontSize: "12px",
+    focusSetupWin.appendChild(focusSetupLabelInput);
 
-        color: "rgba(159, 220, 255, 0.6)"
+    focusSetupWin.appendChild(minTitle);
 
-    }));
+    focusSetupWin.appendChild(focusSetupTimeRow);
 
-    headRow.appendChild(refresher);
+    focusSetupWin.appendChild(btnRow);
 
-    card.appendChild(headRow);
+    document.body.appendChild(focusSetupWin);
 
-    ftStatsEl = document.createElement("div");
+    /* Enter starts, Escape closes. */
 
-    card.appendChild(ftStatsEl);
+    focusSetupWin.addEventListener("keydown", (event) => {
 
-    card.appendChild(ftSectionTitle("Last 7 days"));
+        if (event.key === "Enter") {
 
-    ftChartEl = document.createElement("div");
+            focusSetupStart();
 
-    card.appendChild(ftChartEl);
+        } else if (event.key === "Escape") {
 
-    card.appendChild(ftSectionTitle("Top labels this week"));
+            focusCloseSetup();
 
-    ftLabelsEl = document.createElement("div");
-
-    card.appendChild(ftLabelsEl);
-
-    card.appendChild(ftSectionTitle("Session history"));
-
-    ftEmptyHintEl = ftEl("div", "", {
-
-        fontSize: "12px",
-
-        color: "rgba(159, 220, 255, 0.6)",
-
-        padding: "4px 0"
+        }
 
     });
 
-    card.appendChild(ftEmptyHintEl);
+    /* Drag the window by its title bar. */
 
-    ftListEl = document.createElement("div");
+    let dragging = false;
 
-    card.appendChild(ftListEl);
+    let offX = 0;
 
-    /* The clear button re-renders on arm/disarm inside
-       refresh(), so it lives in its own slot. */
+    let offY = 0;
 
-    ftClearSlotEl = document.createElement("div");
+    handle.addEventListener("pointerdown", (event) => {
 
-    card.appendChild(ftClearSlotEl);
+        dragging = true;
 
-    ftPageEl.appendChild(card);
+        offX = event.clientX - focusSetupWin.offsetLeft;
 
-    document.body.appendChild(ftPageEl);
+        offY = event.clientY - focusSetupWin.offsetTop;
+
+        handle.style.cursor = "grabbing";
+
+        handle.setPointerCapture(event.pointerId);
+
+    });
+
+    handle.addEventListener("pointermove", (event) => {
+
+        if (!dragging) return;
+
+        focusSetupWin.style.left = `${event.clientX - offX}px`;
+
+        focusSetupWin.style.top = `${event.clientY - offY}px`;
+
+        focusSetupWin.style.transform = "none";
+
+    });
+
+    const endDrag = () => {
+
+        dragging = false;
+
+        handle.style.cursor = "grab";
+
+    };
+
+    handle.addEventListener("pointerup", endDrag);
+
+    handle.addEventListener("pointercancel", endDrag);
 
 }
 
 
-let ftUnsub = null;
+function focusBuildOverlay() {
+
+    focusOverlay = document.createElement("div");
+
+    Object.assign(focusOverlay.style, {
+
+        position: "fixed",
+
+        inset: "0",
+
+        zIndex: "9000",
+
+        display: "none",
+
+        alignItems: "center",
+
+        justifyContent: "center",
+
+        flexDirection: "column",
+
+        gap: "18px",
+
+        background: "rgba(2, 6, 16, 0.92)",
+
+        backdropFilter: "blur(8px)"
+
+    });
+
+    focusLabelEl = document.createElement("div");
+
+    Object.assign(focusLabelEl.style, {
+
+        color: "#9fdcff",
+
+        fontSize: "18px",
+
+        letterSpacing: "2px"
+
+    });
+
+    focusTimeEl = document.createElement("div");
+
+    Object.assign(focusTimeEl.style, {
+
+        color: "#eaf7ff",
+
+        fontSize: "96px",
+
+        fontWeight: "200",
+
+        fontVariantNumeric: "tabular-nums",
+
+        textShadow: "0 0 40px rgba(80, 210, 255, 0.6)"
+
+    });
+
+    focusTimeEl.textContent = "25:00";
+
+    const row = document.createElement("div");
+
+    row.style.display = "flex";
+
+    row.style.gap = "12px";
+
+    focusPauseBtn = document.createElement("button");
+
+    focusPauseBtn.textContent = "Pause";
+
+    const endBtn = document.createElement("button");
+
+    endBtn.textContent = "End";
+
+    [focusPauseBtn, endBtn].forEach((b) => {
+
+        Object.assign(b.style, {
+
+            padding: "10px 28px",
+
+            borderRadius: "999px",
+
+            border: "1px solid rgba(80, 210, 255, 0.4)",
+
+            background: "transparent",
+
+            color: "#9fdcff",
+
+            fontSize: "14px",
+
+            letterSpacing: "2px",
+
+            cursor: "pointer"
+
+        });
+
+    });
+
+    focusPauseBtn.addEventListener("click", () => {
+
+        if (focusPaused) {
+
+            focusResume();
+
+        } else {
+
+            focusPause();
+
+        }
+
+    });
+
+    endBtn.addEventListener("click", focusStop);
+
+    row.appendChild(focusPauseBtn);
+
+    row.appendChild(endBtn);
+
+    const hint = document.createElement("div");
+
+    hint.textContent = "FOCUS PROTOCOL ENGAGED";
+
+    Object.assign(hint.style, {
+
+        color: "rgba(159, 220, 255, 0.4)",
+
+        fontSize: "11px",
+
+        letterSpacing: "5px"
+
+    });
+
+    focusOverlay.appendChild(hint);
+
+    focusOverlay.appendChild(focusLabelEl);
+
+    focusOverlay.appendChild(focusTimeEl);
+
+    focusOverlay.appendChild(row);
+
+    document.body.appendChild(focusOverlay);
+
+}
 
 
-Aegis.register("focustracker", {
+Aegis.register("focus", {
 
-    version: "1.0.0",
-
-    name: "Focus Tracker",
+    version: "1.4.3",
 
 
-    getToday,
+    start: focusStart,
 
-    getWeek,
+    startSeconds,
 
-    getAllTime,
+    pause: focusPause,
 
-    getStreak,
+    resume: focusResume,
 
-    getDailyMinutes,
+    stop: focusStop,
 
-    getTopLabels,
+    getStatus: focusGetStatus,
 
-    list,
+    getSessions,
 
-    open,
-
-    refresh,
+    getWeekMinutes,
 
 
     init() {
 
-        ftBuildPage();
+        focusBuildButton();
 
-        ftAddMoreEntry();
+        focusBuildOverlay();
 
-        refresh();
+        focusBuildSetupWindow();
 
-        if (!ftHookNavigation()) {
+        focusHookResize();
 
-            let attempts = 0;
+        /* If OUR timer is stopped out from under us (e.g. the
+           timer widget's STOP button on our row), end the session
+           as incomplete instead of leaving it frozen. Other
+           timers' stops are none of our business. */
 
-            const retry = setInterval(() => {
+        focusTimerStopUnsub = Aegis.listen("timerStopped", (d) => {
 
-                attempts += 1;
+            if (focusActive && !focusFinishing &&
+                d && d.id === focusTimerId) {
 
-                if (ftHookNavigation() || attempts >= 20) {
+                focusFinish(false);
 
-                    clearInterval(retry);
+            }
 
-                }
+        });
 
-            }, 250);
-
-        }
-
-        try {
-
-            if (ftUnsub) ftUnsub();
-
-            ftUnsub = Aegis.listen("focusEnded", refresh);
-
-        } catch (error) {}
-
-        console.log("Focus Tracker v1.0.0 initialized.");
+        console.log("Focus initialized.");
 
     },
 
 
-    refresh() {
-
-        refresh();
-
-    },
+    refresh() {},
 
 
     shutdown() {
 
-        if (ftPageEl && ftPageEl.parentNode) {
+        if (focusTimerStopUnsub) {
 
-            ftPageEl.parentNode.removeChild(ftPageEl);
+            try { focusTimerStopUnsub(); } catch (error) {}
 
-        }
-
-        try {
-
-            const entry = document.querySelector(
-                '.aegis-more-list [data-goto-page="' +
-                FT_PAGE + '"]'
-            );
-
-            if (entry && entry.parentNode) {
-
-                entry.parentNode.removeChild(entry);
-
-            }
-
-        } catch (error) {}
-
-        if (ftUnsub) {
-
-            ftUnsub();
-
-            ftUnsub = null;
+            focusTimerStopUnsub = null;
 
         }
 
-        ftPageEl = null;
+        if (Aegis.modules.timer && focusTimerId) {
 
-        console.log("Focus Tracker shut down.");
+            Aegis.run("timer", "stop", focusTimerId);
+
+        }
+
+        focusTimerId = null;
+
+        if (focusBtn && focusBtn.parentNode) {
+
+            focusBtn.parentNode.removeChild(focusBtn);
+
+        }
+
+        if (focusOverlay && focusOverlay.parentNode) {
+
+            focusOverlay.parentNode.removeChild(focusOverlay);
+
+        }
+
+        if (focusSetupWin && focusSetupWin.parentNode) {
+
+            focusSetupWin.parentNode.removeChild(focusSetupWin);
+
+        }
+
+        focusSetupWin = null;
+
+        document.title = "AEGIS";
 
     },
 
@@ -1286,7 +1200,9 @@ Aegis.register("focustracker", {
 
             version: this.version,
 
-            sessions: ftLoadSessions().length
+            active: focusActive,
+
+            weekMinutes: getWeekMinutes()
 
         };
 

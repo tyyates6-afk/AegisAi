@@ -1,44 +1,66 @@
 /*======================================
 
-        AEGIS FOCUS TRACKER v0.1.0
+        AEGIS FOCUS TRACKER v1.0.0
 
-        STAND-IN module (unpolished). Reads the session log
-        that the Focus module already keeps in localStorage
-        ("aegisFocusSessions") and shows simple stats: today,
-        this week, all time, plus recent sessions.
+        Polished module. Reads the session log the Focus
+        module already keeps in localStorage
+        ("aegisFocusSessions") — {startedAt, minutes, label,
+        completed} — and turns it into a real tracker page:
+
+        - Stats header: this-week minutes, week sessions,
+          best day-streak, all-time minutes
+        - 7-day bar chart (CSS, no libs)
+        - Top labels by minutes
+        - Full session history grouped by day, with
+          per-session delete and two-tap clear-all
+
+        Backward compatible with the v0.1.0 stand-in and
+        the focus.js session shape. Same localStorage
+        key/shape; nothing to migrate.
 
         Page lives in the More hub, like Prayer Journal.
-        Refreshes whenever a focus session ends.
+        Refreshes automatically when a focus session ends.
+
+        Cache-busted filename (focus-tracker-1.0.0.js) so
+        phones with stale caches pick it up.
 
 ======================================*/
 
 
-const FOCUS_TRACKER_PAGE = "focustracker";
+const FT_PAGE = "focustracker";
 
-const FOCUS_SESSIONS_KEY = "aegisFocusSessions";
+const FT_STORE_KEY = "aegisFocusSessions";
 
 
 let ftPageEl = null;
 
 let ftStatsEl = null;
 
+let ftChartEl = null;
+
+let ftLabelsEl = null;
+
 let ftListEl = null;
 
+let ftEmptyHintEl = null;
 
-/* ---------- data ---------- */
+let ftClearSlotEl = null;
+
+
+/* ==================== data ==================== */
 
 
 function ftLoadSessions() {
 
     try {
 
-        const raw = localStorage.getItem(FOCUS_SESSIONS_KEY);
+        const raw = localStorage.getItem(FT_STORE_KEY);
 
         if (!raw) return [];
 
-        const list = JSON.parse(raw);
+        const ftListSessions = JSON.parse(raw);
 
-        return Array.isArray(list) ? list : [];
+        return Array.isArray(ftListSessions) ? ftListSessions : [];
 
     } catch (error) {
 
@@ -49,13 +71,33 @@ function ftLoadSessions() {
 }
 
 
+function ftSaveSessions(ftListSessions) {
+
+    try {
+
+        localStorage.setItem(FT_STORE_KEY, JSON.stringify(ftListSessions));
+
+    } catch (error) {}
+
+}
+
+
 function ftDayKey(d) {
 
     const dt = d instanceof Date ? d : new Date(d);
 
+    if (isNaN(dt.getTime())) return null;
+
     return dt.getFullYear() + "-" +
         String(dt.getMonth() + 1).padStart(2, "0") + "-" +
         String(dt.getDate()).padStart(2, "0");
+
+}
+
+
+function ftTodayKey() {
+
+    return ftDayKey(new Date());
 
 }
 
@@ -77,83 +119,221 @@ function ftWeekStart() {
 }
 
 
-function getToday() {
+function ftOnDay(s, key) {
 
-    const key = ftDayKey(new Date());
+    return !!(s && ftDayKey(s.startedAt) === key);
 
-    const list = ftLoadSessions().filter((s) => {
+}
 
-        return s && ftDayKey(s.startedAt) === key;
 
-    });
+function ftGetToday() {
+
+    const key = ftTodayKey();
+
+    const ftListSessions = ftLoadSessions().filter((s) => ftOnDay(s, key));
 
     return {
 
-        sessions: list.length,
+        sessions: ftListSessions.length,
 
-        minutes: list.reduce((t, s) => t + (s.minutes || 0), 0)
+        minutes: ftListSessions.reduce((t, s) => t + (s.minutes || 0), 0),
+
+        completed: ftListSessions.filter((s) => s.completed).length
 
     };
 
 }
 
 
-function getWeek() {
+function ftGetWeek() {
 
     const start = ftWeekStart().getTime();
 
-    const list = ftLoadSessions().filter((s) => {
+    const ftListSessions = ftLoadSessions().filter((s) => {
 
-        return s && new Date(s.startedAt).getTime() >= start;
+        const t = new Date(s && s.startedAt).getTime();
+
+        return !isNaN(t) && t >= start;
 
     });
 
     return {
 
-        sessions: list.length,
+        sessions: ftListSessions.length,
 
-        minutes: list.reduce((t, s) => t + (s.minutes || 0), 0),
+        minutes: ftListSessions.reduce((t, s) => t + (s.minutes || 0), 0),
 
-        completed: list.filter((s) => s.completed).length
+        completed: ftListSessions.filter((s) => s.completed).length
 
     };
 
 }
 
 
-function getAllTime() {
+function ftGetAllTime() {
 
-    const list = ftLoadSessions();
+    const ftListSessions = ftLoadSessions();
 
     return {
 
-        sessions: list.length,
+        sessions: ftListSessions.length,
 
-        minutes: list.reduce((t, s) => t + (s.minutes || 0), 0),
+        minutes: ftListSessions.reduce((t, s) => t + (s.minutes || 0), 0),
 
-        completed: list.filter((s) => s.completed).length
+        completed: ftListSessions.filter((s) => s.completed).length
 
     };
 
 }
 
 
-function list() {
+/* Consecutive calendar days (ending today, or yesterday if
+   today has no completed session yet) with at least one
+   completed focus session. */
+
+function ftGetStreak() {
+
+    const completedDays = {};
+
+    ftLoadSessions().forEach((s) => {
+
+        if (s && s.completed) {
+
+            const key = ftDayKey(s.startedAt);
+
+            if (key) completedDays[key] = true;
+
+        }
+
+    });
+
+    let streak = 0;
+
+    const d = new Date();
+
+    d.setHours(0, 0, 0, 0);
+
+    /* If today has nothing completed yet, the streak may
+       still be alive through yesterday. */
+
+    if (!completedDays[ftDayKey(d)]) {
+
+        d.setDate(d.getDate() - 1);
+
+    }
+
+    while (completedDays[ftDayKey(d)]) {
+
+        streak += 1;
+
+        d.setDate(d.getDate() - 1);
+
+    }
+
+    return streak;
+
+}
+
+
+/* Minutes per day for the last n days, oldest first.
+   [{key, label("Mon"), minutes}]. */
+
+function ftGetDailyMinutes(n) {
+
+    const days = [];
+
+    const now = new Date();
+
+    now.setHours(0, 0, 0, 0);
+
+    for (let i = n - 1; i >= 0; i--) {
+
+        const d = new Date(now);
+
+        d.setDate(d.getDate() - i);
+
+        days.push({
+
+            key: ftDayKey(d),
+
+            label: d.toLocaleDateString([], { weekday: "short" }),
+
+            minutes: 0
+
+        });
+
+    }
+
+    const byKey = {};
+
+    days.forEach((day) => { byKey[day.key] = day; });
+
+    ftLoadSessions().forEach((s) => {
+
+        const key = s && ftDayKey(s.startedAt);
+
+        if (key && byKey[key]) {
+
+            byKey[key].minutes += (s.minutes || 0);
+
+        }
+
+    });
+
+    return days;
+
+}
+
+
+/* Top labels by minutes within the current week,
+   [{label, minutes}]. */
+
+function ftGetTopLabels(limit) {
+
+    const start = ftWeekStart().getTime();
+
+    const byLabel = {};
+
+    ftLoadSessions().forEach((s) => {
+
+        if (!s) return;
+
+        const t = new Date(s.startedAt).getTime();
+
+        if (isNaN(t) || t < start) return;
+
+        const name = (s.label || "untitled").trim() || "untitled";
+
+        byLabel[name] = (byLabel[name] || 0) + (s.minutes || 0);
+
+    });
+
+    return Object.keys(byLabel)
+
+        .map((name) => ({ label: name, minutes: byLabel[name] }))
+
+        .sort((a, b) => b.minutes - a.minutes)
+
+        .slice(0, limit || 3);
+
+}
+
+
+function ftListSessions() {
 
     return ftLoadSessions().slice().reverse();
 
 }
 
 
-/* ---------- nav glue ---------- */
+/* ==================== nav glue ==================== */
 
 
 function ftNav() {
 
     try {
 
-        if (typeof Aegis !== "undefined" &&
-            Aegis.getModule) {
+        if (typeof Aegis !== "undefined" && Aegis.getModule) {
 
             const mod = Aegis.getModule("navigation");
 
@@ -186,8 +366,7 @@ function ftShowPage(name) {
 
     Array.prototype.forEach.call(pages, (page) => {
 
-        const on = page.dataset &&
-            page.dataset.page === name;
+        const on = page.dataset && page.dataset.page === name;
 
         if (page.classList) {
 
@@ -243,7 +422,7 @@ function ftAddMoreEntry() {
         if (!hubList) return false;
 
         if (hubList.querySelector(
-            '[data-goto-page="' + FOCUS_TRACKER_PAGE + '"]'
+            '[data-goto-page="' + FT_PAGE + '"]'
         )) {
 
             return true;
@@ -254,11 +433,11 @@ function ftAddMoreEntry() {
 
         item.className = "aegis-more-item";
 
-        item.setAttribute("data-goto-page", FOCUS_TRACKER_PAGE);
+        item.setAttribute("data-goto-page", FT_PAGE);
 
         item.textContent = "📊 Focus Tracker";
 
-        item.addEventListener("click", open);
+        item.addEventListener("click", ftOpen);
 
         const divider = hubList.querySelector("hr");
 
@@ -294,18 +473,33 @@ function ftStyle(el, styles) {
 }
 
 
-/* ---------- page ---------- */
+function ftEl(tag, text, styles) {
+
+    const el = document.createElement(tag);
+
+    if (text !== undefined && text !== null) {
+
+        el.textContent = text;
+
+    }
+
+    if (styles) ftStyle(el, styles);
+
+    return el;
+
+}
+
+
+/* ==================== page ==================== */
 
 
 function ftStat(label, value) {
 
-    const box = document.createElement("div");
-
-    ftStyle(box, {
+    const box = ftEl("div", null, {
 
         flex: "1",
 
-        minWidth: "80px",
+        minWidth: "72px",
 
         textAlign: "center",
 
@@ -319,13 +513,9 @@ function ftStat(label, value) {
 
     });
 
-    const v = document.createElement("div");
+    const v = ftEl("div", String(value), {
 
-    v.textContent = String(value);
-
-    ftStyle(v, {
-
-        fontSize: "20px",
+        fontSize: "22px",
 
         fontWeight: "bold",
 
@@ -333,11 +523,7 @@ function ftStat(label, value) {
 
     });
 
-    const l = document.createElement("div");
-
-    l.textContent = label;
-
-    ftStyle(l, {
+    const l = ftEl("div", label, {
 
         fontSize: "10px",
 
@@ -358,101 +544,314 @@ function ftStat(label, value) {
 }
 
 
-function open() {
+function ftSectionTitle(text) {
 
-    refresh();
+    return ftEl("h3", text, {
 
-    ftShowPage(FOCUS_TRACKER_PAGE);
+        fontSize: "13px",
+
+        color: "#9fdcff",
+
+        margin: "14px 0 8px"
+
+    });
 
 }
 
 
-function refresh() {
-
-    if (!ftStatsEl || !ftListEl) return;
-
-    const today = getToday();
-
-    const week = getWeek();
-
-    const all = getAllTime();
+function ftRenderStats() {
 
     ftStatsEl.innerHTML = "";
 
-    const row1 = document.createElement("div");
+    const week = ftGetWeek();
 
-    ftStyle(row1, {
+    const streak = ftGetStreak();
 
-        display: "flex",
+    const all = ftGetAllTime();
 
-        gap: "8px",
-
-        marginBottom: "8px"
-
-    });
-
-    row1.appendChild(ftStat("TODAY (MIN)", today.minutes));
-
-    row1.appendChild(ftStat("TODAY (SESSIONS)", today.sessions));
-
-    const row2 = document.createElement("div");
-
-    ftStyle(row2, {
+    const row = ftEl("div", null, {
 
         display: "flex",
 
         gap: "8px",
 
-        marginBottom: "12px"
+        marginBottom: "4px"
 
     });
 
-    row2.appendChild(ftStat("WEEK (MIN)", week.minutes));
+    row.appendChild(ftStat("WEEK (MIN)", week.minutes));
+
+    row.appendChild(ftStat("WEEK SESSIONS", week.sessions));
+
+    row.appendChild(ftStat("BEST STREAK", streak + "d"));
+
+    ftStatsEl.appendChild(row);
+
+    const row2 = ftEl("div", null, {
+
+        display: "flex",
+
+        gap: "8px",
+
+        marginBottom: "4px"
+
+    });
 
     row2.appendChild(ftStat("WEEK DONE", week.completed));
 
     row2.appendChild(ftStat("ALL-TIME (MIN)", all.minutes));
 
-    ftStatsEl.appendChild(row1);
+    row2.appendChild(ftStat("ALL SESSIONS", all.sessions));
 
     ftStatsEl.appendChild(row2);
 
-    ftListEl.innerHTML = "";
+}
 
-    const sessions = list().slice(0, 10);
 
-    if (!sessions.length) {
+function ftRenderChart() {
 
-        const empty = document.createElement("div");
+    ftChartEl.innerHTML = "";
 
-        empty.textContent =
-            "No focus sessions yet — hit FOCUS and get one in.";
+    const days = ftGetDailyMinutes(7);
 
-        ftStyle(empty, {
+    const max = Math.max.apply(null,
+        days.map((d) => d.minutes).concat([1]));
 
-            fontSize: "12px",
+    const wrap = ftEl("div", null, {
 
-            color: "rgba(159, 220, 255, 0.6)",
+        display: "flex",
 
-            padding: "8px 0"
+        alignItems: "flex-end",
+
+        gap: "6px",
+
+        height: "110px",
+
+        padding: "6px 2px 0"
+
+    });
+
+    days.forEach((day) => {
+
+        const col = ftEl("div", null, {
+
+            flex: "1",
+
+            display: "flex",
+
+            flexDirection: "column",
+
+            alignItems: "center",
+
+            justifyContent: "flex-end",
+
+            height: "100%"
 
         });
 
-        ftListEl.appendChild(empty);
+        const val = day.minutes > 0 ? String(day.minutes) : "";
+
+        const vlabel = ftEl("div", val, {
+
+            fontSize: "9px",
+
+            color: "rgba(159, 220, 255, 0.75)",
+
+            marginBottom: "2px",
+
+            minHeight: "11px"
+
+        });
+
+        const bar = ftEl("div", null, {
+
+            width: "70%",
+
+            borderRadius: "5px",
+
+            background: day.minutes > 0
+                ? "linear-gradient(180deg, #50d2ff, #1e7fb8)"
+                : "rgba(80, 210, 255, 0.10)",
+
+            height: Math.max(day.minutes / max * 76, 4) + "px"
+
+        });
+
+        const dlabel = ftEl("div", day.label, {
+
+            fontSize: "9px",
+
+            color: "rgba(159, 220, 255, 0.55)",
+
+            marginTop: "3px"
+
+        });
+
+        col.appendChild(vlabel);
+
+        col.appendChild(bar);
+
+        col.appendChild(dlabel);
+
+        wrap.appendChild(col);
+
+    });
+
+    ftChartEl.appendChild(wrap);
+
+}
+
+
+function ftRenderLabels() {
+
+    ftLabelsEl.innerHTML = "";
+
+    const tops = ftGetTopLabels(3);
+
+    if (!tops.length) {
+
+        ftLabelsEl.appendChild(ftEl("div",
+            "No labeled sessions this week yet.", {
+
+                fontSize: "12px",
+
+                color: "rgba(159, 220, 255, 0.6)",
+
+                padding: "2px 0 4px"
+
+            }));
 
         return;
 
     }
 
-    sessions.forEach((s) => {
+    tops.forEach((t, i) => {
 
-        const row = document.createElement("div");
-
-        ftStyle(row, {
+        const row = ftEl("div", null, {
 
             display: "flex",
 
             justifyContent: "space-between",
+
+            fontSize: "12px",
+
+            color: "#9fdcff",
+
+            padding: "5px 0",
+
+            borderBottom: "1px solid rgba(80, 210, 255, 0.12)"
+
+        });
+
+        row.appendChild(ftEl("span",
+            (i + 1) + ". " + t.label));
+
+        row.appendChild(ftEl("span", t.minutes + " min"));
+
+        ftLabelsEl.appendChild(row);
+
+    });
+
+}
+
+
+function ftFormatTime(ts) {
+
+    const d = new Date(ts);
+
+    if (isNaN(d.getTime())) return "";
+
+    let h = d.getHours();
+
+    const m = String(d.getMinutes()).padStart(2, "0");
+
+    const ap = h >= 12 ? "PM" : "AM";
+
+    h = h % 12 || 12;
+
+    return h + ":" + m + " " + ap;
+
+}
+
+
+function ftDeleteSession(indexFromEnd) {
+
+    /* indexFromEnd: 0 = newest. */
+
+    const ftListSessions = ftLoadSessions();
+
+    const idx = ftListSessions.length - 1 - indexFromEnd;
+
+    if (idx < 0 || idx >= ftListSessions.length) return;
+
+    ftListSessions.splice(idx, 1);
+
+    ftSaveSessions(ftListSessions);
+
+    ftRefresh();
+
+}
+
+
+let ftClearArmed = false;
+
+let ftClearTimer = null;
+
+
+function ftRenderList() {
+
+    ftListEl.innerHTML = "";
+
+    const sessions = ftListSessions();
+
+    if (!sessions.length) {
+
+        ftEmptyHintEl.textContent =
+            "No focus sessions yet — hit FOCUS and get one in.";
+
+        ftEmptyHintEl.style.display = "";
+
+        return;
+
+    }
+
+    ftEmptyHintEl.style.display = "none";
+
+    let lastDay = null;
+
+    sessions.forEach((s, i) => {
+
+        const dayKey = ftDayKey(s.startedAt);
+
+        const d = new Date(s.startedAt);
+
+        const dayLabel = isNaN(d.getTime())
+            ? "Unknown date"
+            : d.toLocaleDateString([], {
+
+                weekday: "short",
+
+                month: "short",
+
+                day: "numeric"
+
+            });
+
+        if (dayKey !== lastDay) {
+
+            lastDay = dayKey;
+
+            ftListEl.appendChild(ftSectionTitle(dayLabel));
+
+        }
+
+        const row = ftEl("div", null, {
+
+            display: "flex",
+
+            alignItems: "center",
+
+            gap: "8px",
 
             fontSize: "12px",
 
@@ -464,27 +863,178 @@ function refresh() {
 
         });
 
-        const left = document.createElement("span");
+        const badge = ftEl("span", s.completed ? "✓" : "◐", {
 
-        const d = new Date(s.startedAt);
+            fontSize: "13px",
 
-        left.textContent = (s.completed ? "✓ " : "◐ ") +
-            d.toLocaleDateString([], {
-                month: "short",
-                day: "numeric"
-            }) + " — " + (s.label || "untitled");
+            color: s.completed ? "#7dffa8" : "#ffd37d",
 
-        const right = document.createElement("span");
+            minWidth: "16px",
 
-        right.textContent = (s.minutes || 0) + " min";
+            textAlign: "center"
 
-        row.appendChild(left);
+        });
+
+        const mid = ftEl("span", null, { flex: "1" });
+
+        mid.appendChild(ftEl("span",
+            ftFormatTime(s.startedAt) + "  " +
+            ((s.label || "untitled").trim() || "untitled"), {
+
+                display: "block"
+
+            }));
+
+        const right = ftEl("span", (s.minutes || 0) + " min", {
+
+            color: "rgba(159, 220, 255, 0.7)"
+
+        });
+
+        const del = ftEl("button", "×", {
+
+            background: "transparent",
+
+            border: "none",
+
+            color: "rgba(255, 120, 120, 0.65)",
+
+            fontSize: "15px",
+
+            cursor: "pointer",
+
+            padding: "2px 6px",
+
+            width: "auto"
+
+        });
+
+        del.setAttribute("aria-label", "Delete session");
+
+        del.addEventListener("click", () => ftDeleteSession(i));
+
+        row.appendChild(badge);
+
+        row.appendChild(mid);
 
         row.appendChild(right);
+
+        row.appendChild(del);
 
         ftListEl.appendChild(row);
 
     });
+
+}
+
+
+function ftDisarmClear() {
+
+    ftClearArmed = false;
+
+    if (ftClearTimer) {
+
+        clearTimeout(ftClearTimer);
+
+        ftClearTimer = null;
+
+    }
+
+    ftRefresh();
+
+}
+
+
+function ftClearButton() {
+
+    const btn = ftEl("button",
+        ftClearArmed ? "Tap again to wipe all history" : "Clear history", {
+
+            width: "100%",
+
+            marginTop: "14px",
+
+            padding: "9px",
+
+            borderRadius: "10px",
+
+            border: "1px solid " + (ftClearArmed
+                ? "rgba(255, 120, 120, 0.7)"
+                : "rgba(255, 120, 120, 0.3)"),
+
+            background: ftClearArmed
+                ? "rgba(255, 120, 120, 0.15)"
+                : "transparent",
+
+            color: "rgba(255, 150, 150, 0.9)",
+
+            fontSize: "12px",
+
+            cursor: "pointer"
+
+        });
+
+    btn.addEventListener("click", () => {
+
+        if (!ftClearArmed) {
+
+            ftClearArmed = true;
+
+            ftRefresh();
+
+            ftClearTimer = setTimeout(ftDisarmClear, 4000);
+
+            return;
+
+        }
+
+        ftDisarmClear();
+
+        ftSaveSessions([]);
+
+        ftRefresh();
+
+    });
+
+    return btn;
+
+}
+
+
+/* ==================== ftRefresh + page ==================== */
+
+
+function ftOpen() {
+
+    ftRefresh();
+
+    ftShowPage(FT_PAGE);
+
+}
+
+
+function ftRefresh() {
+
+    if (!ftStatsEl) return;
+
+    ftRenderStats();
+
+    ftRenderChart();
+
+    ftRenderLabels();
+
+    ftRenderList();
+
+    /* Rebuild the clear button here so its armed/disarmed
+       state is always visible. */
+
+    if (ftClearSlotEl) {
+
+        ftClearSlotEl.innerHTML = "";
+
+        ftClearSlotEl.appendChild(ftClearButton());
+
+    }
 
 }
 
@@ -495,7 +1045,7 @@ function ftBuildPage() {
 
     ftPageEl.className = "aegis-page";
 
-    ftPageEl.dataset.page = FOCUS_TRACKER_PAGE;
+    ftPageEl.dataset.page = FT_PAGE;
 
     const back = document.createElement("button");
 
@@ -519,29 +1069,94 @@ function ftBuildPage() {
 
     card.appendChild(h2);
 
+    /* Row: title + ftRefresh button. */
+
+    const headRow = ftEl("div", null, {
+
+        display: "flex",
+
+        alignItems: "center",
+
+        justifyContent: "space-between",
+
+        marginBottom: "6px"
+
+    });
+
+    const refresher = ftEl("button", "↻ Refresh", {
+
+        width: "auto",
+
+        padding: "6px 12px",
+
+        borderRadius: "10px",
+
+        border: "1px solid rgba(80, 210, 255, 0.35)",
+
+        background: "rgba(80, 210, 255, 0.08)",
+
+        color: "#9fdcff",
+
+        fontSize: "12px",
+
+        cursor: "pointer"
+
+    });
+
+    refresher.addEventListener("click", ftRefresh);
+
+    headRow.appendChild(ftEl("span", "Your focus history", {
+
+        fontSize: "12px",
+
+        color: "rgba(159, 220, 255, 0.6)"
+
+    }));
+
+    headRow.appendChild(refresher);
+
+    card.appendChild(headRow);
+
     ftStatsEl = document.createElement("div");
 
     card.appendChild(ftStatsEl);
 
-    const h3 = document.createElement("h3");
+    card.appendChild(ftSectionTitle("Last 7 days"));
 
-    h3.textContent = "Recent sessions";
+    ftChartEl = document.createElement("div");
 
-    ftStyle(h3, {
+    card.appendChild(ftChartEl);
 
-        fontSize: "13px",
+    card.appendChild(ftSectionTitle("Top labels this week"));
 
-        color: "#9fdcff",
+    ftLabelsEl = document.createElement("div");
 
-        margin: "4px 0 6px"
+    card.appendChild(ftLabelsEl);
+
+    card.appendChild(ftSectionTitle("Session history"));
+
+    ftEmptyHintEl = ftEl("div", "", {
+
+        fontSize: "12px",
+
+        color: "rgba(159, 220, 255, 0.6)",
+
+        padding: "4px 0"
 
     });
 
-    card.appendChild(h3);
+    card.appendChild(ftEmptyHintEl);
 
     ftListEl = document.createElement("div");
 
     card.appendChild(ftListEl);
+
+    /* The clear button re-renders on arm/disarm inside
+       ftRefresh(), so it lives in its own slot. */
+
+    ftClearSlotEl = document.createElement("div");
+
+    card.appendChild(ftClearSlotEl);
 
     ftPageEl.appendChild(card);
 
@@ -555,22 +1170,28 @@ let ftUnsub = null;
 
 Aegis.register("focustracker", {
 
-    version: "0.1.0",
+    version: "1.0.0",
 
-    name: "Focus Tracker (stand-in)",
+    name: "Focus Tracker",
 
 
-    getToday,
+    getToday: ftGetToday,
 
-    getWeek,
+    getWeek: ftGetWeek,
 
-    getAllTime,
+    getAllTime: ftGetAllTime,
 
-    list,
+    getStreak: ftGetStreak,
 
-    open,
+    getDailyMinutes: ftGetDailyMinutes,
 
-    refresh,
+    getTopLabels: ftGetTopLabels,
+
+    list: ftListSessions,
+
+    open: ftOpen,
+
+    refresh: ftRefresh,
 
 
     init() {
@@ -579,7 +1200,7 @@ Aegis.register("focustracker", {
 
         ftAddMoreEntry();
 
-        refresh();
+        ftRefresh();
 
         if (!ftHookNavigation()) {
 
@@ -603,18 +1224,18 @@ Aegis.register("focustracker", {
 
             if (ftUnsub) ftUnsub();
 
-            ftUnsub = Aegis.listen("focusEnded", refresh);
+            ftUnsub = Aegis.listen("focusEnded", ftRefresh);
 
         } catch (error) {}
 
-        console.log("Focus Tracker (stand-in) initialized.");
+        console.log("Focus Tracker v1.0.0 initialized.");
 
     },
 
 
-    refresh() {
+    ftRefresh() {
 
-        refresh();
+        ftRefresh();
 
     },
 
@@ -631,7 +1252,7 @@ Aegis.register("focustracker", {
 
             const entry = document.querySelector(
                 '.aegis-more-list [data-goto-page="' +
-                FOCUS_TRACKER_PAGE + '"]'
+                FT_PAGE + '"]'
             );
 
             if (entry && entry.parentNode) {
@@ -652,7 +1273,7 @@ Aegis.register("focustracker", {
 
         ftPageEl = null;
 
-        console.log("Focus Tracker (stand-in) shut down.");
+        console.log("Focus Tracker shut down.");
 
     },
 

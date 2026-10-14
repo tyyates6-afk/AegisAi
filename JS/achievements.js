@@ -37,9 +37,9 @@ function achRead(key) {
 
         if (!raw) return [];
 
-        const list = JSON.parse(raw);
+        const achList = JSON.parse(raw);
 
-        return Array.isArray(list) ? list : [];
+        return Array.isArray(achList) ? achList : [];
 
     } catch (error) {
 
@@ -58,9 +58,9 @@ function achUnlocked() {
 
         if (!raw) return [];
 
-        const list = JSON.parse(raw);
+        const achList = JSON.parse(raw);
 
-        return Array.isArray(list) ? list : [];
+        return Array.isArray(achList) ? achList : [];
 
     } catch (error) {
 
@@ -272,7 +272,7 @@ const ACH_DEFS = [
 ];
 
 
-function check() {
+function achCheck() {
 
     const stats = achStats();
 
@@ -331,7 +331,7 @@ function check() {
 
         });
 
-        refresh();
+        achRefresh();
 
     }
 
@@ -340,7 +340,7 @@ function check() {
 }
 
 
-function list() {
+function achList() {
 
     const unlocked = achUnlocked();
 
@@ -474,7 +474,7 @@ function achAddMoreEntry() {
 
         item.textContent = "🏆 Achievements";
 
-        item.addEventListener("click", open);
+        item.addEventListener("click", achOpen);
 
         const divider = hubList.querySelector("hr");
 
@@ -513,22 +513,22 @@ function achStyle(el, styles) {
 /* ---------- page ---------- */
 
 
-function open() {
+function achOpen() {
 
-    refresh();
+    achRefresh();
 
     achShowPage(ACH_PAGE);
 
 }
 
 
-function refresh() {
+function achRefresh() {
 
     if (!achListEl) return;
 
     achListEl.innerHTML = "";
 
-    const items = list();
+    const items = achList();
 
     const unlocked = items.filter((i) => i.unlocked);
 
@@ -671,13 +671,13 @@ Aegis.register("achievements", {
     name: "Achievements (stand-in)",
 
 
-    check,
+    check: achCheck,
 
-    list,
+    list: achList,
 
-    open,
+    open: achOpen,
 
-    refresh,
+    refresh: achRefresh,
 
 
     init() {
@@ -686,7 +686,7 @@ Aegis.register("achievements", {
 
         achAddMoreEntry();
 
-        refresh();
+        achRefresh();
 
         if (!achHookNavigation()) {
 
@@ -711,22 +711,22 @@ Aegis.register("achievements", {
 
             try {
 
-                achUnsubs.push(Aegis.listen(evt, check));
+                achUnsubs.push(Aegis.listen(evt, achCheck));
 
             } catch (error) {}
 
         });
 
-        check();
+        achCheck();
 
         console.log("Achievements (stand-in) initialized.");
 
     },
 
 
-    refresh() {
+    achRefresh() {
 
-        refresh();
+        achRefresh();
 
     },
 

@@ -9,8 +9,8 @@
             "focus 25"      start a 25-min focus session
             "stop focus"    end the focus session
             "timer 5"       start a 5-min timer
-            "go to planner" open the Planner page
-            "go to prayer"  open Prayer Journal
+            "go to planner" vcOpen the Planner page
+            "go to prayer"  vcOpen Prayer Journal
             ...etc.
 
         Tap LISTEN, speak, watch it work. Chrome/Edge only
@@ -477,7 +477,7 @@ function vcAddMoreEntry() {
 
         item.textContent = "🎤 Voice Commands";
 
-        item.addEventListener("click", open);
+        item.addEventListener("click", vcOpen);
 
         const divider = hubList.querySelector("hr");
 
@@ -516,14 +516,14 @@ function vcStyle(el, styles) {
 /* ---------- page ---------- */
 
 
-function open() {
+function vcOpen() {
 
     vcShowPage(VOICECMD_PAGE);
 
 }
 
 
-function refresh() {}
+function vcRefresh() {}
 
 
 function vcBuildPage() {
@@ -630,9 +630,9 @@ Aegis.register("voicecmd", {
 
     supported: vcSupported,
 
-    open,
+    open: vcOpen,
 
-    refresh,
+    refresh: vcRefresh,
 
 
     init() {
@@ -664,9 +664,9 @@ Aegis.register("voicecmd", {
     },
 
 
-    refresh() {
+    vcRefresh() {
 
-        refresh();
+        vcRefresh();
 
     },
 

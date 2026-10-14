@@ -261,7 +261,7 @@ function setVolume(v) {
 }
 
 
-function getStatus() {
+function fsGetStatus() {
 
     return {
 
@@ -389,7 +389,7 @@ function fsAddMoreEntry() {
 
         item.textContent = "🔊 Focus Sounds";
 
-        item.addEventListener("click", open);
+        item.addEventListener("click", fsOpen);
 
         const divider = hubList.querySelector("hr");
 
@@ -428,14 +428,14 @@ function fsStyle(el, styles) {
 /* ---------- page ---------- */
 
 
-function open() {
+function fsOpen() {
 
     fsShowPage(FS_PAGE);
 
 }
 
 
-function refresh() {
+function fsRefresh() {
 
     fsPaint();
 
@@ -633,11 +633,11 @@ Aegis.register("focussounds", {
 
     setVolume,
 
-    getStatus,
+    getStatus: fsGetStatus,
 
-    open,
+    open: fsOpen,
 
-    refresh,
+    refresh: fsRefresh,
 
 
     init() {
@@ -693,9 +693,9 @@ Aegis.register("focussounds", {
     },
 
 
-    refresh() {
+    fsRefresh() {
 
-        refresh();
+        fsRefresh();
 
     },
 

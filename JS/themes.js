@@ -147,7 +147,7 @@ function apply(id) {
 
     } catch (error) {}
 
-    refresh();
+    thRefresh();
 
     try {
 
@@ -167,7 +167,7 @@ function current() {
 }
 
 
-function list() {
+function thList() {
 
     return THEME_DEFS.map((d) => d.id);
 
@@ -287,7 +287,7 @@ function thAddMoreEntry() {
 
         item.textContent = "🎨 Dashboard Themes";
 
-        item.addEventListener("click", open);
+        item.addEventListener("click", thOpen);
 
         const divider = hubList.querySelector("hr");
 
@@ -326,14 +326,14 @@ function thStyle(el, styles) {
 /* ---------- page ---------- */
 
 
-function open() {
+function thOpen() {
 
     thShowPage(THEMES_PAGE);
 
 }
 
 
-function refresh() {
+function thRefresh() {
 
     if (!thGridEl) return;
 
@@ -483,11 +483,11 @@ Aegis.register("themes", {
 
     current,
 
-    list,
+    list: thList,
 
-    open,
+    open: thOpen,
 
-    refresh,
+    refresh: thRefresh,
 
 
     init() {
@@ -498,7 +498,7 @@ Aegis.register("themes", {
 
         thAddMoreEntry();
 
-        refresh();
+        thRefresh();
 
         /* Re-apply the saved theme at boot. */
 
@@ -532,9 +532,9 @@ Aegis.register("themes", {
     },
 
 
-    refresh() {
+    thRefresh() {
 
-        refresh();
+        thRefresh();
 
     },
 

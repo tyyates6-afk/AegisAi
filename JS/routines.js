@@ -13,9 +13,9 @@
 
     USE:
     - Everything is automatic once loaded. Defaults: asleep
-      22:00–07:00, checked every minute. Waking up comes with
+      23:00–07:00, checked every minute. Waking up comes with
       a little happy stretch.
-    - Aegis.run("routines", "setSleepWindow", 22, 7)
+    - Aegis.run("routines", "setSleepWindow", 23, 7)
     - Aegis.run("routines", "setEnabled", false)
     - Aegis.run("routines", "sleepNow")
     - Aegis.run("routines", "wakeNow")
@@ -39,7 +39,7 @@ const ROUTINES_CHECK_MS = 60 * 1000;
 
 let routinesEnabled = true;
 
-let routinesSleepStart = 22;
+let routinesSleepStart = 23;
 
 let routinesSleepEnd = 7;
 
@@ -218,7 +218,7 @@ function routinesWake() {
 }
 
 
-function check() {
+function rtCheck() {
 
     if (!routinesEnabled) return;
 
@@ -227,7 +227,7 @@ function check() {
     if (routinesFocusActive()) return;
 
     /* The pet might not exist yet (init order) — the next
-       minute's check will catch him once he's built. */
+       minute's rtCheck will catch him once he's built. */
 
     if (!routinesPetReady()) return;
 
@@ -263,7 +263,7 @@ function setSleepWindow(startHour, endHour) {
 
     routinesSave();
 
-    check();
+    rtCheck();
 
     return true;
 
@@ -284,7 +284,7 @@ function setEnabled(on) {
 
     } else {
 
-        check();
+        rtCheck();
 
     }
 
@@ -307,7 +307,7 @@ function wakeNow() {
 }
 
 
-function getStatus() {
+function rtGetStatus() {
 
     return {
 
@@ -331,9 +331,9 @@ Aegis.register("routines", {
     version: "1.0.0",
 
 
-    check,
+    check: rtCheck,
 
-    getStatus,
+    getStatus: rtGetStatus,
 
     setSleepWindow,
 
@@ -348,9 +348,9 @@ Aegis.register("routines", {
 
         routinesLoad();
 
-        check();
+        rtCheck();
 
-        routinesTimer = setInterval(check, ROUTINES_CHECK_MS);
+        routinesTimer = setInterval(rtCheck, ROUTINES_CHECK_MS);
 
         console.log("Routines initialized.");
 
