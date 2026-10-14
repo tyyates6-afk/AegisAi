@@ -513,6 +513,17 @@ function fsBuildPage() {
 
     fsPageEl.dataset.page = FS_PAGE;
 
+    /* Constrain the page to the dashboard's centered column
+       instead of stretching full-bleed edge to edge. */
+
+    fsStyle(fsPageEl, {
+
+        width: "min(1200px, 92%)",
+
+        margin: "0 auto"
+
+    });
+
     const back = document.createElement("button");
 
     back.className = "aegis-page-back";

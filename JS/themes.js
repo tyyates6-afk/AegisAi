@@ -421,6 +421,17 @@ function thBuildPage() {
 
     thPageEl.dataset.page = THEMES_PAGE;
 
+    /* Constrain the page to the dashboard's centered column
+       instead of stretching full-bleed edge to edge. */
+
+    thStyle(thPageEl, {
+
+        width: "min(1200px, 92%)",
+
+        margin: "0 auto"
+
+    });
+
     const back = document.createElement("button");
 
     back.className = "aegis-page-back";

@@ -594,6 +594,17 @@ function prayerBuildPage() {
 
     prayerPageEl.dataset.page = PRAYER_PAGE_NAME;
 
+    /* Constrain the page to the dashboard's centered column
+       instead of stretching full-bleed edge to edge. */
+
+    prayerStyle(prayerPageEl, {
+
+        width: "min(1200px, 92%)",
+
+        margin: "0 auto"
+
+    });
+
     const back = document.createElement("button");
 
     back.className = "aegis-page-back";
