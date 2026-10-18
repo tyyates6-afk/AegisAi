@@ -1,17 +1,38 @@
 /*======================================
 
-        AEGIS DASHBOARD THEMES v0.1.0
+        AEGIS DASHBOARD THEMES v1.0.0
 
-        STAND-IN module (unpolished). AEGIS colors are
-        hardcoded in a lot of places, so real per-widget
-        theming is a bigger project. This stand-in applies
-        a full-screen color filter per preset — crude, but
-        it works everywhere instantly.
+        Real theming for the AEGIS dashboard.
+        The old v0.1.0 was a stand-in that slapped a
+        full-screen CSS filter over everything (hue-rotate
+        etc.) — crude, and it tinted photos and sprites too.
 
-        Choice persists in localStorage ("aegisTheme") and
-        is re-applied at boot.
+        v1.0.0 recolors the dashboard's actual palette:
 
-        Page lives in the More hub, like Prayer Journal.
+        1. Redefines the :root custom properties
+           (--primary, --secondary, --border).
+        2. Injects a <style id="aegis-theme-override"> sheet,
+           last in <head>, carrying rewritten copies of every
+           stylesheet rule that used the old accent colors.
+        3. Sweeps JS-built inline styles (focus, timer, prayer
+           and the other modules hardcode the cyan inline) and
+           keeps a MutationObserver running so later re-renders
+           get re-themed without touching those modules.
+
+        Presets: Default, Sunset, Forest, Royal, Mono.
+        Plus a color-wheel Custom theme — pick any color and
+        the whole accent ramp (accent / light / soft) is
+        derived from it.
+
+        Semantic colors are NEVER remapped: danger reds,
+        success green and the pet's hungry amber stay fixed
+        across every theme.
+
+        Choice persists in localStorage ("aegisTheme"); a custom
+        accent persists under "aegisThemeCustom".
+
+        Drop-in: one script tag AFTER core.js (ideally last).
+        File: themes-1.0.0.js (cache-busted name).
 
 ======================================*/
 
@@ -20,77 +41,313 @@ const THEMES_PAGE = "themes";
 
 const THEMES_STORE_KEY = "aegisTheme";
 
+const THEMES_CUSTOM_KEY = "aegisThemeCustom";
+
+const THEMES_STYLE_ID = "aegis-theme-override";
+
+const THEMES_SKIP_ATTR = "data-th-skip";
+
+const THEMES_ORIG_ATTR = "data-th-orig";
+
+
+/* ---------- pure color utils (no DOM — unit-testable) ---------- */
+
+
+function thHexToRgb(hex) {
+
+    const h = hex.replace("#", "");
+
+    const r = parseInt(h.slice(0, 2), 16);
+
+    const g = parseInt(h.slice(2, 4), 16);
+
+    const b = parseInt(h.slice(4, 6), 16);
+
+    return r + "," + g + "," + b;
+
+}
+
+
+function thRgbToHex(r, g, b) {
+
+    const c = (n) => {
+
+        const s = Math.max(0, Math.min(255, Math.round(n))).toString(16);
+
+        return s.length === 1 ? "0" + s : s;
+
+    };
+
+    return "#" + c(r) + c(g) + c(b);
+
+}
+
+
+function thMixHex(hexA, hexB, t) {
+
+    const pa = hexA.replace("#", "");
+
+    const pb = hexB.replace("#", "");
+
+    const r = parseInt(pa.slice(0, 2), 16) * (1 - t) +
+        parseInt(pb.slice(0, 2), 16) * t;
+
+    const g = parseInt(pa.slice(2, 4), 16) * (1 - t) +
+        parseInt(pb.slice(2, 4), 16) * t;
+
+    const b = parseInt(pa.slice(4, 6), 16) * (1 - t) +
+        parseInt(pb.slice(4, 6), 16) * t;
+
+    return thRgbToHex(r, g, b);
+
+}
+
+
+function thValidHex(hex) {
+
+    return typeof hex === "string" && /^#[0-9a-fA-F]{6}$/.test(hex);
+
+}
+
+
+/* Build the full accent ramp from one base color:
+   accent (the base), light (accent-tinted text),
+   soft (palest tint). */
+
+function thRampFor(accentHex) {
+
+    const accent = accentHex.toLowerCase();
+
+    const light = thMixHex(accent, "#ffffff", 0.55);
+
+    const soft = thMixHex(accent, "#ffffff", 0.82);
+
+    return {
+
+        accent: accent,
+
+        accentRgb: thHexToRgb(accent),
+
+        light: light,
+
+        lightRgb: thHexToRgb(light),
+
+        soft: soft,
+
+        softRgb: thHexToRgb(soft)
+
+    };
+
+}
+
+
+/* ---------- theme definitions ---------- */
+
 
 const THEME_DEFS = [
 
-    {
+    { id: "default", name: "Default", accent: "#00d9ff" },
 
-        id: "default",
+    { id: "sunset", name: "Sunset", accent: "#ff9a5c" },
 
-        name: "Default",
+    { id: "forest", name: "Forest", accent: "#5cff8a" },
 
-        swatch: "#00d9ff",
+    { id: "royal", name: "Royal", accent: "#b45cff" },
 
-        filter: ""
+    { id: "mono", name: "Mono", accent: "#9aa7b5" },
 
-    },
+    { id: "custom", name: "Custom", accent: null }
 
-    {
+];
 
-        id: "sunset",
 
-        name: "Sunset",
+/* Source colors the dashboard actually uses, grouped by role.
+   Triplets cover rgb()/rgba() serializations (stylesheets and
+   inline styles); hexes cover as-authored stylesheet values.
+   Semantic colors (danger red, success green, hungry amber)
+   are deliberately absent — they never remap. */
 
-        swatch: "#ff9a5c",
+const TH_TRIPLETS = [
 
-        filter: "hue-rotate(-35deg) saturate(1.25)"
+    /* accent role */
 
-    },
+    [0, 217, 255, "accent"],
 
-    {
+    [80, 210, 255, "accent"],
 
-        id: "forest",
+    [0, 170, 255, "accent"],
 
-        name: "Forest",
+    [0, 180, 255, "accent"],
 
-        swatch: "#5cff8a",
+    /* light role (accent-tinted text) */
 
-        filter: "hue-rotate(85deg) saturate(1.1)"
+    [102, 234, 255, "light"],
 
-    },
+    [102, 204, 255, "light"],
 
-    {
+    [125, 211, 252, "light"],
 
-        id: "royal",
+    [126, 230, 255, "light"],
 
-        name: "Royal",
+    [51, 195, 255, "light"],
 
-        swatch: "#b45cff",
+    [159, 220, 255, "light"],
 
-        filter: "hue-rotate(140deg) saturate(1.15)"
+    /* soft role (palest tints) */
 
-    },
+    [174, 241, 255, "soft"],
 
-    {
+    [234, 247, 255, "soft"]
 
-        id: "mono",
+];
 
-        name: "Mono",
 
-        swatch: "#9aa7b5",
+const TH_HEXES = [
 
-        filter: "grayscale(0.75)"
+    ["#00d9ff", "accent"],
+
+    ["#50d2ff", "accent"],
+
+    ["#66eaff", "light"],
+
+    ["#66ccff", "light"],
+
+    ["#7dd3fc", "light"],
+
+    ["#7ee6ff", "light"],
+
+    ["#33c3ff", "light"],
+
+    ["#9fdcff", "light"],
+
+    ["#aef1ff", "soft"],
+
+    ["#eaf7ff", "soft"]
+
+];
+
+
+const TH_TRIPLET_RES = TH_TRIPLETS.map((t) => ({
+
+    role: t[3],
+
+    re: new RegExp(
+
+        "rgba?\\(\\s*" + t[0] + "\\s*,\\s*" + t[1] + "\\s*,\\s*" + t[2] +
+        "\\s*(?:,\\s*([\\d.]+)\\s*)?\\)",
+
+        "gi"
+
+    )
+
+}));
+
+
+const TH_HEX_RES = TH_HEXES.map((h) => ({
+
+    role: h[1],
+
+    re: new RegExp(h[0], "gi")
+
+}));
+
+
+function thRampColor(ramp, role) {
+
+    if (role === "light") return { hex: ramp.light, rgb: ramp.lightRgb };
+
+    if (role === "soft") return { hex: ramp.soft, rgb: ramp.softRgb };
+
+    return { hex: ramp.accent, rgb: ramp.accentRgb };
+
+}
+
+
+/* Pure string rewrite: swap every known source color for the
+   theme ramp's equivalent, preserving alpha. */
+
+function thRewriteColors(text, ramp) {
+
+    if (!text || typeof text !== "string") return text;
+
+    let out = text;
+
+    for (let i = 0; i < TH_TRIPLET_RES.length; i++) {
+
+        const item = TH_TRIPLET_RES[i];
+
+        item.re.lastIndex = 0;
+
+        const rgb = thRampColor(ramp, item.role).rgb;
+
+        out = out.replace(item.re, (m, a) =>
+
+            a === undefined ? "rgb(" + rgb + ")" : "rgba(" + rgb + "," + a + ")"
+
+        );
 
     }
 
-];
+    for (let i = 0; i < TH_HEX_RES.length; i++) {
+
+        const item = TH_HEX_RES[i];
+
+        item.re.lastIndex = 0;
+
+        out = out.replace(item.re, thRampColor(ramp, item.role).hex);
+
+    }
+
+    return out;
+
+}
+
+
+function thHasNeedle(text) {
+
+    if (!text || typeof text !== "string") return false;
+
+    for (let i = 0; i < TH_TRIPLETS.length; i++) {
+
+        const t = TH_TRIPLETS[i];
+
+        if (text.indexOf(t[0] + "," + t[1] + "," + t[2]) >= 0) return true;
+
+        if (text.indexOf(t[0] + ", " + t[1] + ", " + t[2]) >= 0) return true;
+
+    }
+
+    const low = text.toLowerCase();
+
+    for (let i = 0; i < TH_HEXES.length; i++) {
+
+        if (low.indexOf(TH_HEXES[i][0]) >= 0) return true;
+
+    }
+
+    return false;
+
+}
+
+
+/* ---------- state ---------- */
 
 
 let thPageEl = null;
 
 let thGridEl = null;
 
+let thCustomInput = null;
+
+let thCustomHex = null;
+
 let thTheme = "default";
+
+let thCustomAccent = "#00d9ff";
+
+let thObserver = null;
+
+let thSweepTimer = 0;
 
 
 /* ---------- data ---------- */
@@ -104,7 +361,13 @@ function thLoad() {
 
         if (raw) thTheme = raw;
 
+        const cust = localStorage.getItem(THEMES_CUSTOM_KEY);
+
+        if (thValidHex(cust)) thCustomAccent = cust.toLowerCase();
+
     } catch (error) {}
+
+    if (!thDef(thTheme)) thTheme = "default";
 
 }
 
@@ -120,34 +383,310 @@ function thSave() {
 }
 
 
-function thDef(id) {
+function thSaveCustom() {
 
-    for (let i = 0; i < THEME_DEFS.length; i++) {
+    try {
 
-        if (THEME_DEFS[i].id === id) return THEME_DEFS[i];
+        localStorage.setItem(THEMES_CUSTOM_KEY, thCustomAccent);
 
-    }
-
-    return THEME_DEFS[0];
+    } catch (error) {}
 
 }
 
 
-function apply(id) {
+function thDef(id) {
 
-    const def = thDef(id);
+    for (let i = 0; i < THEME_DEFS.length; i++) {
 
-    thTheme = def.id;
+        if (THEME_DEFS[i].id === id) {
 
-    thSave();
+            if (id === "custom") {
+
+                return { id: "custom", name: "Custom", accent: thCustomAccent };
+
+            }
+
+            return THEME_DEFS[i];
+
+        }
+
+    }
+
+    return null;
+
+}
+
+
+function thRampForTheme(id) {
+
+    const def = thDef(id) || thDef("default");
+
+    return thRampFor(def.accent);
+
+}
+
+
+function thCurrentRamp() {
+
+    return thRampForTheme(thTheme);
+
+}
+
+
+/* ---------- apply pipeline ---------- */
+
+
+function thApplyVars(ramp) {
 
     try {
 
-        document.documentElement.style.filter = def.filter;
+        const s = document.documentElement.style;
+
+        s.setProperty("--primary", ramp.accent);
+
+        s.setProperty("--secondary", ramp.light);
+
+        s.setProperty("--border", "rgba(" + ramp.accentRgb + ",0.18)");
 
     } catch (error) {}
 
-    thRefresh();
+}
+
+
+function thCollectRules(rules) {
+
+    let out = "";
+
+    for (let i = 0; i < rules.length; i++) {
+
+        const r = rules[i];
+
+        try {
+
+            if (r.cssRules && r.conditionText) {
+
+                const inner = thCollectRules(r.cssRules);
+
+                if (inner) {
+
+                    out += "@media " + r.conditionText + " {\n" + inner + "}\n";
+
+                }
+
+            } else if (r.cssText) {
+
+                if (thHasNeedle(r.cssText)) out += r.cssText + "\n";
+
+            }
+
+        } catch (error) {}
+
+    }
+
+    return out;
+
+}
+
+
+function thCollectThemedCss() {
+
+    let out = "";
+
+    let sheets = null;
+
+    try {
+
+        sheets = document.styleSheets;
+
+    } catch (error) {
+
+        return "";
+
+    }
+
+    if (!sheets) return "";
+
+    for (let i = 0; i < sheets.length; i++) {
+
+        const sheet = sheets[i];
+
+        try {
+
+            if (sheet.ownerNode && sheet.ownerNode.id === THEMES_STYLE_ID) continue;
+
+            if (sheet.cssRules) out += thCollectRules(sheet.cssRules);
+
+        } catch (error) {
+
+            /* cross-origin sheet — skip */
+
+        }
+
+    }
+
+    return out;
+
+}
+
+
+function thInjectSheet(cssText) {
+
+    let el = null;
+
+    try {
+
+        el = document.getElementById(THEMES_STYLE_ID);
+
+    } catch (error) {}
+
+    if (!el) {
+
+        el = document.createElement("style");
+
+        el.id = THEMES_STYLE_ID;
+
+        try {
+
+            document.head.appendChild(el);
+
+        } catch (error) {
+
+            return;
+
+        }
+
+    }
+
+    el.textContent = cssText;
+
+}
+
+
+function thSkipped(el) {
+
+    try {
+
+        return !!(el.closest && el.closest("[" + THEMES_SKIP_ATTR + "]"));
+
+    } catch (error) {
+
+        return false;
+
+    }
+
+}
+
+
+function thSweepOne(el, ramp) {
+
+    if (!el || el.id === THEMES_STYLE_ID || thSkipped(el)) return;
+
+    let cur = null;
+
+    try {
+
+        cur = el.getAttribute("style");
+
+    } catch (error) {
+
+        return;
+
+    }
+
+    if (!cur || !thHasNeedle(cur)) return;
+
+    try {
+
+        el.setAttribute(THEMES_ORIG_ATTR, cur);
+
+        el.setAttribute("style", thRewriteColors(cur, ramp));
+
+    } catch (error) {}
+
+}
+
+
+function thSweepInline(ramp) {
+
+    let els = null;
+
+    try {
+
+        els = document.querySelectorAll("[style]");
+
+    } catch (error) {
+
+        return;
+
+    }
+
+    for (let i = 0; i < els.length; i++) thSweepOne(els[i], ramp);
+
+    try {
+
+        thSweepOne(document.documentElement, ramp);
+
+    } catch (error) {}
+
+}
+
+
+function thRestoreInline() {
+
+    let els = null;
+
+    try {
+
+        els = document.querySelectorAll("[" + THEMES_ORIG_ATTR + "]");
+
+    } catch (error) {
+
+        return;
+
+    }
+
+    for (let i = 0; i < els.length; i++) {
+
+        const el = els[i];
+
+        try {
+
+            el.setAttribute("style", el.getAttribute(THEMES_ORIG_ATTR));
+
+            el.removeAttribute(THEMES_ORIG_ATTR);
+
+        } catch (error) {}
+
+    }
+
+}
+
+
+function thApplyPipeline(ramp) {
+
+    thRestoreInline();
+
+    thApplyVars(ramp);
+
+    thInjectSheet(thRewriteColors(thCollectThemedCss(), ramp));
+
+    thSweepInline(ramp);
+
+}
+
+
+/* ---------- public API (all th-prefixed — no globals leak) ---------- */
+
+
+function thApplyTheme(id, save) {
+
+    const def = thDef(id) || thDef("default");
+
+    thTheme = def.id;
+
+    if (save !== false) thSave();
+
+    thApplyPipeline(thRampFor(def.accent));
 
     try {
 
@@ -155,21 +694,215 @@ function apply(id) {
 
     } catch (error) {}
 
-    return thTheme;
-
-}
-
-
-function current() {
+    thRefresh();
 
     return thTheme;
 
 }
 
 
-function thList() {
+function thCurrentTheme() {
+
+    return thTheme;
+
+}
+
+
+function thListThemes() {
 
     return THEME_DEFS.map((d) => d.id);
+
+}
+
+
+function thSetCustom(hex) {
+
+    if (!thValidHex(hex)) return thTheme;
+
+    thCustomAccent = hex.toLowerCase();
+
+    thSaveCustom();
+
+    return thApplyTheme("custom");
+
+}
+
+
+function thPreviewCustom(hex) {
+
+    if (!thValidHex(hex)) return;
+
+    thApplyPipeline(thRampFor(hex.toLowerCase()));
+
+    if (thCustomHex) thCustomHex.textContent = hex.toLowerCase();
+
+}
+
+
+/* ---------- live re-theme watcher ---------- */
+
+
+function thWatch() {
+
+    if (thObserver) return;
+
+    let MO = null;
+
+    try {
+
+        MO = MutationObserver;
+
+    } catch (error) {
+
+        return;
+
+    }
+
+    if (!MO) return;
+
+    try {
+
+        thObserver = new MO((muts) => {
+
+            let dirty = false;
+
+            for (let i = 0; i < muts.length && !dirty; i++) {
+
+                const m = muts[i];
+
+                if (m.type === "attributes" && m.attributeName === "style") {
+
+                    const t = m.target;
+
+                    if (t && t.id !== THEMES_STYLE_ID && !thSkipped(t)) {
+
+                        let s = null;
+
+                        try {
+
+                            s = t.getAttribute("style");
+
+                        } catch (error) {}
+
+                        if (s && thHasNeedle(s)) dirty = true;
+
+                    }
+
+                } else if (m.type === "childList" && m.addedNodes) {
+
+                    for (let j = 0; j < m.addedNodes.length && !dirty; j++) {
+
+                        const n = m.addedNodes[j];
+
+                        if (n && n.nodeType === 1 &&
+                            n.id !== THEMES_STYLE_ID && !thSkipped(n)) {
+
+                            let s = null;
+
+                            try {
+
+                                s = n.getAttribute("style");
+
+                            } catch (error) {}
+
+                            if (s && thHasNeedle(s)) {
+
+                                dirty = true;
+
+                                break;
+
+                            }
+
+                            try {
+
+                                const inner = n.querySelectorAll("[style]");
+
+                                for (let k = 0; k < inner.length; k++) {
+
+                                    const q = inner[k];
+
+                                    if (q.id === THEMES_STYLE_ID || thSkipped(q)) continue;
+
+                                    let qs = null;
+
+                                    try {
+
+                                        qs = q.getAttribute("style");
+
+                                    } catch (error) {}
+
+                                    if (qs && thHasNeedle(qs)) {
+
+                                        dirty = true;
+
+                                        break;
+
+                                    }
+
+                                }
+
+                            } catch (error) {}
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            if (dirty) {
+
+                try {
+
+                    clearTimeout(thSweepTimer);
+
+                } catch (error) {}
+
+                thSweepTimer = setTimeout(
+
+                    () => thSweepInline(thCurrentRamp()),
+
+                    80
+
+                );
+
+            }
+
+        });
+
+        thObserver.observe(document.documentElement, {
+
+            childList: true,
+
+            subtree: true,
+
+            attributes: true,
+
+            attributeFilter: ["style"]
+
+        });
+
+    } catch (error) {
+
+        thObserver = null;
+
+    }
+
+}
+
+
+function thUnwatch() {
+
+    try {
+
+        if (thSweepTimer) clearTimeout(thSweepTimer);
+
+        if (thObserver) thObserver.disconnect();
+
+    } catch (error) {}
+
+    thObserver = null;
 
 }
 
@@ -181,8 +914,7 @@ function thNav() {
 
     try {
 
-        if (typeof Aegis !== "undefined" &&
-            Aegis.getModule) {
+        if (typeof Aegis !== "undefined" && Aegis.getModule) {
 
             const mod = Aegis.getModule("navigation");
 
@@ -215,8 +947,7 @@ function thShowPage(name) {
 
     Array.prototype.forEach.call(pages, (page) => {
 
-        const on = page.dataset &&
-            page.dataset.page === name;
+        const on = page.dataset && page.dataset.page === name;
 
         if (page.classList) {
 
@@ -271,9 +1002,7 @@ function thAddMoreEntry() {
 
         if (!hubList) return false;
 
-        if (hubList.querySelector(
-            '[data-goto-page="' + THEMES_PAGE + '"]'
-        )) {
+        if (hubList.querySelector('[data-goto-page="' + THEMES_PAGE + '"]')) {
 
             return true;
 
@@ -335,11 +1064,30 @@ function thOpen() {
 
 function thRefresh() {
 
+    if (thCustomInput) {
+
+        try {
+
+            thCustomInput.value = thCustomAccent;
+
+        } catch (error) {}
+
+    }
+
+    if (thCustomHex) {
+
+        thCustomHex.textContent =
+            thCustomAccent + (thTheme === "custom" ? " ✓" : "");
+
+    }
+
     if (!thGridEl) return;
 
     thGridEl.innerHTML = "";
 
     THEME_DEFS.forEach((def) => {
+
+        if (def.id === "custom") return;
 
         const btn = document.createElement("button");
 
@@ -388,7 +1136,7 @@ function thRefresh() {
 
             borderRadius: "50%",
 
-            background: def.swatch,
+            background: def.accent,
 
             border: "1px solid rgba(255,255,255,0.35)",
 
@@ -404,7 +1152,7 @@ function thRefresh() {
 
         btn.appendChild(label);
 
-        btn.addEventListener("click", () => apply(def.id));
+        btn.addEventListener("click", () => thApplyTheme(def.id));
 
         thGridEl.appendChild(btn);
 
@@ -421,6 +1169,11 @@ function thBuildPage() {
 
     thPageEl.dataset.page = THEMES_PAGE;
 
+    /* The settings page keeps its own chrome — it is never
+       swept, so the preset swatches always show true colors. */
+
+    thPageEl.setAttribute(THEMES_SKIP_ATTR, "1");
+
     /* Constrain the page to the dashboard's centered column
        instead of stretching full-bleed edge to edge. */
 
@@ -435,8 +1188,6 @@ function thBuildPage() {
     const back = document.createElement("button");
 
     back.className = "aegis-page-back";
-
-    back.setAttribute("data-back-to", "more");
 
     back.textContent = "← Back to More";
 
@@ -457,8 +1208,8 @@ function thBuildPage() {
     const note = document.createElement("div");
 
     note.textContent =
-        "Stand-in: each theme is a full-screen color filter. " +
-        "Real per-widget theming comes later.";
+        "Real theming — recolors the dashboard's actual palette. " +
+        "Your choice is saved automatically.";
 
     thStyle(note, {
 
@@ -476,6 +1227,116 @@ function thBuildPage() {
 
     card.appendChild(thGridEl);
 
+    /* ---- custom color wheel ---- */
+
+    const customWrap = document.createElement("div");
+
+    thStyle(customWrap, {
+
+        marginTop: "14px",
+
+        paddingTop: "12px",
+
+        borderTop: "1px solid rgba(159,220,255,0.15)"
+
+    });
+
+    const customLabel = document.createElement("div");
+
+    customLabel.textContent = "Custom color";
+
+    thStyle(customLabel, {
+
+        fontSize: "13px",
+
+        color: "#9fdcff",
+
+        marginBottom: "8px"
+
+    });
+
+    customWrap.appendChild(customLabel);
+
+    const row = document.createElement("div");
+
+    thStyle(row, {
+
+        display: "flex",
+
+        alignItems: "center",
+
+        gap: "12px"
+
+    });
+
+    thCustomInput = document.createElement("input");
+
+    thCustomInput.type = "color";
+
+    thCustomInput.value = thCustomAccent;
+
+    thCustomInput.setAttribute("aria-label", "Pick a custom accent color");
+
+    thStyle(thCustomInput, {
+
+        width: "44px",
+
+        height: "44px",
+
+        border: "none",
+
+        borderRadius: "50%",
+
+        padding: "0",
+
+        background: "none",
+
+        cursor: "pointer",
+
+        flexShrink: "0"
+
+    });
+
+    thCustomInput.addEventListener("input", () => thPreviewCustom(thCustomInput.value));
+
+    thCustomInput.addEventListener("change", () => thSetCustom(thCustomInput.value));
+
+    row.appendChild(thCustomInput);
+
+    thCustomHex = document.createElement("span");
+
+    thCustomHex.textContent = thCustomAccent;
+
+    thStyle(thCustomHex, {
+
+        fontSize: "13px",
+
+        color: "#9fdcff",
+
+        fontFamily: "monospace"
+
+    });
+
+    row.appendChild(thCustomHex);
+
+    const hint = document.createElement("div");
+
+    hint.textContent = "Pick any color — the whole dashboard follows it.";
+
+    thStyle(hint, {
+
+        fontSize: "11px",
+
+        color: "rgba(159, 220, 255, 0.55)"
+
+    });
+
+    row.appendChild(hint);
+
+    customWrap.appendChild(row);
+
+    card.appendChild(customWrap);
+
     thPageEl.appendChild(card);
 
     document.body.appendChild(thPageEl);
@@ -485,40 +1346,73 @@ function thBuildPage() {
 
 Aegis.register("themes", {
 
-    version: "0.1.0",
+    version: "1.0.0",
 
-    name: "Dashboard Themes (stand-in)",
+    name: "Dashboard Themes",
 
 
-    apply,
+    apply: function (id) {
 
-    current,
+        return thApplyTheme(id);
 
-    list: thList,
+    },
 
-    open: thOpen,
+    current: function () {
 
-    refresh: thRefresh,
+        return thCurrentTheme();
+
+    },
+
+    list: function () {
+
+        return thListThemes();
+
+    },
+
+    open: function () {
+
+        return thOpen();
+
+    },
+
+    refresh: function () {
+
+        return thRefresh();
+
+    },
+
+    setCustom: function (hex) {
+
+        return thSetCustom(hex);
+
+    },
+
+    customAccent: function () {
+
+        return thCustomAccent;
+
+    },
 
 
     init() {
 
         thLoad();
 
+        /* Neutralize the v0.1.0 stand-in filter so it never stacks. */
+
+        try {
+
+            document.documentElement.style.filter = "";
+
+        } catch (error) {}
+
         thBuildPage();
 
         thAddMoreEntry();
 
-        thRefresh();
+        thApplyTheme(thTheme, false);
 
-        /* Re-apply the saved theme at boot. */
-
-        try {
-
-            document.documentElement.style.filter =
-                thDef(thTheme).filter;
-
-        } catch (error) {}
+        thWatch();
 
         if (!thHookNavigation()) {
 
@@ -538,29 +1432,44 @@ Aegis.register("themes", {
 
         }
 
-        console.log("Dashboard Themes (stand-in) initialized.");
-
-    },
-
-
-    thRefresh() {
-
-        thRefresh();
+        console.log("Dashboard Themes v1.0.0 initialized.");
 
     },
 
 
     shutdown() {
 
+        thUnwatch();
+
+        thRestoreInline();
+
         try {
 
-            document.documentElement.style.filter = "";
+            const el = document.getElementById(THEMES_STYLE_ID);
+
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+
+        } catch (error) {}
+
+        try {
+
+            const s = document.documentElement.style;
+
+            s.removeProperty("--primary");
+
+            s.removeProperty("--secondary");
+
+            s.removeProperty("--border");
 
         } catch (error) {}
 
         if (thPageEl && thPageEl.parentNode) {
 
-            thPageEl.parentNode.removeChild(thPageEl);
+            try {
+
+                thPageEl.parentNode.removeChild(thPageEl);
+
+            } catch (error) {}
 
         }
 
@@ -581,7 +1490,13 @@ Aegis.register("themes", {
 
         thPageEl = null;
 
-        console.log("Dashboard Themes (stand-in) shut down.");
+        thGridEl = null;
+
+        thCustomInput = null;
+
+        thCustomHex = null;
+
+        console.log("Dashboard Themes v1.0.0 shut down.");
 
     },
 
