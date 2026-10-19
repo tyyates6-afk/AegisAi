@@ -25,6 +25,11 @@ Supports:
 The AI handler can use:
    context.run(module, method, ...args)
 
+Streaming: the AI handler may accept a third
+argument, onPartial(partialText), called with
+the reply so far as it streams. The command
+bar paints each partial into the AI reply line.
+
 This module registers with Aegis Core and is
 initialized automatically by Aegis.initModules().
 ======================================*/
@@ -455,7 +460,7 @@ initialized automatically by Aegis.initModules().
 
             // Floating button
 
-            
+
 
             const fab =
                 document.createElement("button");
@@ -511,12 +516,11 @@ initialized automatically by Aegis.initModules().
             );
 
 
-            
+
 
         },
 
 
-       
 
 
         // ==================================
@@ -704,15 +708,13 @@ initialized automatically by Aegis.initModules().
                         `/${keyword} `;
 
                     this._renderSuggestions(
-                        this._els.input.value
+                        event.target.value
                     );
 
                     this._els.input.focus();
 
                 }
             );
-
-            box.appendChild(row);
 
         });
 
@@ -938,11 +940,42 @@ initialized automatically by Aegis.initModules().
             }
 
 
+            // Create the AI reply line up front so
+            // streamed partials have somewhere to
+            // paint. _printLine returns the element.
+
+            const aiLine =
+                this._printLine(
+                    "",
+                    "ai"
+                );
+
+
+            let painted =
+                false;
+
+
+            const paintPartial =
+                (partial) => {
+
+                    painted =
+                        true;
+
+                    aiLine.textContent =
+                        partial;
+
+                    this._els.output.scrollTop =
+                        this._els.output.scrollHeight;
+
+                };
+
+
             try {
 
                 const response =
                     await this._aiHandler(
                         text,
+
                         {
 
                             // Allow AI layer
@@ -981,7 +1014,12 @@ initialized automatically by Aegis.initModules().
                                 () =>
                                     global.Aegis?.modules || {}
 
-                        }
+                        },
+
+                        // onPartial (streaming): the reply
+                        // so far. Replace, don't append.
+
+                        paintPartial
                     );
 
 
@@ -990,14 +1028,60 @@ initialized automatically by Aegis.initModules().
                     response !== null
                 ) {
 
-                    this._printLine(
-                        response,
-                        "ai"
-                    );
+                    painted =
+                        true;
+
+
+                    // Final text. Covers handlers that
+                    // don't stream, plus anything after
+                    // the last partial.
+
+                    if (
+                        typeof response === "string"
+                    ) {
+
+                        aiLine.textContent =
+                            response;
+
+                    } else {
+
+                        try {
+
+                            aiLine.textContent =
+                                JSON.stringify(
+                                    response,
+                                    null,
+                                    2
+                                );
+
+                        } catch {
+
+                            aiLine.textContent =
+                                String(response);
+
+                        }
+
+                    }
+
+
+                    this._els.output.scrollTop =
+                        this._els.output.scrollHeight;
+
+                }
+
+
+                if (!painted) {
+
+                    // Nothing ever arrived — don't
+                    // leave an empty line behind.
+
+                    aiLine.remove();
 
                 }
 
             } catch (error) {
+
+                aiLine.remove();
 
                 this._printLine(
                     `AI error: ${error.message}`,
@@ -1061,6 +1145,9 @@ initialized automatically by Aegis.initModules().
 
             this._els.output.scrollTop =
                 this._els.output.scrollHeight;
+
+
+            return line;
 
         },
 

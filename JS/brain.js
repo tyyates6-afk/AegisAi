@@ -15,6 +15,16 @@ WHAT IT DOES
   lists module health).
 - Speaks replies through the voice module.
   Toggle with: Aegis.run("brain","setSpeakReplies",false)
+- Gemini replies stream word-by-word by
+  default (Server-Sent Events): text appears
+  as it generates instead of waiting for the
+  full reply. Toggle with:
+  Aegis.run("brain","setGeminiStream",false)
+  The proxy edge function must be redeployed
+  for streaming (it pipes the upstream SSE
+  stream). Anything listening for the
+  "brainPartial" broadcast (or passed as an
+  onPartial callback) gets the growing text.
 
 PROVIDERS (v3.0.0)
 - openai (default): direct browser calls to
@@ -110,6 +120,13 @@ initialized automatically by Aegis.initModules().
 
             geminiMaxTokens: 1024,
 
+            // Stream Gemini replies word-by-word
+            // (default on; stored "0" disables).
+            geminiStream:
+                localStorage.getItem(
+                    "geminiStream"
+                ) !== "0",
+
             temperature: 0.7,
 
             // Max messages kept (not counting
@@ -186,10 +203,19 @@ initialized automatically by Aegis.initModules().
             }
 
 
+            // The optional third argument lets
+            // a caller (e.g. a streaming-aware
+            // command bar) receive the reply
+            // word-by-word. Plain callers just
+            // await the final string as before.
             const ok =
                 bar.api.setAIHandler(
-                    (text, context) =>
-                        this._handle(text, context)
+                    (text, context, onPartial) =>
+                        this._handle(
+                            text,
+                            context,
+                            onPartial
+                        )
                 );
 
 
@@ -389,6 +415,38 @@ initialized automatically by Aegis.initModules().
         },
 
 
+        // Stream Gemini replies word-by-word
+        // (Server-Sent Events). Default on;
+        // stored "0" disables. Non-streaming
+        // stays available as the fallback.
+        getGeminiStream() {
+
+            return (
+                localStorage.getItem(
+                    "geminiStream"
+                ) !== "0"
+            );
+
+        },
+
+
+        setGeminiStream(on) {
+
+            this._config.geminiStream =
+                !!on;
+
+            localStorage.setItem(
+                "geminiStream",
+                on ? "1" : "0"
+            );
+
+            return (
+                "Gemini streaming " +
+                (on ? "on." : "off.")
+            );
+        },
+
+
         setSpeakReplies(on) {
 
             this._config.speakReplies =
@@ -463,6 +521,9 @@ initialized automatically by Aegis.initModules().
                                 : "none"
                         : null,
 
+                geminiStream:
+                    this.getGeminiStream(),
+
                 commandBarConnected:
                     this._connected,
 
@@ -476,7 +537,9 @@ initialized automatically by Aegis.initModules().
         // Ask the brain directly, outside the
         // command bar (e.g. from the voice
         // widget or a quick-action button).
-        ask(text) {
+        // Pass onPartial to receive the reply
+        // word-by-word as it streams.
+        ask(text, onPartial) {
 
             const context = {
 
@@ -509,7 +572,8 @@ initialized automatically by Aegis.initModules().
 
             return this._handle(
                 text,
-                context
+                context,
+                onPartial
             );
         },
 
@@ -518,7 +582,11 @@ initialized automatically by Aegis.initModules().
         // CONVERSATION
         // ==================================
 
-        async _handle(text, context) {
+        // onPartial (optional): called with the
+        // growing reply text as it streams in
+        // (Gemini provider only). The promise
+        // still resolves with the final string.
+        async _handle(text, context, onPartial) {
 
             const provider = this._config.provider;
 
@@ -594,7 +662,8 @@ initialized automatically by Aegis.initModules().
                         : provider === "gemini"
                             ? await this._thinkGemini(
                                   text,
-                                  context
+                                  context,
+                                  onPartial
                               )
                             : await this._think(
                                   context
@@ -1407,6 +1476,384 @@ initialized automatically by Aegis.initModules().
         },
 
 
+        // Streaming variant of _callGemini.
+        // Resolves with the full accumulated
+        // parts array once the SSE stream ends;
+        // calls onToken(growingText) as text
+        // chunks arrive. Throws on HTTP errors
+        // or empty/blocked streams, so callers
+        // can fall back to _callGemini.
+        async _callGeminiStream(
+            contents,
+            noTools,
+            onToken
+        ) {
+
+            const body =
+                this._geminiRequestBody(
+                    contents,
+                    noTools
+                );
+
+            const userKey =
+                this.getGeminiApiKey();
+
+            let url;
+
+            let headers;
+
+            let mode;
+
+
+            if (userKey) {
+
+                // Per-user key: the browser calls
+                // Google's streaming endpoint
+                // directly.
+                mode = "direct";
+
+                url =
+                    "https://generativelanguage.googleapis.com" +
+                    "/v1beta/models/" +
+                    encodeURIComponent(
+                        this._config.geminiModel
+                    ) +
+                    ":streamGenerateContent";
+
+                headers = {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "x-goog-api-key":
+                        userKey
+
+                };
+
+                // The model rides in the URL on
+                // the direct path.
+                delete body.model;
+
+            } else {
+
+                // Shared proxy: the edge function
+                // uses :streamGenerateContent
+                // upstream and pipes the SSE
+                // stream back when it sees this.
+                mode = "proxy";
+
+                url =
+                    this.getGeminiProxyUrl().replace(
+                        /\/$/,
+                        ""
+                    );
+
+                body.stream = true;
+
+                headers = {
+
+                    "Content-Type":
+                        "application/json"
+
+                };
+            }
+
+
+            const response = await fetch(
+                url,
+                {
+
+                    method: "POST",
+
+                    headers: headers,
+
+                    body: JSON.stringify(body)
+
+                }
+            );
+
+            if (!response.ok) {
+
+                const errText =
+                    await response.text();
+
+                throw new Error(
+                    "Gemini" +
+                    (
+                        mode === "direct"
+                            ? " (direct)"
+                            : " (proxy)"
+                    ) +
+                    " " +
+                    response.status +
+                    ": " +
+                    errText.slice(0, 200)
+                );
+            }
+
+            return this._readGeminiStream(
+                response,
+                onToken
+            );
+        },
+
+
+        // Reads a Gemini SSE stream
+        // (streamGenerateContent), accumulating
+        // every content part in order. JSON
+        // objects split across TCP chunks are
+        // reassembled via the line buffer.
+        async _readGeminiStream(
+            response,
+            onToken
+        ) {
+
+            const reader =
+                response.body.getReader();
+
+            const decoder =
+                new TextDecoder();
+
+            let buffer = "";
+
+            const parts = [];
+
+            let textSoFar = "";
+
+
+            const handleLine = (line) => {
+
+                const trimmed =
+                    line.trim();
+
+                if (
+                    !trimmed ||
+                    trimmed.indexOf("data:") !==
+                        0
+                ) {
+
+                    return;
+                }
+
+                const payload =
+                    trimmed.slice(5).trim();
+
+                if (
+                    !payload ||
+                    payload === "[DONE]"
+                ) {
+
+                    return;
+                }
+
+                let chunk = null;
+
+                try {
+
+                    chunk = JSON.parse(payload);
+
+                } catch (ignore) {
+
+                    return;
+                }
+
+                const cand =
+                    chunk &&
+                    chunk.candidates &&
+                    chunk.candidates[0];
+
+                const cps =
+                    cand &&
+                    cand.content &&
+                    Array.isArray(
+                        cand.content.parts
+                    )
+                        ? cand.content.parts
+                        : null;
+
+                if (!cps) {
+
+                    return;
+                }
+
+                let addedText = false;
+
+                for (const p of cps) {
+
+                    parts.push(p);
+
+                    if (
+                        typeof p.text ===
+                            "string" &&
+                        p.text
+                    ) {
+
+                        textSoFar += p.text;
+
+                        addedText = true;
+                    }
+                }
+
+                if (
+                    addedText &&
+                    typeof onToken ===
+                        "function"
+                ) {
+
+                    try {
+
+                        onToken(textSoFar);
+
+                    } catch (ignore) {}
+                }
+            };
+
+
+            for (;;) {
+
+                const read =
+                    await reader.read();
+
+                if (read.done) {
+
+                    break;
+                }
+
+                buffer += decoder.decode(
+                    read.value,
+                    { stream: true }
+                );
+
+                let nl =
+                    buffer.indexOf("\n");
+
+                while (nl >= 0) {
+
+                    handleLine(
+                        buffer.slice(0, nl)
+                    );
+
+                    buffer =
+                        buffer.slice(nl + 1);
+
+                    nl = buffer.indexOf("\n");
+                }
+            }
+
+            if (buffer.trim()) {
+
+                handleLine(buffer);
+            }
+
+            try {
+
+                reader.releaseLock();
+
+            } catch (ignore) {}
+
+
+            if (!parts.length) {
+
+                // Distinguished so the tool loop
+                // does NOT burn a retry on a
+                // semantically blocked reply.
+                const blocked = new Error(
+                    "Empty or blocked response " +
+                    "from Gemini."
+                );
+
+                blocked.geminiBlocked = true;
+
+                throw blocked;
+            }
+
+            return parts;
+        },
+
+
+        // One hook point for progressive UI:
+        // every streamed text chunk is broadcast
+        // so the command bar (or anything else)
+        // can paint the reply word-by-word.
+        // A command bar that wants it just does:
+        //   Aegis.listen("brainPartial",
+        //     (d) => showPartial(d.text));
+        _broadcastBrainPartial(text) {
+
+            try {
+
+                if (
+                    global.Aegis &&
+                    typeof global.Aegis
+                        .broadcast === "function"
+                ) {
+
+                    global.Aegis.broadcast(
+                        "brainPartial",
+                        {
+
+                            text: text,
+
+                            provider: "gemini"
+
+                        }
+                    );
+                }
+
+            } catch (ignore) {}
+        },
+
+
+        // One streamed tool-loop round: returns
+        // the round's accumulated parts. Text
+        // progress goes to onPartial (when given)
+        // and the brainPartial broadcast.
+        async _streamGeminiRound(
+            contents,
+            noTools,
+            onPartial
+        ) {
+
+            const self = this;
+
+            return this._callGeminiStream(
+                contents,
+                noTools,
+                function (textSoFar) {
+
+                    if (
+                        typeof onPartial ===
+                            "function"
+                    ) {
+
+                        try {
+
+                            onPartial(textSoFar);
+
+                        } catch (ignore) {}
+                    }
+
+                    self._broadcastBrainPartial(
+                        textSoFar
+                    );
+                }
+            );
+        },
+
+
+        _geminiTextFromParts(parts) {
+
+            return parts
+                .filter(
+                    (p) =>
+                        typeof p.text ===
+                        "string"
+                )
+                .map((p) => p.text)
+                .join("");
+        },
+
+
         _geminiParts(data) {
 
             const cand =
@@ -1430,7 +1877,11 @@ initialized automatically by Aegis.initModules().
         },
 
 
-        async _thinkGemini(text, context) {
+        async _thinkGemini(
+            text,
+            context,
+            onPartial
+        ) {
 
             // Working contents in Gemini's native
             // format: roles are "user" / "model"
@@ -1453,6 +1904,9 @@ initialized automatically by Aegis.initModules().
                 })
             );
 
+            const streamOn =
+                this.getGeminiStream();
+
             for (
                 let round = 0;
                 round <
@@ -1460,22 +1914,62 @@ initialized automatically by Aegis.initModules().
                 round++
             ) {
 
-                const data =
-                    await this._callGemini(
-                        contents,
-                        false
+                let parts;
+
+                if (streamOn) {
+
+                    try {
+
+                        parts =
+                            await this._streamGeminiRound(
+                                contents,
+                                false,
+                                onPartial
+                            );
+
+                    } catch (streamError) {
+
+                        if (
+                            streamError &&
+                            streamError.geminiBlocked
+                        ) {
+
+                            // A blocked reply is
+                            // final — retrying just
+                            // burns another call.
+                            throw streamError;
+                        }
+
+                        // Fall back to one buffered
+                        // call for this round. This
+                        // also covers proxies deployed
+                        // before streaming existed.
+                        const data =
+                            await this._callGemini(
+                                contents,
+                                false
+                            );
+
+                        parts =
+                            this._geminiParts(data);
+                    }
+
+                } else {
+
+                    const data =
+                        await this._callGemini(
+                            contents,
+                            false
+                        );
+
+                    parts =
+                        this._geminiParts(data);
+                }
+
+                const textParts =
+                    this._geminiTextFromParts(
+                        parts
                     );
-
-                const parts =
-                    this._geminiParts(data);
-
-                const textParts = parts
-                    .filter(
-                        (p) =>
-                            typeof p.text ===
-                            "string"
-                    )
-                    .map((p) => p.text);
 
                 const calls = parts.filter(
                     (p) => p.functionCall
@@ -1494,8 +1988,7 @@ initialized automatically by Aegis.initModules().
 
                 if (!calls.length) {
 
-                    const reply =
-                        textParts.join("");
+                    const reply = textParts;
 
                     this._history.push({
 
@@ -1556,20 +2049,12 @@ initialized automatically by Aegis.initModules().
 
             // Out of tool rounds — final answer,
             // no more tools.
-            const data =
-                await this._callGemini(
+            const reply =
+                await this._geminiFinalRound(
                     contents,
-                    true
+                    onPartial,
+                    streamOn
                 );
-
-            const reply = this._geminiParts(data)
-                .filter(
-                    (p) =>
-                        typeof p.text ===
-                        "string"
-                )
-                .map((p) => p.text)
-                .join("");
 
             this._history.push({
 
@@ -1582,6 +2067,56 @@ initialized automatically by Aegis.initModules().
             this._trimHistory();
 
             return reply;
+        },
+
+
+        // Last-chance answer with no tools left.
+        // Streams when enabled, with the same
+        // buffered fallback as normal rounds.
+        async _geminiFinalRound(
+            contents,
+            onPartial,
+            streamOn
+        ) {
+
+            if (streamOn) {
+
+                try {
+
+                    const parts =
+                        await this._streamGeminiRound(
+                            contents,
+                            true,
+                            onPartial
+                        );
+
+                    return this._geminiTextFromParts(
+                        parts
+                    );
+
+                } catch (streamError) {
+
+                    if (
+                        streamError &&
+                        streamError.geminiBlocked
+                    ) {
+
+                        throw streamError;
+                    }
+
+                    // Fall through to buffered.
+                }
+            }
+
+            const data =
+                await this._callGemini(
+                    contents,
+                    true
+                );
+
+            return this._geminiTextFromParts(
+                this._geminiParts(data)
+            );
         },
 
 

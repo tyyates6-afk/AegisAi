@@ -15,6 +15,8 @@
       Optional per-user API key: with their own
       key, a user's browser calls Google directly
       (their key, their quota, their data).
+      "Stream responses" toggle (default on):
+      words appear as they generate.
 
     No index.html changes needed — the card
     injects itself into the Settings page.
@@ -164,6 +166,13 @@ function injectCard() {
             'background:rgba(80,210,255,0.06);' +
             "border:1px solid rgba(80,210,255,0.25);border-radius:12px;" +
             'color:#dff2ff;outline:none">' +
+            '<label style="display:flex;align-items:center;gap:8px;' +
+            'font-size:12px;color:#9fdcff;margin-bottom:10px;cursor:pointer">' +
+            '<input type="checkbox" id="brainGeminiStream" ' +
+            'style="width:15px;height:15px;accent-color:#50d2ff">' +
+            "<span>Stream responses " +
+            '<span style="color:#5b7a93">(words appear as they ' +
+            "generate)</span></span></label>" +
             "</div>" +
 
             '<button type="button" id="brainSettingsSave" ' +
@@ -231,6 +240,7 @@ function wireCard(card, initialProvider) {
     const geminiProxyInput = card.querySelector("#brainGeminiProxy");
     const geminiKeyInput = card.querySelector("#brainGeminiKey");
     const geminiModel = card.querySelector("#brainGeminiModel");
+    const geminiStream = card.querySelector("#brainGeminiStream");
     const status = card.querySelector("#brainSettingsStatus");
 
     if (keyInput && api && api.getApiKey)
@@ -252,6 +262,11 @@ function wireCard(card, initialProvider) {
     if (geminiModel)
         geminiModel.value =
             localStorage.getItem("geminiModel") || "gemini-2.5-flash";
+    if (geminiStream)
+        geminiStream.checked =
+            !api || !api.getGeminiStream
+                ? true
+                : api.getGeminiStream();
 
     card.querySelectorAll("[data-brain-provider]").forEach((b) => {
         b.addEventListener("click", () => {
@@ -283,6 +298,8 @@ function wireCard(card, initialProvider) {
                     api.setGeminiApiKey(geminiKeyInput.value.trim());
                 if (geminiModel && geminiModel.value.trim() && api && api.setGeminiModel)
                     api.setGeminiModel(geminiModel.value.trim());
+                if (geminiStream && api && api.setGeminiStream)
+                    api.setGeminiStream(geminiStream.checked);
 
                 // Clear the key fields after save
                 if (keyInput) keyInput.value = "";
