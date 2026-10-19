@@ -1,14 +1,20 @@
 /*======================================
-    AEGIS BRAIN SETTINGS v1.0.0
+    AEGIS BRAIN SETTINGS v1.1.0
 
     Runtime Settings card for the Brain
-    module (brain.js v2.0.0+).
+    module (brain.js v3.0.0+).
 
-    - Provider switch: OpenAI / Claude
+    - Provider switch: OpenAI / Claude / Gemini
     - OpenAI: API key + model
     - Claude: Supabase edge function URL + model
       (API key lives server-side in Supabase,
        same pattern as eleven-tts)
+    - Gemini: Supabase edge function URL + model
+      (API key lives server-side in Supabase.
+       Free tier via Google AI Studio.)
+      Optional per-user API key: with their own
+      key, a user's browser calls Google directly
+      (their key, their quota, their data).
 
     No index.html changes needed — the card
     injects itself into the Settings page.
@@ -75,6 +81,10 @@ function injectCard() {
             'style="flex:1;border-radius:999px;padding:9px 4px;' +
             "font-size:12px;letter-spacing:1px;cursor:pointer;" +
             'border:1px solid rgba(80,210,255,0.4)">Claude</button>' +
+            '<button type="button" data-brain-provider="gemini" ' +
+            'style="flex:1;border-radius:999px;padding:9px 4px;' +
+            "font-size:12px;letter-spacing:1px;cursor:pointer;" +
+            'border:1px solid rgba(80,210,255,0.4)">Gemini</button>' +
             "</div>" +
 
             /* OpenAI section */
@@ -121,6 +131,41 @@ function injectCard() {
             'color:#dff2ff;outline:none">' +
             "</div>" +
 
+            /* Gemini section */
+            '<div data-brain-section="gemini" style="display:none">' +
+            '<label style="display:block;font-size:12px;color:#9fdcff;' +
+            'margin-bottom:4px">Supabase edge function URL</label>' +
+            '<input type="text" id="brainGeminiProxy" ' +
+            'placeholder="https://...supabase.co/functions/v1/gemini-chat" ' +
+            'style="width:100%;box-sizing:border-box;' +
+            "padding:10px 12px;font-size:14px;margin-bottom:10px;" +
+            'background:rgba(80,210,255,0.06);' +
+            "border:1px solid rgba(80,210,255,0.25);border-radius:12px;" +
+            'color:#dff2ff;outline:none">' +
+            '<label style="display:block;font-size:12px;color:#9fdcff;' +
+            'margin-bottom:4px">API key (optional — use your own free key)</label>' +
+            '<input type="password" id="brainGeminiKey" ' +
+            'placeholder="AIza..." style="width:100%;box-sizing:border-box;' +
+            "padding:10px 12px;font-size:14px;margin-bottom:10px;" +
+            'background:rgba(80,210,255,0.06);' +
+            "border:1px solid rgba(80,210,255,0.25);border-radius:12px;" +
+            'color:#dff2ff;outline:none">' +
+            '<p class="empty-state" style="margin:0 0 10px">Free from ' +
+            "Google AI Studio. Without it, requests share the " +
+            "proxy's key and quota.</p>" +
+            '<p class="empty-state" style="margin:0 0 10px">The proxy ' +
+            "key lives server-side in Supabase — " +
+            "it never touches the browser.</p>" +
+            '<label style="display:block;font-size:12px;color:#9fdcff;' +
+            'margin-bottom:4px">Model</label>' +
+            '<input type="text" id="brainGeminiModel" ' +
+            'placeholder="gemini-2.5-flash" style="width:100%;box-sizing:border-box;' +
+            "padding:10px 12px;font-size:14px;margin-bottom:10px;" +
+            'background:rgba(80,210,255,0.06);' +
+            "border:1px solid rgba(80,210,255,0.25);border-radius:12px;" +
+            'color:#dff2ff;outline:none">' +
+            "</div>" +
+
             '<button type="button" id="brainSettingsSave" ' +
             'style="border-radius:999px;border:1px solid ' +
             "rgba(80,210,255,0.5);background:rgba(80,210,255,0.12);" +
@@ -158,12 +203,18 @@ function paintProviderButtons(card, provider) {
     const claudeSection = card.querySelector(
         '[data-brain-section="claude"]'
     );
+    const geminiSection = card.querySelector(
+        '[data-brain-section="gemini"]'
+    );
     if (openaiSection)
         openaiSection.style.display =
-            provider === "claude" ? "none" : "block";
+            provider === "openai" ? "block" : "none";
     if (claudeSection)
         claudeSection.style.display =
             provider === "claude" ? "block" : "none";
+    if (geminiSection)
+        geminiSection.style.display =
+            provider === "gemini" ? "block" : "none";
 }
 
 function wireCard(card, initialProvider) {
@@ -177,6 +228,9 @@ function wireCard(card, initialProvider) {
     const openModel = card.querySelector("#brainOpenAiModel");
     const proxyInput = card.querySelector("#brainClaudeProxy");
     const claudeModel = card.querySelector("#brainClaudeModel");
+    const geminiProxyInput = card.querySelector("#brainGeminiProxy");
+    const geminiKeyInput = card.querySelector("#brainGeminiKey");
+    const geminiModel = card.querySelector("#brainGeminiModel");
     const status = card.querySelector("#brainSettingsStatus");
 
     if (keyInput && api && api.getApiKey)
@@ -190,6 +244,14 @@ function wireCard(card, initialProvider) {
     if (claudeModel)
         claudeModel.value =
             localStorage.getItem("claudeModel") || "claude-sonnet-4-5";
+    if (geminiProxyInput)
+        geminiProxyInput.value =
+            localStorage.getItem("geminiProxyUrl") || "";
+    if (geminiKeyInput && api && api.getGeminiApiKey)
+        geminiKeyInput.value = api.getGeminiApiKey();
+    if (geminiModel)
+        geminiModel.value =
+            localStorage.getItem("geminiModel") || "gemini-2.5-flash";
 
     card.querySelectorAll("[data-brain-provider]").forEach((b) => {
         b.addEventListener("click", () => {
@@ -215,8 +277,16 @@ function wireCard(card, initialProvider) {
                 if (claudeModel && claudeModel.value.trim() && api && api.setClaudeModel)
                     api.setClaudeModel(claudeModel.value.trim());
 
-                // Clear the key field after save
+                if (geminiProxyInput && api && api.setGeminiProxyUrl)
+                    api.setGeminiProxyUrl(geminiProxyInput.value.trim());
+                if (geminiKeyInput && geminiKeyInput.value.trim() && api && api.setGeminiApiKey)
+                    api.setGeminiApiKey(geminiKeyInput.value.trim());
+                if (geminiModel && geminiModel.value.trim() && api && api.setGeminiModel)
+                    api.setGeminiModel(geminiModel.value.trim());
+
+                // Clear the key fields after save
                 if (keyInput) keyInput.value = "";
+                if (geminiKeyInput) geminiKeyInput.value = "";
 
                 if (status) {
                     const st = api && api.status ? api.status() : null;
@@ -245,7 +315,7 @@ if (
     typeof window.Aegis.register === "function"
 ) {
     window.Aegis.register("brainSettings", {
-        version: "1.0.0",
+        version: "1.1.0",
         name: "Brain Settings",
         init() {
             // Settings page may render after boot.
@@ -260,7 +330,7 @@ if (
                 injectCard();
             }, 500);
             try {
-                console.log("Brain Settings v1.0.0 initialized.");
+                console.log("Brain Settings v1.1.0 initialized.");
             } catch (e) {}
         },
     });
