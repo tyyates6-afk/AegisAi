@@ -1,5 +1,5 @@
 /*======================================
-        AEGIS COMPANION PET v1.0.0
+        AEGIS COMPANION PET v1.4.0
 ======================================
 
     A floating desktop companion for AEGIS.
@@ -16,6 +16,14 @@
          orb-hungry.png    (3 frames — grumble shiver)
          orb-working.png   (4 frames — study buddy groove)
        (Transparent PNGs — backgrounds already keyed out.)
+    4. Festive (Christmas) sheets go in
+       assets/pet/seasonal/Christmas/ as:
+         orb-idle-festive.png, orb-happy-festive.png,
+         orb-sleep-festive.png, orb-sleep-night-festive.png,
+         orb-excited-festive.png, orb-hungry-festive.png,
+         orb-working-festive.png
+       Same dimensions and frame counts as the base sheets —
+       the Santa hats are baked into the art, frame by frame.
 
     DRIVING THE PET:
     - Aegis.run("pet", "setMood", "happy")
@@ -39,7 +47,34 @@
     (127.0.0.1:17373). This module connects to it, so the
     dashboard pet and the desktop pet mirror each other's
     moods. Nothing leaves your PC. If the desktop app
-    isn't running, the dashboard pet just works solo.
+    dashboard pet just works solo.
+
+    FESTIVE MODE (v1.4.0) + SEASONAL CALENDAR (v1.3.0):
+    - The Santa hat is baked into festive sprite sheets, NOT a
+      mood and NOT an overlay: festive mode swaps each mood to
+      its Christmas sheet, so the hat stays on through idle,
+      happy, sleep, sleepNight, hungry, working and excited all
+      at once. Moods keep working underneath it, and the hat
+      follows each frame's squash and bob because it's in the art.
+      (v1.2.0/v1.3.0's SVG overlay is gone — superseded.)
+    - SEASONAL CYCLE: on "auto" (the default) the hat appears by
+      itself the day after US Thanksgiving (4th Thursday of
+      November) and comes off on January 1st, every year — the
+      date is computed, never hardcoded, and a 5-minute check
+      flips it without a reload or a tap.
+    - Aegis.run("pet", "setFestive", true) / false — manual override
+      ("on" / "off"); setFestive("auto") hands control back to the
+      calendar. setSeasonalEvents(true/false) is the master switch.
+    - Persists in localStorage "aegisPetFestive" ("auto"/"1"/"0",
+      default "auto") and "aegisPetSeasonalEvents" ("1"/"0",
+      default on). Broadcasts "petFestive" { festive, mode }.
+    - Settings (Desktop Pet card) has a "Seasonal events" toggle,
+      a "Santa hat" checkbox, and a "Follow the seasonal calendar"
+      button that returns the hat to auto.
+    - The hat is local-only per device: the desktop link mirrors
+      moods, not the hat. To get the hat on the desktop pet as well,
+      copy this file over aegis-pet-app/JS/pet.js AND the 7 festive
+      sheets into aegis-pet-app/assets/pet/seasonal/Christmas/.
 
 ======================================*/
 
@@ -48,18 +83,21 @@ const PET_SPRITES = {
 
     idle: {
         src: "assets/pet/orb-idle.png",
+        festive: "assets/pet/seasonal/Christmas/orb-idle-festive.png",
         frames: 4,
         fps: 6
     },
 
     happy: {
         src: "assets/pet/orb-happy.png",
+        festive: "assets/pet/seasonal/Christmas/orb-happy-festive.png",
         frames: 4,
         fps: 10
     },
 
     sleep: {
         src: "assets/pet/orb-sleep.png",
+        festive: "assets/pet/seasonal/Christmas/orb-sleep-festive.png",
         frames: 3,
         fps: 2
     },
@@ -69,6 +107,7 @@ const PET_SPRITES = {
 
     sleepNight: {
         src: "assets/pet/orb-sleep-night.png",
+        festive: "assets/pet/seasonal/Christmas/orb-sleep-night-festive.png",
         frames: 4,
         fps: 2
     },
@@ -77,6 +116,7 @@ const PET_SPRITES = {
 
     hungry: {
         src: "assets/pet/orb-hungry.png",
+        festive: "assets/pet/seasonal/Christmas/orb-hungry-festive.png",
         frames: 3,
         fps: 4
     },
@@ -85,12 +125,14 @@ const PET_SPRITES = {
 
     working: {
         src: "assets/pet/orb-working.png",
+        festive: "assets/pet/seasonal/Christmas/orb-working-festive.png",
         frames: 4,
         fps: 4
     },
 
     excited: {
         src: "assets/pet/orb-excited.png",
+        festive: "assets/pet/seasonal/Christmas/orb-excited-festive.png",
         frames: 4,
         fps: 12
     }
@@ -289,6 +331,108 @@ function petInjectLinkSetting() {
 
         }
 
+        /* Seasonal events: the master switch for the auto
+           calendar. Santa hat: manual override — checking it pins
+           the hat on, unchecking pins it off; Auto hands control
+           back to the calendar. */
+
+        const seasonalLabel = document.createElement("label");
+
+        seasonalLabel.style.cssText = "display:flex;align-items:center;" +
+            "gap:10px;font-size:14px;cursor:pointer;margin-top:10px";
+
+        const seasonalToggle = document.createElement("input");
+
+        seasonalToggle.type = "checkbox";
+
+        seasonalToggle.id = "petSeasonalToggle";
+
+        seasonalToggle.checked = petSeasonalEnabled;
+
+        seasonalToggle.style.cssText =
+            "width:20px;height:20px;accent-color:#d92632";
+
+        seasonalToggle.addEventListener("change", () => {
+
+            setSeasonalEvents(seasonalToggle.checked);
+
+        });
+
+        const seasonalText = document.createElement("span");
+
+        seasonalText.textContent = "🎄 Seasonal events";
+
+        seasonalLabel.appendChild(seasonalToggle);
+
+        seasonalLabel.appendChild(seasonalText);
+
+        card.appendChild(seasonalLabel);
+
+        const seasonalNote = document.createElement("p");
+
+        seasonalNote.className = "empty-state";
+
+        seasonalNote.style.marginTop = "4px";
+
+        seasonalNote.textContent = "When on, POTATO dresses up on his own — " +
+            "Santa hat from the day after Thanksgiving through " +
+            "New Year's Eve, every year.";
+
+        card.appendChild(seasonalNote);
+
+        const festiveLabel = document.createElement("label");
+
+        festiveLabel.style.cssText = "display:flex;align-items:center;" +
+            "gap:10px;font-size:14px;cursor:pointer;margin-top:10px";
+
+        const festiveToggle = document.createElement("input");
+
+        festiveToggle.type = "checkbox";
+
+        festiveToggle.id = "petFestiveToggle";
+
+        festiveToggle.checked = petFestive;
+
+        festiveToggle.style.cssText =
+            "width:20px;height:20px;accent-color:#d92632";
+
+        festiveToggle.addEventListener("change", () => {
+
+            setFestive(festiveToggle.checked);
+
+        });
+
+        const festiveText = document.createElement("span");
+
+        festiveText.textContent = "🎅 Santa hat";
+
+        festiveLabel.appendChild(festiveToggle);
+
+        festiveLabel.appendChild(festiveText);
+
+        card.appendChild(festiveLabel);
+
+        const festiveAutoBtn = document.createElement("button");
+
+        festiveAutoBtn.id = "petFestiveAuto";
+
+        festiveAutoBtn.textContent = "Follow the seasonal calendar";
+
+        festiveAutoBtn.disabled = petFestiveMode === "auto";
+
+        festiveAutoBtn.style.cssText = "margin-top:8px;font-size:13px;" +
+            "padding:6px 10px;border-radius:8px;" +
+            "border:1px solid rgba(140,220,255,0.5);background:transparent;" +
+            "color:inherit;cursor:pointer";
+
+        festiveAutoBtn.addEventListener("click", () => {
+
+            setFestiveMode("auto");
+
+        });
+
+        card.appendChild(festiveAutoBtn);
+
     } catch (error) {}
 
 }
@@ -402,6 +546,26 @@ let petRevertTimer = null;
 let petZzz = null;
 
 let petCssInjected = false;
+
+
+/* ---- Festive mode (Santa hat) ---- */
+/* Baked into festive sprite sheets, not a mood and not an overlay:
+   festive mode swaps each mood to its Christmas sheet. */
+
+let petFestive = false;
+
+/* "auto" = follow the seasonal calendar, "on" = hat always on,
+   "off" = hat always off. */
+
+let petFestiveMode = "auto";
+
+let petSeasonalEnabled = true;
+
+let petFestiveTimer = null;
+
+const PET_FESTIVE_KEY = "aegisPetFestive";
+
+const PET_SEASONAL_KEY = "aegisPetSeasonalEvents";
 
 
 /* ---- Hunger & feeding ---- */
@@ -648,6 +812,252 @@ function petUpdateFeedBtn() {
 }
 
 
+function petLoadFestive() {
+
+    try {
+
+        const raw = localStorage.getItem(PET_FESTIVE_KEY);
+
+        /* Stored values: "auto" (follow the seasonal calendar),
+           "1" (hat always on), "0" (hat always off). Anything
+           else, including no saved value, means auto. */
+
+        petFestiveMode = raw === "1" ? "on" : raw === "0" ? "off" : "auto";
+
+    } catch (error) {
+
+        petFestiveMode = "auto";
+
+    }
+
+}
+
+
+function petLoadSeasonal() {
+
+    try {
+
+        const raw = localStorage.getItem(PET_SEASONAL_KEY);
+
+        /* Default ON — the seasonal cycle runs itself. */
+
+        petSeasonalEnabled = raw === null ? true : raw !== "0";
+
+    } catch (error) {
+
+        petSeasonalEnabled = true;
+
+    }
+
+}
+
+
+function petSaveFestive() {
+
+    try {
+
+        localStorage.setItem(
+            PET_FESTIVE_KEY,
+            petFestiveMode === "on" ? "1" :
+                petFestiveMode === "off" ? "0" : "auto"
+        );
+
+    } catch (error) {}
+
+}
+
+
+function petSaveSeasonal() {
+
+    try {
+
+        localStorage.setItem(
+            PET_SEASONAL_KEY, petSeasonalEnabled ? "1" : "0"
+        );
+
+    } catch (error) {}
+
+}
+
+
+/* US Thanksgiving: the fourth Thursday of November. */
+
+function petThanksgivingDay(year) {
+
+    const nov1 = new Date(year, 10, 1);
+
+    const firstThursday = 1 + ((4 - nov1.getDay() + 7) % 7);
+
+    return firstThursday + 21;
+
+}
+
+
+/* The festive season: the day after Thanksgiving through
+   December 31st. January 1st is already out. */
+
+function petIsFestiveSeason(date) {
+
+    const d = date || new Date();
+
+    const month = d.getMonth();
+
+    if (month === 11) return true;
+
+    if (month !== 10) return false;
+
+    return d.getDate() > petThanksgivingDay(d.getFullYear());
+
+}
+
+
+function petFestiveStatus(date) {
+
+    const inSeason = petIsFestiveSeason(date);
+
+    const festive = petFestiveMode === "on" ||
+        (petFestiveMode === "auto" && petSeasonalEnabled && inSeason);
+
+    return {
+        festive,
+        mode: petFestiveMode,
+        seasonalEvents: petSeasonalEnabled,
+        inSeason
+    };
+
+}
+
+
+/* Recompute the effective hat state from mode + calendar, swap
+   the sprite set if it changed, sync the Settings toggles, and
+   broadcast only on change. */
+
+function petUpdateFestive() {
+
+    const status = petFestiveStatus();
+
+    const changed = status.festive !== petFestive;
+
+    petFestive = status.festive;
+
+    if (changed && petEl) {
+
+        petShowMood(petMood);
+
+    }
+
+    petSyncFestiveSettings();
+
+    if (changed) {
+
+        try {
+
+            Aegis.broadcast("petFestive", {
+                festive: petFestive,
+                mode: petFestiveMode
+            });
+
+        } catch (error) {}
+
+    }
+
+    return petFestive;
+
+}
+
+
+function petSyncFestiveSettings() {
+
+    try {
+
+        if (typeof document === "undefined" || !document.getElementById) return;
+
+        const hatToggle = document.getElementById("petFestiveToggle");
+
+        if (hatToggle) hatToggle.checked = petFestive;
+
+        const autoBtn = document.getElementById("petFestiveAuto");
+
+        if (autoBtn) autoBtn.disabled = petFestiveMode === "auto";
+
+        const seasonalToggle = document.getElementById("petSeasonalToggle");
+
+        if (seasonalToggle) seasonalToggle.checked = petSeasonalEnabled;
+
+    } catch (error) {}
+
+}
+
+
+function setFestiveMode(mode) {
+
+    if (mode !== "auto" && mode !== "on" && mode !== "off") {
+
+        console.warn(`Pet: unknown festive mode "${mode}".`);
+
+        return petFestive;
+
+    }
+
+    petFestiveMode = mode;
+
+    petSaveFestive();
+
+    return petUpdateFestive();
+
+}
+
+
+function setFestive(enabled) {
+
+    if (enabled === "auto") return setFestiveMode("auto");
+
+    return setFestiveMode(enabled ? "on" : "off");
+
+}
+
+
+function getFestive() {
+
+    return petFestive;
+
+}
+
+
+function getFestiveMode() {
+
+    return petFestiveMode;
+
+}
+
+
+function toggleFestive() {
+
+    return setFestiveMode(petFestive ? "off" : "on");
+
+}
+
+
+function setSeasonalEvents(enabled) {
+
+    petSeasonalEnabled = !!enabled;
+
+    petSaveSeasonal();
+
+    petUpdateFestive();
+
+    return petSeasonalEnabled;
+
+}
+
+
+function getSeasonalEvents() {
+
+    return petSeasonalEnabled;
+
+}
+
+
 function petFoodDrop(food) {
 
     const x = petEl.offsetLeft + petFrameW / 2;
@@ -739,6 +1149,25 @@ let petListeners = [];
 
 let petPreloaded = {};
 
+let petPreloadedFestive = {};
+
+
+/* The image for a mood: the Christmas sheet while festive is on,
+   the base sheet otherwise. Festive sheets have the same
+   dimensions and frame counts as the base sheets. */
+
+function petActiveImage(mood) {
+
+    if (petFestive && petPreloadedFestive[mood]) {
+
+        return petPreloadedFestive[mood];
+
+    }
+
+    return petPreloaded[mood];
+
+}
+
 
 function petSprite(mood) {
 
@@ -754,7 +1183,7 @@ function petMeasure(mood) {
 
     const sprite = petSprite(mood);
 
-    const img = petPreloaded[mood];
+    const img = petActiveImage(mood);
 
     if (img && img.naturalWidth > 0) {
 
@@ -845,7 +1274,7 @@ function petShowMood(mood) {
 
     petStrip.innerHTML = "";
 
-    const frameImg = petPreloaded[mood];
+    const frameImg = petActiveImage(mood);
 
     if (frameImg) {
 
@@ -965,6 +1394,27 @@ function petPreload() {
         };
 
         petPreloaded[mood] = img;
+
+        /* Preload the Christmas sheet too, so flipping festive
+           on swaps instantly instead of waiting on a download. */
+
+        const festiveImg = new Image();
+
+        festiveImg.src = PET_SPRITES[mood].festive;
+
+        festiveImg.onload = () => {
+
+            if (mood === petMood && petFestive) {
+
+                petMeasure(mood);
+
+                petDrawFrame();
+
+            }
+
+        };
+
+        petPreloadedFestive[mood] = festiveImg;
 
     });
 
@@ -1216,6 +1666,14 @@ function petDestroy() {
 
     }
 
+    if (petFestiveTimer) {
+
+        clearInterval(petFestiveTimer);
+
+        petFestiveTimer = null;
+
+    }
+
     if (petRevertTimer) {
 
         clearTimeout(petRevertTimer);
@@ -1261,10 +1719,52 @@ function petDestroy() {
 
 Aegis.register("pet", {
 
-    version: "1.1.0",
+    version: "1.4.0",
 
 
     setMood,
+
+
+    setFestive,
+
+
+    getFestive,
+
+
+    toggleFestive,
+
+
+    setFestiveMode,
+
+
+    getFestiveMode,
+
+
+    setSeasonalEvents,
+
+
+    getSeasonalEvents,
+
+
+    refreshFestive() {
+
+        return petUpdateFestive();
+
+    },
+
+
+    isFestiveSeason(date) {
+
+        return petIsFestiveSeason(date);
+
+    },
+
+
+    festiveStatus(date) {
+
+        return petFestiveStatus(date);
+
+    },
 
 
     feed,
@@ -1313,7 +1813,15 @@ Aegis.register("pet", {
 
         petLoadFed();
 
+        petLoadFestive();
+
+        petLoadSeasonal();
+
         petBuild();
+
+        /* First seasonal check before the first frame paints. */
+
+        petUpdateFestive();
 
         petShowMood("idle");
 
@@ -1321,6 +1829,15 @@ Aegis.register("pet", {
 
         petHungerTimer = setInterval(
             petCheckHunger,
+            PET_HUNGER_CHECK_MS
+        );
+
+        /* Re-check the seasonal calendar every 5 minutes, so the
+           hat appears the morning after Thanksgiving and comes
+           off on January 1st without a reload or a tap. */
+
+        petFestiveTimer = setInterval(
+            petUpdateFestive,
             PET_HUNGER_CHECK_MS
         );
 
@@ -1372,6 +1889,14 @@ Aegis.register("pet", {
             mood: petMood,
 
             linked: petLinked,
+
+            festive: petFestive,
+
+            festiveMode: petFestiveMode,
+
+            seasonalEvents: petSeasonalEnabled,
+
+            inSeason: petIsFestiveSeason(),
 
             hungry: petHungry,
 
