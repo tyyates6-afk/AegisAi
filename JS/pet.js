@@ -1290,7 +1290,15 @@ function petShowMood(mood) {
 
         view.draggable = false;
 
-        petStrip.appendChild(view);
+        if (petFestive || mood === "hungry") {
+            petStrip.appendChild(view);
+        } else {
+            const artwork = document.createElement("div");
+            artwork.className = "aegis-pet-artwork";
+            artwork.style.setProperty("--pet-sprite", `url("${sprite.src}")`);
+            artwork.appendChild(view);
+            petStrip.appendChild(artwork);
+        }
 
     }
 

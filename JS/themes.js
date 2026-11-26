@@ -42,6 +42,8 @@ const THEMES_PAGE = "themes";
 const THEMES_STORE_KEY = "aegisTheme";
 
 const THEMES_CUSTOM_KEY = "aegisThemeCustom";
+const THEMES_MAIN_KEY = "aegisThemeMain";
+const THEMES_DEFAULT_MAIN = "#121c2a";
 
 const THEMES_STYLE_ID = "aegis-theme-override";
 
@@ -348,6 +350,8 @@ let thTheme = "default";
 
 let thCustomAccent = "#00d9ff";
 let thPreviewAccent = null;
+let thMainColor = null;
+let thMainInput = null;
 
 let thObserver = null;
 
@@ -368,6 +372,8 @@ function thLoad() {
         const cust = localStorage.getItem(THEMES_CUSTOM_KEY);
 
         if (thValidHex(cust)) thCustomAccent = cust.toLowerCase();
+        const main = localStorage.getItem(THEMES_MAIN_KEY);
+        thMainColor = thValidHex(main) ? main.toLowerCase() : null;
 
     } catch (error) {}
 
@@ -451,9 +457,42 @@ function thApplyVars(ramp) {
         s.setProperty("--secondary", ramp.light);
 
         s.setProperty("--border", "rgba(" + ramp.accentRgb + ",0.18)");
+        s.setProperty("--pet-tint-opacity", thTheme === "default" && !thPreviewAccent ? "0" : "0.65");
 
     } catch (error) {}
 
+}
+
+function thApplyMainColor(color) {
+    const style = document.documentElement.style;
+    const surfaces = [
+        ["--panel", THEMES_DEFAULT_MAIN, 0.88],
+        ["--dashboard-panel-start", "#1e2d41", 0.85],
+        ["--dashboard-panel-end", "#080f1c", 0.9],
+        ["--dashboard-hero-edge", "#0a1423", 0.9]
+    ];
+
+    for (const [property, base, opacity] of surfaces) {
+        if (color) {
+            const rgb = thHexToRgb(thMixHex(base, color, 0.42));
+            style.setProperty(property, `rgba(${rgb},${opacity})`);
+        } else {
+            style.removeProperty(property);
+        }
+    }
+}
+
+function thSetMainColor(color) {
+    if (color !== null && !thValidHex(color)) return;
+
+    thMainColor = color?.toLowerCase() ?? null;
+    try {
+        if (thMainColor) localStorage.setItem(THEMES_MAIN_KEY, thMainColor);
+        else localStorage.removeItem(THEMES_MAIN_KEY);
+    } catch (error) {}
+
+    thApplyMainColor(thMainColor);
+    if (thMainInput) thMainInput.value = thMainColor || THEMES_DEFAULT_MAIN;
 }
 
 
@@ -583,7 +622,7 @@ function thSkipped(el) {
 
 function thSweepOne(el, ramp) {
 
-    if (!el || el.id === THEMES_STYLE_ID || thSkipped(el)) return;
+    if (!el || el === document.documentElement || el.id === THEMES_STYLE_ID || thSkipped(el)) return;
 
     let cur = null;
 
@@ -627,12 +666,6 @@ function thSweepInline(ramp) {
     }
 
     for (let i = 0; i < els.length; i++) thSweepOne(els[i], ramp);
-
-    try {
-
-        thSweepOne(document.documentElement, ramp);
-
-    } catch (error) {}
 
 }
 
@@ -1260,7 +1293,7 @@ function thBuildPage() {
 
     const customLabel = document.createElement("div");
 
-    customLabel.textContent = "Custom color";
+    customLabel.textContent = "Accent color";
 
     thStyle(customLabel, {
 
@@ -1338,7 +1371,7 @@ function thBuildPage() {
 
     const hint = document.createElement("div");
 
-    hint.textContent = "Pick any color — the whole dashboard follows it.";
+    hint.textContent = "Highlights, borders, and controls";
 
     thStyle(hint, {
 
@@ -1352,6 +1385,29 @@ function thBuildPage() {
 
     customWrap.appendChild(row);
 
+    const mainLabel = document.createElement("label");
+    mainLabel.htmlFor = "aegis-theme-main-color";
+    mainLabel.textContent = "Main color";
+    thStyle(mainLabel, { display: "block", margin: "14px 0 8px" });
+    customWrap.appendChild(mainLabel);
+
+    const mainRow = document.createElement("div");
+    thStyle(mainRow, { display: "flex", alignItems: "center", gap: "12px" });
+    thMainInput = document.createElement("input");
+    thMainInput.id = mainLabel.htmlFor;
+    thMainInput.type = "color";
+    thMainInput.value = thMainColor || THEMES_DEFAULT_MAIN;
+    thStyle(thMainInput, { width: "44px", height: "44px", cursor: "pointer" });
+    thMainInput.addEventListener("input", () => thApplyMainColor(thMainInput.value));
+    thMainInput.addEventListener("change", () => thSetMainColor(thMainInput.value));
+    mainRow.appendChild(thMainInput);
+
+    const resetMain = document.createElement("button");
+    resetMain.type = "button";
+    resetMain.textContent = "Reset main color";
+    resetMain.addEventListener("click", () => thSetMainColor(null));
+    mainRow.appendChild(resetMain);
+    customWrap.appendChild(mainRow);
     card.appendChild(customWrap);
 
     thPageEl.appendChild(card);
@@ -1428,6 +1484,7 @@ Aegis.register("themes", {
         thAddMoreEntry();
 
         thApplyTheme(thTheme, false);
+        thApplyMainColor(thMainColor);
 
         thWatch();
 
@@ -1460,6 +1517,7 @@ Aegis.register("themes", {
         thPreviewAccent = null;
 
         thRestoreInline();
+        thApplyMainColor(null);
 
         try {
 
@@ -1478,6 +1536,7 @@ Aegis.register("themes", {
             s.removeProperty("--secondary");
 
             s.removeProperty("--border");
+            s.removeProperty("--pet-tint-opacity");
 
         } catch (error) {}
 
@@ -1513,6 +1572,7 @@ Aegis.register("themes", {
         thCustomInput = null;
 
         thCustomHex = null;
+        thMainInput = null;
 
         console.log("Dashboard Themes v1.0.0 shut down.");
 

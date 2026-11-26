@@ -8,6 +8,9 @@
     --bg:#050b14;
     --panel:rgba(18,28,42,.88);
     --panel-light:rgba(28,40,60,.85);
+    --dashboard-panel-start:rgba(30,45,65,.85);
+    --dashboard-panel-end:rgba(8,15,28,.9);
+    --dashboard-hero-edge:rgba(10,20,35,.9);
 
     --primary:#00d9ff;
     --secondary:#66ccff;
@@ -16,10 +19,32 @@
 
     --border:rgba(0,217,255,.18);
 
+    --pet-tint-opacity:0;
     --radius:18px;
 
     --transition:.25s ease;
 
+}
+
+.aegis-pet-artwork {
+    position: relative;
+    display: flex;
+    flex: none;
+    isolation: isolate;
+}
+
+@supports (mask-image: none) or (-webkit-mask-image: none) {
+    .aegis-pet-artwork::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-color: var(--primary);
+        opacity: var(--pet-tint-opacity);
+        mix-blend-mode: color;
+        -webkit-mask: var(--pet-sprite) center / 100% 100% no-repeat;
+        mask: var(--pet-sprite) center / 100% 100% no-repeat;
+    }
 }
 
 body{
@@ -335,8 +360,8 @@ button:hover{
 
         linear-gradient(
             145deg,
-            rgba(30,45,65,.85),
-            rgba(8,15,28,.9)
+            var(--dashboard-panel-start),
+            var(--dashboard-panel-end)
         );
 
     border:
@@ -391,7 +416,7 @@ button:hover{
 
             rgba(0,217,255,.18),
 
-            rgba(10,20,35,.9)
+            var(--dashboard-hero-edge)
 
         );
 
