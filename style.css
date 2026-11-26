@@ -48,6 +48,34 @@
     }
 }
 
+.focus-playlists {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.focus-playlist {
+    max-width: 540px;
+    margin-bottom: 18px;
+}
+
+.focus-playlist input {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+}
+
+.focus-playlist-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.focus-playlist-actions a {
+    color: var(--secondary);
+}
+
 body{
 
     margin:0;

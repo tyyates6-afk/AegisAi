@@ -876,6 +876,18 @@ function focusBuildSetupWindow() {
 
     focusSetupWin.appendChild(btnRow);
 
+    const soundsBtn = document.createElement("button");
+    soundsBtn.type = "button";
+    soundsBtn.textContent = "Focus Sounds & playlists";
+    soundsBtn.addEventListener("click", () => {
+        focusCloseSetup();
+        Aegis.run("focussounds", "open");
+    });
+    soundsBtn.addEventListener("keydown", event => {
+        if (event.key === "Enter") event.stopPropagation();
+    });
+    focusSetupWin.appendChild(soundsBtn);
+
     document.body.appendChild(focusSetupWin);
 
     /* Enter starts, Escape closes. */

@@ -21,6 +21,14 @@ const FS_PAGE = "focussounds";
 
 const FS_STORE_KEY = "aegisFocusSounds";
 
+const FS_PLAYLISTS = [
+    { id: "spotify", name: "Spotify", host: "open.spotify.com",
+        path: /^\/(?:intl-[a-z]{2}\/)?playlist\/[a-z0-9]+\/?$/i },
+    { id: "appleMusic", name: "Apple Music", host: "music.apple.com",
+        path: /^\/(?:[a-z]{2}\/)?playlist\/(?:[^/]+\/)?pl\.[a-z0-9-]+\/?$/i }
+];
+let fsPlaylistLinks = {};
+
 
 let fsPageEl = null;
 
@@ -49,6 +57,9 @@ function fsLoad() {
         if (!raw) return;
 
         const data = JSON.parse(raw);
+        fsPlaylistLinks = Object.fromEntries(FS_PLAYLISTS.map(provider => [
+            provider.id, fsPlaylistUrl(provider, data?.playlists?.[provider.id])
+        ]));
 
         if (data && typeof data.sound === "string") {
 
@@ -75,12 +86,30 @@ function fsSave() {
 
             sound: fsChoice,
 
-            volume: fsVolume
+            volume: fsVolume,
+            playlists: fsPlaylistLinks
 
         }));
 
-    } catch (error) {}
+        return true;
+    } catch (error) {
+        return false;
+    }
 
+}
+
+function fsPlaylistUrl(provider, value) {
+    if (typeof value !== "string") return "";
+    try {
+        const url = new URL(value.trim());
+        if (url.protocol === "https:" && url.host === provider.host &&
+            !url.username && !url.password && provider.path.test(url.pathname)) {
+            return url.origin + url.pathname;
+        }
+    } catch {
+        // The field may be empty or contain an incomplete URL.
+    }
+    return "";
 }
 
 
@@ -294,7 +323,7 @@ function fsNav() {
 
     } catch (error) {}
 
-    return null;
+    return window.Navigation || null;
 
 }
 
@@ -505,6 +534,80 @@ function fsSoundBtn(kind, label) {
 }
 
 
+function fsBuildPlaylists(card) {
+    const section = document.createElement("section");
+    section.className = "focus-playlists";
+    const heading = document.createElement("h3");
+    heading.textContent = "Focus playlists";
+    section.appendChild(heading);
+
+    for (const provider of FS_PLAYLISTS) {
+        const form = document.createElement("form");
+        form.noValidate = true;
+        form.className = "focus-playlist";
+
+        const label = document.createElement("label");
+        label.htmlFor = `focus-playlist-${provider.id}`;
+        label.textContent = `${provider.name} playlist link`;
+        const input = document.createElement("input");
+        input.id = label.htmlFor;
+        input.type = "url";
+        input.autocomplete = "off";
+        input.value = fsPlaylistLinks[provider.id] || "";
+
+        const actions = document.createElement("div");
+        actions.className = "focus-playlist-actions";
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.textContent = "Save link";
+        const open = document.createElement("a");
+        open.textContent = `Open in ${provider.name}`;
+        open.target = "_blank";
+        open.rel = "noopener noreferrer";
+        const updateLink = () => {
+            const url = fsPlaylistLinks[provider.id];
+            open.hidden = !url;
+            if (url) open.href = url;
+            else open.removeAttribute("href");
+        };
+        updateLink();
+        actions.append(save, open);
+
+        const status = document.createElement("div");
+        status.id = `${input.id}-status`;
+        status.setAttribute("role", "status");
+        input.setAttribute("aria-describedby", status.id);
+        input.addEventListener("input", () => {
+            input.removeAttribute("aria-invalid");
+            status.textContent = "";
+        });
+        form.addEventListener("submit", event => {
+            event.preventDefault();
+            const url = fsPlaylistUrl(provider, input.value);
+            if (!url && input.value.trim()) {
+                input.setAttribute("aria-invalid", "true");
+                status.textContent = `Paste a playlist link from ${provider.name}.`;
+                input.focus();
+                return;
+            }
+            const previous = fsPlaylistLinks[provider.id] || "";
+            fsPlaylistLinks[provider.id] = url;
+            if (!fsSave()) {
+                fsPlaylistLinks[provider.id] = previous;
+                status.textContent = "Could not save the link on this device.";
+                return;
+            }
+            input.value = url;
+            updateLink();
+            status.textContent = url ? "Playlist link saved." : "Playlist link cleared.";
+        });
+        form.append(label, input, actions, status);
+        section.appendChild(form);
+    }
+    card.appendChild(section);
+}
+
+
 function fsBuildPage() {
 
     fsPageEl = document.createElement("div");
@@ -622,6 +725,7 @@ function fsBuildPage() {
     });
 
     card.appendChild(note);
+    fsBuildPlaylists(card);
 
     fsPageEl.appendChild(card);
 
