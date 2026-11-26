@@ -253,7 +253,7 @@
             if (page === "home") return "home";
             if (page === "planner") return "planner";
             if (page === "modules") return "modules";
-            if (page === "settings") return "settings";
+            if (page === "settings" || page === "themes") return "settings";
             return "more";
         },
 

@@ -40,8 +40,8 @@
                     status: "active" | "answered",
                     answeredAt, answeredNote }.
 
-    Prayers persist in localStorage ("aegisPrayerJournal").
-    No AI, no backend.
+    Prayers persist locally and sync through the signed-in
+    account's progress collection.
 
     BROADCASTS:
     - "prayerAdded"    { id, title }
@@ -67,8 +67,6 @@ const PRAYER_PAGE_NAME = "prayer";
 
 let prayers = [];
 
-let prayerSeq = 0;
-
 let prayerFilter = "all";
 
 let prayerPageEl = null;
@@ -89,35 +87,16 @@ let prayerSearchQuery = "";
 
 function prayerLoad() {
 
-    try {
-
-        const raw = localStorage.getItem(PRAYER_STORE_KEY);
-
-        if (!raw) return;
-
-        const data = JSON.parse(raw);
-
-        if (Array.isArray(data.prayers)) {
-
-            prayers = data.prayers.filter(prayerValid);
-
-        }
-
-    } catch (error) {}
+    prayers = ProgressStorage.read(PRAYER_STORE_KEY)
+        .filter(prayerValid)
+        .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
 }
 
 
 function prayerSave() {
 
-    try {
-
-        localStorage.setItem(
-            PRAYER_STORE_KEY,
-            JSON.stringify({ prayers: prayers })
-        );
-
-    } catch (error) {}
+    ProgressStorage.save(PRAYER_STORE_KEY, prayers);
 
 }
 
@@ -143,9 +122,7 @@ function prayerNow() {
 
 function prayerNewId() {
 
-    prayerSeq += 1;
-
-    return "prayer-" + Date.now().toString(36) + "-" + prayerSeq;
+    return "prayer-" + ProgressStorage.revision();
 
 }
 
@@ -1270,6 +1247,8 @@ Aegis.register("prayer", {
 
 
     refresh() {
+
+        prayerLoad();
 
         prayerRenderList();
 

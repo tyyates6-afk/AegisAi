@@ -29,7 +29,8 @@ const ProgressStorage = {
         aegisFocusSessions: session => session?.startedAt,
         aegisAchievements: id => id,
         petSettings: setting => setting?.id,
-        themeSettings: setting => setting?.id
+        themeSettings: setting => setting?.id,
+        aegisPrayerJournal: prayer => prayer?.id
     },
     legacySettings: {
         petSettings: ["aegisPetFestive", "aegisPetSeasonalEvents", "aegisPetMeals"],
@@ -46,6 +47,9 @@ const ProgressStorage = {
             const stored = JSON.parse(localStorage.getItem(this.storageKey(key, userId)));
             if (userId && Array.isArray(stored?.items) && stored.pending) return stored;
             if (!userId && Array.isArray(stored)) return { items: stored, pending: {} };
+            if (!userId && key === "aegisPrayerJournal" && Array.isArray(stored?.prayers)) {
+                return { items: stored.prayers, pending: {} };
+            }
         } catch (error) {
             console.warn("Could not read progress", error);
         }
@@ -124,6 +128,7 @@ const ProgressStorage = {
                         ([id, value]) => [id, { value, revision: this.revision(), seed: true }]
                     ));
                     saveData(target, { items, pending });
+                    if (key === "aegisPrayerJournal") localStorage.removeItem(key);
                 }
             }
         }

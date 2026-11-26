@@ -1,4 +1,4 @@
-const CACHE_NAME = "aegis-v5";
+const CACHE_NAME = "aegis-v6";
 
 const BASE =
     self.location.pathname.replace("/service-worker.js", "");
@@ -225,6 +225,9 @@ self.addEventListener("fetch", event => {
 
     const request = event.request;
     const url = new URL(request.url);
+
+    // Account data must bypass the shared offline cache.
+    if (request.headers.has("authorization")) return;
 
     // Only handle HTTP/HTTPS requests
     if (

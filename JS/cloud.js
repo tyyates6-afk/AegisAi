@@ -160,6 +160,8 @@ Aegis.register("cloud", {
                 this.user =
                 session?.user || null;
 
+                this.useProgressAccount();
+
                 console.log(
                     "Auth State:",
                     event
@@ -169,7 +171,6 @@ Aegis.register("cloud", {
                     "cloudUpdated"
                 );
 
-                this.useProgressAccount();
                 if (this.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
                     const userId = this.user.id;
                     setTimeout(() => {
@@ -368,6 +369,8 @@ Aegis.register("cloud", {
         this.user =
         data.user;
 
+        this.useProgressAccount();
+
         console.log(
             "AEGIS login successful:",
             this.user
@@ -396,6 +399,8 @@ Aegis.register("cloud", {
 
         this.user = null;
 
+        this.useProgressAccount();
+
         Aegis.broadcast(
             "cloudUpdated"
         );
@@ -416,6 +421,8 @@ Aegis.register("cloud", {
 
             this.user =
             data.session.user;
+
+            this.useProgressAccount();
 
             console.log(
                 "Supabase session restored:",
@@ -510,7 +517,8 @@ Aegis.register("cloud", {
             aegisFocusSessions: ["focustracker", "refresh"],
             aegisAchievements: ["achievements", "refresh"],
             petSettings: ["pet", "reloadSettings"],
-            themeSettings: ["themes", "reloadSettings"]
+            themeSettings: ["themes", "reloadSettings"],
+            aegisPrayerJournal: ["prayer", "refresh"]
         };
         const [name, method] = modules[collection];
         Aegis.getModule(name)?.api?.[method]?.();

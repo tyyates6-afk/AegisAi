@@ -344,8 +344,6 @@ let thGridEl = null;
 
 let thCustomInput = null;
 
-let thCustomHex = null;
-
 let thTheme = "default";
 
 let thCustomAccent = "#00d9ff";
@@ -780,8 +778,6 @@ function thPreviewCustom(hex) {
     thPreviewAccent = hex.toLowerCase();
     thApplyPipeline(thCurrentRamp());
 
-    if (thCustomHex) thCustomHex.textContent = hex.toLowerCase();
-
 }
 
 
@@ -1006,9 +1002,9 @@ function thShowPage(name) {
 }
 
 
-function thGoMore() {
+function thGoSettings() {
 
-    thShowPage("more");
+    thShowPage("settings");
 
 }
 
@@ -1040,15 +1036,15 @@ function thHookNavigation() {
 }
 
 
-function thAddMoreEntry() {
+function thAddSettingsEntry() {
 
     try {
 
-        const hubList = document.querySelector(".aegis-more-list");
+        const settings = document.getElementById("appearanceSettings");
 
-        if (!hubList) return false;
+        if (!settings) return false;
 
-        if (hubList.querySelector('[data-goto-page="' + THEMES_PAGE + '"]')) {
+        if (settings.querySelector('[data-goto-page="' + THEMES_PAGE + '"]')) {
 
             return true;
 
@@ -1056,7 +1052,7 @@ function thAddMoreEntry() {
 
         const item = document.createElement("button");
 
-        item.className = "aegis-more-item";
+        item.type = "button";
 
         item.setAttribute("data-goto-page", THEMES_PAGE);
 
@@ -1064,17 +1060,7 @@ function thAddMoreEntry() {
 
         item.addEventListener("click", thOpen);
 
-        const divider = hubList.querySelector("hr");
-
-        if (divider) {
-
-            hubList.insertBefore(item, divider);
-
-        } else {
-
-            hubList.appendChild(item);
-
-        }
+        settings.appendChild(item);
 
         return true;
 
@@ -1117,13 +1103,6 @@ function thRefresh() {
             thCustomInput.value = thCustomAccent;
 
         } catch (error) {}
-
-    }
-
-    if (thCustomHex) {
-
-        thCustomHex.textContent =
-            thCustomAccent + (thTheme === "custom" ? " ✓" : "");
 
     }
 
@@ -1212,6 +1191,35 @@ function thRefresh() {
 }
 
 
+function thBuildColorPicker(container, { id, name, value, preview, save, reset }) {
+    const label = document.createElement("label");
+    label.htmlFor = id;
+    label.textContent = name;
+    thStyle(label, { display: "block", margin: "14px 0 8px" });
+    container.appendChild(label);
+
+    const row = document.createElement("div");
+    thStyle(row, { display: "flex", alignItems: "center", gap: "12px" });
+
+    const input = document.createElement("input");
+    input.id = id;
+    input.type = "color";
+    input.value = value;
+    thStyle(input, { width: "44px", height: "44px", cursor: "pointer" });
+    input.addEventListener("input", () => preview(input.value));
+    input.addEventListener("change", () => save(input.value));
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Reset " + name.toLowerCase();
+    button.addEventListener("click", reset);
+
+    row.append(input, button);
+    container.appendChild(row);
+    return input;
+}
+
+
 function thBuildPage() {
 
     thPageEl = document.createElement("div");
@@ -1240,9 +1248,9 @@ function thBuildPage() {
 
     back.className = "aegis-page-back";
 
-    back.textContent = "← Back to More";
+    back.textContent = "← Back to Settings";
 
-    back.addEventListener("click", thGoMore);
+    back.addEventListener("click", thGoSettings);
 
     thPageEl.appendChild(back);
 
@@ -1296,123 +1304,26 @@ function thBuildPage() {
 
     });
 
-    const customLabel = document.createElement("div");
-
-    customLabel.textContent = "Accent color";
-
-    thStyle(customLabel, {
-
-        fontSize: "13px",
-
-        color: "#9fdcff",
-
-        marginBottom: "8px"
-
+    thMainInput = thBuildColorPicker(customWrap, {
+        id: "aegis-theme-main-color",
+        name: "Main color",
+        value: thMainColor || THEMES_DEFAULT_MAIN,
+        preview: thApplyMainColor,
+        save: thSetMainColor,
+        reset: () => thSetMainColor(null)
     });
-
-    customWrap.appendChild(customLabel);
-
-    const row = document.createElement("div");
-
-    thStyle(row, {
-
-        display: "flex",
-
-        alignItems: "center",
-
-        gap: "12px"
-
+    thCustomInput = thBuildColorPicker(customWrap, {
+        id: "aegis-theme-accent-color",
+        name: "Accent color",
+        value: thCustomAccent,
+        preview: thPreviewCustom,
+        save: thSetCustom,
+        reset: () => {
+            thCustomAccent = thDef("default").accent;
+            thSaveCustom();
+            thApplyTheme("default");
+        }
     });
-
-    thCustomInput = document.createElement("input");
-
-    thCustomInput.type = "color";
-
-    thCustomInput.value = thCustomAccent;
-
-    thCustomInput.setAttribute("aria-label", "Pick a custom accent color");
-
-    thStyle(thCustomInput, {
-
-        width: "44px",
-
-        height: "44px",
-
-        border: "none",
-
-        borderRadius: "50%",
-
-        padding: "0",
-
-        background: "none",
-
-        cursor: "pointer",
-
-        flexShrink: "0"
-
-    });
-
-    thCustomInput.addEventListener("input", () => thPreviewCustom(thCustomInput.value));
-
-    thCustomInput.addEventListener("change", () => thSetCustom(thCustomInput.value));
-
-    row.appendChild(thCustomInput);
-
-    thCustomHex = document.createElement("span");
-
-    thCustomHex.textContent = thCustomAccent;
-
-    thStyle(thCustomHex, {
-
-        fontSize: "13px",
-
-        color: "#9fdcff",
-
-        fontFamily: "monospace"
-
-    });
-
-    row.appendChild(thCustomHex);
-
-    const hint = document.createElement("div");
-
-    hint.textContent = "Highlights, borders, and controls";
-
-    thStyle(hint, {
-
-        fontSize: "11px",
-
-        color: "rgba(159, 220, 255, 0.55)"
-
-    });
-
-    row.appendChild(hint);
-
-    customWrap.appendChild(row);
-
-    const mainLabel = document.createElement("label");
-    mainLabel.htmlFor = "aegis-theme-main-color";
-    mainLabel.textContent = "Main color";
-    thStyle(mainLabel, { display: "block", margin: "14px 0 8px" });
-    customWrap.appendChild(mainLabel);
-
-    const mainRow = document.createElement("div");
-    thStyle(mainRow, { display: "flex", alignItems: "center", gap: "12px" });
-    thMainInput = document.createElement("input");
-    thMainInput.id = mainLabel.htmlFor;
-    thMainInput.type = "color";
-    thMainInput.value = thMainColor || THEMES_DEFAULT_MAIN;
-    thStyle(thMainInput, { width: "44px", height: "44px", cursor: "pointer" });
-    thMainInput.addEventListener("input", () => thApplyMainColor(thMainInput.value));
-    thMainInput.addEventListener("change", () => thSetMainColor(thMainInput.value));
-    mainRow.appendChild(thMainInput);
-
-    const resetMain = document.createElement("button");
-    resetMain.type = "button";
-    resetMain.textContent = "Reset main color";
-    resetMain.addEventListener("click", () => thSetMainColor(null));
-    mainRow.appendChild(resetMain);
-    customWrap.appendChild(mainRow);
     card.appendChild(customWrap);
 
     thPageEl.appendChild(card);
@@ -1493,7 +1404,7 @@ Aegis.register("themes", {
 
         thBuildPage();
 
-        thAddMoreEntry();
+        thAddSettingsEntry();
 
         thApplyTheme(thTheme, false);
         thApplyMainColor(thMainColor);
@@ -1567,7 +1478,7 @@ Aegis.register("themes", {
         try {
 
             const entry = document.querySelector(
-                '.aegis-more-list [data-goto-page="' +
+                '#appearanceSettings [data-goto-page="' +
                 THEMES_PAGE + '"]'
             );
 
@@ -1585,7 +1496,6 @@ Aegis.register("themes", {
 
         thCustomInput = null;
 
-        thCustomHex = null;
         thMainInput = null;
 
         console.log("Dashboard Themes v1.0.0 shut down.");
