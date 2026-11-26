@@ -460,7 +460,18 @@ function thApplyVars(ramp) {
         s.setProperty("--border", "rgba(" + ramp.accentRgb + ",0.18)");
         const tintArtwork = thTheme !== "default";
         s.setProperty("--artwork-tint-opacity", tintArtwork ? "0.65" : "0");
-        s.setProperty("--background-tint", tintArtwork ? `rgba(${ramp.accentRgb},0.4)` : "transparent");
+        const background = thMainColor ?? (tintArtwork ? ramp.accent : null);
+        if (background) {
+            const start = thHexToRgb(thMixHex("#142337", background, 0.48));
+            const end = thHexToRgb(thMixHex("#050f1e", background, 0.24));
+            s.setProperty("--background-tint", `rgba(${thHexToRgb(background)},0.65)`);
+            s.setProperty("--dashboard-background-start", `rgba(${start},0.9)`);
+            s.setProperty("--dashboard-background-end", `rgba(${end},0.95)`);
+        } else {
+            s.removeProperty("--background-tint");
+            s.removeProperty("--dashboard-background-start");
+            s.removeProperty("--dashboard-background-end");
+        }
 
     } catch (error) {}
 
@@ -1330,6 +1341,8 @@ Aegis.register("themes", {
             s.removeProperty("--border");
             s.removeProperty("--artwork-tint-opacity");
             s.removeProperty("--background-tint");
+            s.removeProperty("--dashboard-background-start");
+            s.removeProperty("--dashboard-background-end");
 
         } catch (error) {}
 

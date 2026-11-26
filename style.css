@@ -121,14 +121,14 @@ body{
     sans-serif;
 
     background:
+    linear-gradient(var(--background-tint), var(--background-tint)),
     linear-gradient(
         rgba(0,0,0,.72),
         rgba(0,0,0,.88)
     ),
-    linear-gradient(var(--background-tint), var(--background-tint)),
     url("assets/background.jpg");
 
-    background-blend-mode: normal, color, normal;
+    background-blend-mode: color, normal, normal;
 
     background-size:cover;
 
@@ -435,8 +435,8 @@ button:hover{
 
         linear-gradient(
             135deg,
-            rgba(20,35,55,.9),
-            rgba(5,15,30,.95)
+            var(--dashboard-background-start, rgba(20,35,55,.9)),
+            var(--dashboard-background-end, rgba(5,15,30,.95))
         );
 
     border:
