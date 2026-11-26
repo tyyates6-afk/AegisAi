@@ -461,7 +461,9 @@ function thApplyVars(ramp) {
         s.setProperty("--secondary", ramp.light);
 
         s.setProperty("--border", "rgba(" + ramp.accentRgb + ",0.18)");
-        s.setProperty("--pet-tint-opacity", thTheme === "default" && !thPreviewAccent ? "0" : "0.65");
+        const tintArtwork = thTheme !== "default" || Boolean(thPreviewAccent);
+        s.setProperty("--artwork-tint-opacity", tintArtwork ? "0.65" : "0");
+        s.setProperty("--background-tint", tintArtwork ? `rgba(${ramp.accentRgb},0.4)` : "transparent");
 
     } catch (error) {}
 
@@ -1547,7 +1549,8 @@ Aegis.register("themes", {
             s.removeProperty("--secondary");
 
             s.removeProperty("--border");
-            s.removeProperty("--pet-tint-opacity");
+            s.removeProperty("--artwork-tint-opacity");
+            s.removeProperty("--background-tint");
 
         } catch (error) {}
 

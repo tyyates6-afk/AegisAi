@@ -1302,7 +1302,7 @@ function petShowMood(mood) {
         } else {
             const artwork = document.createElement("div");
             artwork.className = "aegis-pet-artwork";
-            artwork.style.setProperty("--pet-sprite", `url("${sprite.src}")`);
+            artwork.style.setProperty("--artwork-mask", `url("${sprite.src}")`);
             artwork.appendChild(view);
             petStrip.appendChild(artwork);
         }

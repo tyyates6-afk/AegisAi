@@ -20,7 +20,8 @@
 
     --border:rgba(0,217,255,.18);
 
-    --pet-tint-opacity:0;
+    --artwork-tint-opacity:0;
+    --background-tint:transparent;
     --radius:18px;
 
     --transition:.25s ease;
@@ -34,17 +35,26 @@
     isolation: isolate;
 }
 
+.aegis-logo-artwork {
+    position: relative;
+    display: inline-flex;
+    isolation: isolate;
+    --artwork-mask: url("assets/aegis-logo.png");
+    --artwork-mask-size: contain;
+}
+
 @supports (mask-image: none) or (-webkit-mask-image: none) {
-    .aegis-pet-artwork::after {
+    .aegis-pet-artwork::after,
+    .aegis-logo-artwork::after {
         content: "";
         position: absolute;
         inset: 0;
         pointer-events: none;
         background-color: var(--primary);
-        opacity: var(--pet-tint-opacity);
+        opacity: var(--artwork-tint-opacity);
         mix-blend-mode: color;
-        -webkit-mask: var(--pet-sprite) center / 100% 100% no-repeat;
-        mask: var(--pet-sprite) center / 100% 100% no-repeat;
+        -webkit-mask: var(--artwork-mask) center / var(--artwork-mask-size, 100% 100%) no-repeat;
+        mask: var(--artwork-mask) center / var(--artwork-mask-size, 100% 100%) no-repeat;
     }
 }
 
@@ -92,7 +102,10 @@ body{
         rgba(0,0,0,.72),
         rgba(0,0,0,.88)
     ),
+    linear-gradient(var(--background-tint), var(--background-tint)),
     url("assets/background.jpg");
+
+    background-blend-mode: normal, color, normal;
 
     background-size:cover;
 
