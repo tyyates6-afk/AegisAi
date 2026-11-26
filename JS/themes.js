@@ -365,14 +365,13 @@ function thLoad() {
 
     try {
 
-        const raw = localStorage.getItem(THEMES_STORE_KEY);
+        const raw = ProgressStorage.getSetting("themeSettings", THEMES_STORE_KEY);
+        thTheme = raw || "default";
 
-        if (raw) thTheme = raw;
+        const cust = ProgressStorage.getSetting("themeSettings", THEMES_CUSTOM_KEY);
 
-        const cust = localStorage.getItem(THEMES_CUSTOM_KEY);
-
-        if (thValidHex(cust)) thCustomAccent = cust.toLowerCase();
-        const main = localStorage.getItem(THEMES_MAIN_KEY);
+        thCustomAccent = thValidHex(cust) ? cust.toLowerCase() : THEME_DEFS[0].accent;
+        const main = ProgressStorage.getSetting("themeSettings", THEMES_MAIN_KEY);
         thMainColor = thValidHex(main) ? main.toLowerCase() : null;
 
     } catch (error) {}
@@ -386,7 +385,7 @@ function thSave() {
 
     try {
 
-        localStorage.setItem(THEMES_STORE_KEY, thTheme);
+        ProgressStorage.setSetting("themeSettings", THEMES_STORE_KEY, thTheme);
 
     } catch (error) {}
 
@@ -397,7 +396,7 @@ function thSaveCustom() {
 
     try {
 
-        localStorage.setItem(THEMES_CUSTOM_KEY, thCustomAccent);
+        ProgressStorage.setSetting("themeSettings", THEMES_CUSTOM_KEY, thCustomAccent);
 
     } catch (error) {}
 
@@ -492,8 +491,7 @@ function thSetMainColor(color) {
 
     thMainColor = color?.toLowerCase() ?? null;
     try {
-        if (thMainColor) localStorage.setItem(THEMES_MAIN_KEY, thMainColor);
-        else localStorage.removeItem(THEMES_MAIN_KEY);
+        ProgressStorage.setSetting("themeSettings", THEMES_MAIN_KEY, thMainColor);
     } catch (error) {}
 
     thApplyMainColor(thMainColor);
@@ -1471,6 +1469,13 @@ Aegis.register("themes", {
 
     },
 
+
+    reloadSettings() {
+        thLoad();
+        thApplyTheme(thTheme, false);
+        thApplyMainColor(thMainColor);
+        if (thMainInput) thMainInput.value = thMainColor || THEMES_DEFAULT_MAIN;
+    },
 
     init() {
 

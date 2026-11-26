@@ -675,9 +675,16 @@ function petLoadFed() {
 
     }
 
+}
+
+
+function petLoadMeals() {
+
+    petHungerMeals = [8, 12, 18];
+
     try {
 
-        const raw = localStorage.getItem(PET_MEALS_KEY);
+        const raw = ProgressStorage.getSetting("petSettings", PET_MEALS_KEY);
 
         if (raw) {
 
@@ -701,7 +708,7 @@ function petSaveMeals() {
 
     try {
 
-        localStorage.setItem(PET_MEALS_KEY, JSON.stringify(petHungerMeals));
+        ProgressStorage.setSetting("petSettings", PET_MEALS_KEY, JSON.stringify(petHungerMeals));
 
     } catch (error) {}
 
@@ -816,7 +823,7 @@ function petLoadFestive() {
 
     try {
 
-        const raw = localStorage.getItem(PET_FESTIVE_KEY);
+        const raw = ProgressStorage.getSetting("petSettings", PET_FESTIVE_KEY);
 
         /* Stored values: "auto" (follow the seasonal calendar),
            "1" (hat always on), "0" (hat always off). Anything
@@ -837,7 +844,7 @@ function petLoadSeasonal() {
 
     try {
 
-        const raw = localStorage.getItem(PET_SEASONAL_KEY);
+        const raw = ProgressStorage.getSetting("petSettings", PET_SEASONAL_KEY);
 
         /* Default ON — the seasonal cycle runs itself. */
 
@@ -856,8 +863,8 @@ function petSaveFestive() {
 
     try {
 
-        localStorage.setItem(
-            PET_FESTIVE_KEY,
+        ProgressStorage.setSetting(
+            "petSettings", PET_FESTIVE_KEY,
             petFestiveMode === "on" ? "1" :
                 petFestiveMode === "off" ? "0" : "auto"
         );
@@ -871,8 +878,8 @@ function petSaveSeasonal() {
 
     try {
 
-        localStorage.setItem(
-            PET_SEASONAL_KEY, petSeasonalEnabled ? "1" : "0"
+        ProgressStorage.setSetting(
+            "petSettings", PET_SEASONAL_KEY, petSeasonalEnabled ? "1" : "0"
         );
 
     } catch (error) {}
@@ -1754,6 +1761,13 @@ Aegis.register("pet", {
     getSeasonalEvents,
 
 
+    reloadSettings() {
+        petLoadMeals();
+        petLoadFestive();
+        petLoadSeasonal();
+        petUpdateFestive();
+    },
+
     refreshFestive() {
 
         return petUpdateFestive();
@@ -1820,6 +1834,7 @@ Aegis.register("pet", {
         }
 
         petLoadFed();
+        petLoadMeals();
 
         petLoadFestive();
 

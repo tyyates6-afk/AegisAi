@@ -30,6 +30,7 @@ let achListEl = null;
 
 
 function achRead(key) {
+    if (Object.hasOwn(ProgressStorage.keys, key)) return ProgressStorage.read(key);
 
     try {
 
@@ -54,13 +55,7 @@ function achUnlocked() {
 
     try {
 
-        const raw = localStorage.getItem(ACH_STORE_KEY);
-
-        if (!raw) return [];
-
-        const achList = JSON.parse(raw);
-
-        return Array.isArray(achList) ? achList : [];
+        return ProgressStorage.read(ACH_STORE_KEY);
 
     } catch (error) {
 
@@ -75,10 +70,7 @@ function achSaveUnlocked(ids) {
 
     try {
 
-        localStorage.setItem(
-            ACH_STORE_KEY,
-            JSON.stringify(ids)
-        );
+        ProgressStorage.save(ACH_STORE_KEY, ids);
 
     } catch (error) {}
 

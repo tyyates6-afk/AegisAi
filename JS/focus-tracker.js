@@ -54,13 +54,7 @@ function ftLoadSessions() {
 
     try {
 
-        const raw = localStorage.getItem(FT_STORE_KEY);
-
-        if (!raw) return [];
-
-        const ftListSessions = JSON.parse(raw);
-
-        return Array.isArray(ftListSessions) ? ftListSessions : [];
+        return ProgressStorage.read(FT_STORE_KEY);
 
     } catch (error) {
 
@@ -75,7 +69,7 @@ function ftSaveSessions(ftListSessions) {
 
     try {
 
-        localStorage.setItem(FT_STORE_KEY, JSON.stringify(ftListSessions));
+        ProgressStorage.save(FT_STORE_KEY, ftListSessions);
 
     } catch (error) {}
 

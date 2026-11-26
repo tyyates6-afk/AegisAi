@@ -1,6 +1,6 @@
 /* Habit Tracker v2.2.0 — clean rebuild.
    Full-width dashboard card under Dashboard on the Home page.
-   Stats header, 7-day dots, inline rename. localStorage only.
+   Stats header, 7-day dots, inline rename.
    Render pattern follows prayer.js: createElement + appendChild,
    innerHTML used only to clear containers. */
 
@@ -21,11 +21,7 @@ let hbSelectedFreq = "daily";
 
 function load() {
     try {
-        const raw = localStorage.getItem(STORE_KEY);
-        if (!raw) return [];
-        const list = JSON.parse(raw);
-        if (!Array.isArray(list)) return [];
-        return list.filter((h) => h && typeof h === "object" && typeof h.id === "string");
+        return ProgressStorage.read(STORE_KEY).filter((h) => h && typeof h === "object" && typeof h.id === "string");
     } catch (e) {
         return [];
     }
@@ -33,7 +29,7 @@ function load() {
 
 function save(list) {
     try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(list));
+        ProgressStorage.save(STORE_KEY, list);
     } catch (e) {}
 }
 
@@ -557,6 +553,7 @@ function toggleDay(id, key) {
     else h.days[key] = true;
     save(habits);
     render();
+    Aegis.broadcast("habitToggled", { id, day: key, checked: Boolean(h.days[key]) });
 }
 
 function checkToday(id) {

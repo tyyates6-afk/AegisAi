@@ -155,7 +155,7 @@ Aegis.register("cloud", {
         await this.loadSession();
 
         supabaseClient.auth.onAuthStateChange(
-            async (event, session)=>{
+            (event, session)=>{
 
                 this.user =
                 session?.user || null;
@@ -169,15 +169,24 @@ Aegis.register("cloud", {
                     "cloudUpdated"
                 );
 
-                if(this.user){
-
-                    await this.initialSync();
-
+                this.useProgressAccount();
+                if (this.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+                    const userId = this.user.id;
+                    setTimeout(() => {
+                        if (this.user?.id === userId) void this.initialSync();
+                    }, 0);
                 }
 
             }
         );
 
+        window.addEventListener("online", () => this.scheduleProgressSync(0));
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) this.scheduleProgressSync(0);
+        });
+        setInterval(() => {
+            if (!document.hidden) this.scheduleProgressSync(0);
+        }, 60000);
         await this.testConnection();
 
     },
@@ -433,6 +442,9 @@ Aegis.register("cloud", {
             "Beginning cloud sync..."
         );
 
+        this.useProgressAccount();
+        this.scheduleProgressSync(0);
+
         try{
 
             if(window.loadCloudProfile){
@@ -484,6 +496,86 @@ Aegis.register("cloud", {
         }
 
     },
+    useProgressAccount() {
+        if (ProgressStorage.useAccount(this.user?.id ?? null)) {
+            for (const collection of Object.keys(ProgressStorage.keys)) {
+                this.refreshProgress(collection);
+            }
+        }
+    },
+
+    refreshProgress(collection) {
+        const modules = {
+            aegisHabits: ["habits", "refresh"],
+            aegisFocusSessions: ["focustracker", "refresh"],
+            aegisAchievements: ["achievements", "refresh"],
+            petSettings: ["pet", "reloadSettings"],
+            themeSettings: ["themes", "reloadSettings"]
+        };
+        const [name, method] = modules[collection];
+        Aegis.getModule(name)?.api?.[method]?.();
+    },
+
+    scheduleProgressSync(delay = 300) {
+        if (!this.user) return;
+        clearTimeout(this.progressTimer);
+        this.progressTimer = setTimeout(() => void this.syncProgress(), delay);
+    },
+
+    async syncProgress() {
+        const userId = this.user?.id;
+        if (!userId || ProgressStorage.userId !== userId) return;
+        if (this.progressSyncRunning) {
+            this.progressSyncAgain = true;
+            return;
+        }
+        this.progressSyncRunning = true;
+        try {
+            for (const collection of Object.keys(ProgressStorage.keys)) {
+                if (this.user?.id !== userId) break;
+                const { pending } = ProgressStorage.state(collection, userId);
+                const entries = Object.entries(pending);
+                for (const seed of [true, false]) {
+                    const writes = entries.filter(([, entry]) => Boolean(entry.seed) === seed);
+                    for (let offset = 0; offset < writes.length; offset += 200) {
+                        if (this.user?.id !== userId) return;
+                        const rows = writes.slice(offset, offset + 200).map(([item_id, entry]) => ({
+                            user_id: userId, collection, item_id, value: entry.value
+                        }));
+                        const { error } = await supabaseClient.from("progress_items").upsert(rows, {
+                            onConflict: "user_id,collection,item_id", ignoreDuplicates: seed
+                        });
+                        if (error) throw error;
+                    }
+                }
+
+                const rows = [];
+                let cursor = null;
+                while (this.user?.id === userId) {
+                    let query = supabaseClient.from("progress_items").select("item_id,value")
+                        .eq("user_id", userId).eq("collection", collection).order("item_id").limit(200);
+                    if (cursor !== null) query = query.gt("item_id", cursor);
+                    const { data, error } = await query;
+                    if (error) throw error;
+                    rows.push(...data);
+                    if (data.length < 200) break;
+                    cursor = data.at(-1).item_id;
+                }
+                if (this.user?.id === userId && ProgressStorage.receive(collection, userId, rows, pending)) {
+                    this.refreshProgress(collection);
+                }
+            }
+        } catch (error) {
+            console.warn("Progress sync will retry", error);
+        } finally {
+            this.progressSyncRunning = false;
+            if (this.progressSyncAgain) {
+                this.progressSyncAgain = false;
+                this.scheduleProgressSync(0);
+            }
+        }
+    },
+
     async save(table,data){
 
 

@@ -52,6 +52,7 @@ let focusTotalSec = 0;
 let focusRemainingSec = 0;
 
 let focusStartedAt = null;
+let focusProgressOwner = null;
 
 let focusBtn = null;
 
@@ -92,13 +93,7 @@ function focusLoadSessions() {
 
     try {
 
-        const raw = localStorage.getItem(FOCUS_STORE_KEY);
-
-        if (!raw) return [];
-
-        const list = JSON.parse(raw);
-
-        return Array.isArray(list) ? list : [];
+        return ProgressStorage.read(FOCUS_STORE_KEY);
 
     } catch (error) {
 
@@ -113,14 +108,11 @@ function focusSaveSession(entry) {
 
     try {
 
-        const list = focusLoadSessions();
+        const list = ProgressStorage.read(FOCUS_STORE_KEY, focusProgressOwner);
 
         list.push(entry);
 
-        localStorage.setItem(
-            FOCUS_STORE_KEY,
-            JSON.stringify(list)
-        );
+        ProgressStorage.save(FOCUS_STORE_KEY, list, focusProgressOwner);
 
     } catch (error) {}
 
@@ -214,6 +206,7 @@ function startSeconds(totalSec, label = "") {
     focusRemainingSec = totalSec;
 
     focusStartedAt = new Date().toISOString();
+    focusProgressOwner = ProgressStorage.userId;
 
     focusLabelEl.textContent = focusLabel || "Focus session";
 
