@@ -999,6 +999,9 @@ const GOOGLE_CALENDAR = {
     auth: null,
     clientId: "525444472618-c47e4nbbo5cugtkpq248t22919k2nl4h.apps.googleusercontent.com",
     calendarId: "primary",
+    importedEvents: [],
+    syncing: false,
+    syncStatus: "",
 
     /* ==================================
        INIT
@@ -1033,6 +1036,7 @@ const GOOGLE_CALENDAR = {
 
         }
 
+        if (this.auth && this.auth.expires_at <= Date.now()) this.disconnect();
         this._updateUI();
 
     },
@@ -1059,6 +1063,8 @@ const GOOGLE_CALENDAR = {
                         return;
                     }
 
+                    this.importedEvents = [];
+                    this.syncStatus = "";
                     this.auth = {
                         access_token: response.access_token,
                         expires_at: Date.now() + ((response.expires_in || 3600) * 1000)
@@ -1111,6 +1117,11 @@ const GOOGLE_CALENDAR = {
 
         }
 
+        if (this.auth.expires_at <= Date.now()) {
+            this.disconnect();
+            throw new Error("Google Calendar access expired. Reconnect to sync.");
+        }
+
         return this.auth.access_token;
 
     },
@@ -1147,6 +1158,11 @@ const GOOGLE_CALENDAR = {
             );
 
         if(!response.ok){
+
+            if (response.status === 401 && this.auth?.access_token === token) {
+                this.disconnect();
+                throw new Error("Google Calendar access expired. Reconnect to sync.");
+            }
 
             let errorData = {};
 
@@ -1228,20 +1244,21 @@ const GOOGLE_CALENDAR = {
         else{
 
             const start =
-                `${event.date}T${event.time}:00`;
+                new Date(`${event.date}T${event.time}:00`);
 
             const end =
-                this.calculateEndTime(
-                    event.date,
-                    event.time
-                );
+                new Date(start.getTime() + 60 * 60 * 1000);
+
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
             payload.start = {
-                dateTime: start
+                dateTime: start.toISOString(),
+                timeZone
             };
 
             payload.end = {
-                dateTime: end
+                dateTime: end.toISOString(),
+                timeZone
             };
 
         }
@@ -1272,6 +1289,7 @@ const GOOGLE_CALENDAR = {
         }
 
 
+        payload.recurrence ??= [];
         return payload;
 
     },
@@ -1311,10 +1329,10 @@ const GOOGLE_CALENDAR = {
 
         if(event.recurrenceEnd){
 
-            const until =
-                event.recurrenceEnd
-                    .replaceAll("-", "") +
-                "T235959Z";
+            const until = event.time
+                ? new Date(`${event.recurrenceEnd}T23:59:59`).toISOString()
+                    .replace(/[-:]/g, "").replace(".000", "")
+                : event.recurrenceEnd.replaceAll("-", "");
 
             rule +=
                 `;UNTIL=${until}`;
@@ -1346,12 +1364,7 @@ const GOOGLE_CALENDAR = {
                 url
             );
 
-        return (
-            data.items &&
-            data.items.length
-        )
-            ? data.items[0]
-            : null;
+        return data.items?.find(event => event.status !== "cancelled" && !event.recurringEventId);
 
     },
 
@@ -1366,6 +1379,8 @@ const GOOGLE_CALENDAR = {
             this.buildGoogleEvent(
                 event
             );
+
+        if (/^\d+$/.test(String(event.id))) payload.id = `aegis${event.id}`;
 
         const url =
             "https://www.googleapis.com/calendar/v3/" +
@@ -1421,280 +1436,103 @@ const GOOGLE_CALENDAR = {
     },
 
 
-    /* ==================================
-       DELETE
-    ================================== */
+    async runSync(sync) {
+        if (this.syncing) return;
+        this.syncing = true;
+        this.syncStatus = "Syncing Google Calendar…";
+        this._updateUI();
 
-    async deleteGoogleEvent(
-        googleEventId
-    ){
-
-        const token =
-            await this.ensureToken();
-
-        const url =
-            "https://www.googleapis.com/calendar/v3/" +
-            `calendars/${encodeURIComponent(this.calendarId)}` +
-            `/events/${encodeURIComponent(googleEventId)}`;
-
-        const response =
-            await fetch(
-                url,
-                {
-                    method:"DELETE",
-
-                    headers:{
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
-            );
-
-        if(
-            !response.ok &&
-            response.status !== 404
-        ){
-
-            throw new Error(
-                `Google delete failed: ${response.status}`
-            );
-
+        try {
+            this.syncStatus = await sync();
+        } catch (error) {
+            this.syncStatus = error.message || "Google Calendar sync failed.";
+            console.error("Google Calendar sync failed:", error);
+        } finally {
+            this.syncing = false;
+            this._updateUI();
         }
-
     },
 
+    async syncToGoogle() {
+        await this.runSync(async () => {
+            const token = await this.ensureToken();
+            let sent = 0;
+            let failed = 0;
 
-    /* ==================================
-       SYNC AEGIS → GOOGLE
-    ================================== */
-
-    async syncToGoogle(){
-
-        if(!this.auth){
-
-            alert(
-                "Connect Google Calendar first."
-            );
-
-            return;
-
-        }
-
-        console.log(
-            "Starting AEGIS → Google Calendar sync..."
-        );
-
-
-        for(const event of events){
-
-            try{
-
-                const existing =
-                    await this.findGoogleEvent(
-                        event.id
-                    );
-
-
-                if(existing){
-
-                    await this.updateGoogleEvent(
-                        existing.id,
-                        event
-                    );
-
-                    console.log(
-                        "Google event updated:",
-                        event.id
-                    );
-
-                }else{
-
-                    await this.createGoogleEvent(
-                        event
-                    );
-
-                    console.log(
-                        "Google event created:",
-                        event.id
-                    );
-
+            for (const event of structuredClone(events)) {
+                if (this.auth?.access_token !== token) break;
+                try {
+                    const existing = await this.findGoogleEvent(event.id);
+                    if (this.auth?.access_token !== token) break;
+                    if (existing) await this.updateGoogleEvent(existing.id, event);
+                    else await this.createGoogleEvent(event);
+                    sent++;
+                } catch (error) {
+                    failed++;
+                    console.error("Failed to send event to Google Calendar:", event.id, error);
                 }
-
-            }catch(error){
-
-                console.error(
-                    "Google sync failed:",
-                    event.id,
-                    error
-                );
-
             }
 
-        }
-
-
-        alert(
-            "AEGIS → Google Calendar sync complete."
-        );
-
+            if (this.auth?.access_token !== token) {
+                return "Google Calendar connection ended. Reconnect to finish sending events.";
+            }
+            return failed
+                ? `Sent ${sent} to Google Calendar. ${failed} failed.`
+                : `Sent ${sent} to Google Calendar.`;
+        });
     },
 
+    async syncFromGoogle() {
+        await this.runSync(async () => {
+            const token = await this.ensureToken();
+            const from = new Date();
+            from.setFullYear(from.getFullYear() - 1);
+            from.setHours(0, 0, 0, 0);
+            const through = new Date();
+            through.setFullYear(through.getFullYear() + 2);
+            through.setHours(0, 0, 0, 0);
 
-    /* ==================================
-       GOOGLE → AEGIS
-    ================================== */
+            const params = new URLSearchParams({
+                singleEvents: "true",
+                showDeleted: "false",
+                maxResults: "2500",
+                timeMin: from.toISOString(),
+                timeMax: through.toISOString()
+            });
+            const url = "https://www.googleapis.com/calendar/v3/calendars/" +
+                encodeURIComponent(this.calendarId) + "/events";
+            const imported = new Map();
 
-    async syncFromGoogle(){
+            do {
+                const page = await this.apiRequest(`${url}?${params}`);
+                if (this.auth?.access_token !== token) {
+                    throw new Error("Google Calendar connection changed. Pull again to refresh.");
+                }
+                for (const event of page.items || []) {
+                    const start = event.start?.date ?? event.start?.dateTime;
+                    if (event.status === "cancelled" || !event.id || !start) continue;
 
-        if(!this.auth){
+                    imported.set(event.id, {
+                        id: `google-${event.id}`,
+                        title: event.summary || "Google Calendar event",
+                        start,
+                        end: event.end?.date ?? event.end?.dateTime,
+                        allDay: Boolean(event.start?.date),
+                        editable: false,
+                        extendedProps: {
+                            googleCalendar: true,
+                            aegisId: event.extendedProperties?.private?.aegis_id
+                        }
+                    });
+                }
+                if (page.nextPageToken) params.set("pageToken", page.nextPageToken);
+                else params.delete("pageToken");
+            } while (params.has("pageToken"));
 
-            throw new Error(
-                "Google Calendar is not connected."
-            );
-
-        }
-
-        console.log(
-            "Starting Google Calendar → AEGIS sync..."
-        );
-
-
-        const url =
-            "https://www.googleapis.com/calendar/v3/" +
-            `calendars/${encodeURIComponent(this.calendarId)}` +
-            "/events" +
-            "?singleEvents=true" +
-            "&showDeleted=false" +
-            "&maxResults=2500";
-
-        const data =
-            await this.apiRequest(
-                url
-            );
-
-        const googleEvents =
-            data.items || [];
-
-
-        for(
-            const googleEvent
-            of googleEvents
-        ){
-
-            const aegisId =
-                googleEvent
-                    .extendedProperties
-                    ?.private
-                    ?.aegis_id;
-
-            /*
-               Ignore Google events that were
-               not created by AEGIS.
-            */
-
-            if(!aegisId){
-
-                continue;
-
-            }
-
-
-            const localEvent =
-                events.find(
-                    event =>
-                        String(event.id) ===
-                        String(aegisId)
-                );
-
-            if(!localEvent){
-
-                continue;
-
-            }
-
-
-            /*
-               Update basic information
-            */
-
-            localEvent.title =
-                googleEvent.summary ||
-                localEvent.title;
-
-            localEvent.notes =
-                googleEvent.description ||
-                "";
-
-            localEvent.location =
-                googleEvent.location ||
-                "";
-
-
-            /*
-               ALL DAY
-            */
-
-            if(
-                googleEvent.start?.date
-            ){
-
-                localEvent.date =
-                    googleEvent.start.date;
-
-                localEvent.time = "";
-
-            }
-
-
-            /*
-               TIMED
-            */
-
-            else if(
-                googleEvent.start?.dateTime
-            ){
-
-                const dateTime =
-                    new Date(
-                        googleEvent.start.dateTime
-                    );
-
-                localEvent.date =
-                    formatDateOnly(
-                        dateTime
-                    );
-
-                localEvent.time =
-                    dateTime
-                        .toTimeString()
-                        .slice(0,5);
-
-            }
-
-        }
-
-
-        saveData(
-            "events",
-            events
-        );
-
-        displayEvents();
-
-        if(window.refreshCalendar){
-
-            window.refreshCalendar();
-
-        }
-
-        Aegis.broadcast(
-            "eventsUpdated"
-        );
-
-        console.log(
-            "Google Calendar → AEGIS sync complete."
-        );
-
+            this.importedEvents = [...imported.values()];
+            window.refreshCalendar?.();
+            return `Pulled ${imported.size} Google Calendar events (past year through the next two years).`;
+        });
     },
 
 
@@ -1720,34 +1558,6 @@ const GOOGLE_CALENDAR = {
     },
 
 
-    calculateEndTime(
-        date,
-        time
-    ){
-
-        const start =
-            new Date(
-                `${date}T${time}:00`
-            );
-
-        /*
-           Default event duration:
-           1 hour
-        */
-
-        start.setHours(
-            start.getHours() + 1
-        );
-
-        return (
-            start
-                .toISOString()
-                .slice(0,19)
-        );
-
-    },
-
-
     /* ==================================
        DISCONNECT
     ================================== */
@@ -1755,6 +1565,8 @@ const GOOGLE_CALENDAR = {
     disconnect(){
 
         this.auth = null;
+        this.importedEvents = [];
+        this.syncStatus = "";
 
         localStorage.removeItem(
             "google_calendar_token"
@@ -1762,9 +1574,7 @@ const GOOGLE_CALENDAR = {
 
         this._updateUI();
 
-        alert(
-            "Disconnected from Google Calendar."
-        );
+        window.refreshCalendar?.();
 
     },
 
@@ -1792,6 +1602,8 @@ const GOOGLE_CALENDAR = {
                 "gcalSyncBtn"
             );
 
+        const pullBtn = document.getElementById("gcalPullBtn");
+
         const disconnectBtn =
             document.getElementById(
                 "gcalDisconnectBtn"
@@ -1813,16 +1625,10 @@ const GOOGLE_CALENDAR = {
         }
 
 
-        if(syncBtn){
-
-            syncBtn.disabled =
-                !this.auth;
-
-            syncBtn.style.cursor =
-                this.auth
-                    ? "pointer"
-                    : "not-allowed";
-
+        for (const button of [syncBtn, pullBtn]) {
+            if (!button) continue;
+            button.disabled = !this.auth || this.syncing;
+            button.style.cursor = button.disabled ? "not-allowed" : "pointer";
         }
 
 
@@ -1842,9 +1648,9 @@ const GOOGLE_CALENDAR = {
         if(status){
 
             status.textContent =
-                this.auth
+                this.syncStatus || (this.auth
                     ? "Connected to Google Calendar"
-                    : "Not connected to Google Calendar.";
+                    : "Not connected to Google Calendar.");
 
             status.style.color =
                 this.auth
@@ -1859,6 +1665,7 @@ const GOOGLE_CALENDAR = {
     _onConnected(){
 
         this._updateUI();
+        void this.syncFromGoogle();
 
         Aegis.broadcast(
             "googleCalendarConnected"
@@ -1881,6 +1688,7 @@ Aegis.register("events", {
 
     init(){
         loadEventsFromCloud();
+        if (GOOGLE_CALENDAR.isConnected()) void GOOGLE_CALENDAR.syncFromGoogle();
         console.log(
             "Events initialized."
         );
@@ -2001,6 +1809,9 @@ GOOGLE_CALENDAR.connect.bind(GOOGLE_CALENDAR);
 
 window.handleGCalSync =
 GOOGLE_CALENDAR.syncToGoogle.bind(GOOGLE_CALENDAR);
+
+window.handleGCalPull =
+GOOGLE_CALENDAR.syncFromGoogle.bind(GOOGLE_CALENDAR);
 
 window.handleGCalDisconnect =
 GOOGLE_CALENDAR.disconnect.bind(GOOGLE_CALENDAR);

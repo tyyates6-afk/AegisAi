@@ -114,6 +114,8 @@ function ensureAegisCalendar() {
 
                             const props = info.event.extendedProps;
 
+                            if (props.googleCalendar) return;
+
                             if (props.isRecurrence &&
                                 props.occurrenceDate !== props.baseDate) {
 
@@ -182,13 +184,6 @@ function getCalendarEvents(fetchInfo, successCallback, failureCallback) {
         const start = fetchInfo.startStr.split("T")[0];
         const end = fetchInfo.endStr.split("T")[0];
 
-        console.log("Calendar loading events:", {
-            count: sourceEvents.length,
-            start,
-            end,
-            events: sourceEvents
-        });
-
         const occurrences = expandEventOccurrences(
             sourceEvents,
             start,
@@ -224,12 +219,19 @@ function getCalendarEvents(fetchInfo, successCallback, failureCallback) {
 
         }));
 
-        console.log(
-            "Calendar events generated:",
-            calendarEvents
-        );
+        const localIds = new Set(sourceEvents.map(event => String(event.id)));
+        const imported = window.GOOGLE_CALENDAR?.importedEvents ?? [];
+        const googleEvents = imported.filter(event => {
+            if (localIds.has(event.extendedProps.aegisId)) return false;
+            if (event.allDay) {
+                return event.start < end && (event.end ? event.end > start : event.start >= start);
+            }
+            return Date.parse(event.start) < Date.parse(fetchInfo.endStr) &&
+                (event.end ? Date.parse(event.end) > Date.parse(fetchInfo.startStr)
+                    : Date.parse(event.start) >= Date.parse(fetchInfo.startStr));
+        });
 
-        successCallback(calendarEvents);
+        successCallback([...calendarEvents, ...googleEvents]);
 
     } catch (error) {
 
@@ -282,41 +284,6 @@ Aegis.register("calendar", {
             }
         );
 
-        Aegis.listen(
-            "googleCalendarConnected",
-            async () => {
-
-                console.log(
-                    "GCal connected — refreshing calendar."
-                );
-
-                try {
-
-                    const google =
-                        window.GOOGLE_CALENDAR;
-
-                    if(
-                        google &&
-                        google.syncFromGoogle
-                    ){
-
-                        await google.syncFromGoogle();
-
-                    }
-
-                    refreshCalendar();
-
-                } catch(error){
-
-                    console.error(
-                        "Google Calendar refresh failed:",
-                        error
-                    );
-
-                }
-
-            }
-        );
     },
 
     refresh() {
