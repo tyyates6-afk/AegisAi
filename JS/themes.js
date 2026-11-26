@@ -37,8 +37,6 @@
 ======================================*/
 
 
-const THEMES_PAGE = "themes";
-
 const THEMES_STORE_KEY = "aegisTheme";
 
 const THEMES_CUSTOM_KEY = "aegisThemeCustom";
@@ -338,7 +336,9 @@ function thHasNeedle(text) {
 /* ---------- state ---------- */
 
 
-let thPageEl = null;
+let thControls = null;
+let thDraft = null;
+let thApplyButton = null;
 
 let thGridEl = null;
 
@@ -347,7 +347,6 @@ let thCustomInput = null;
 let thTheme = "default";
 
 let thCustomAccent = "#00d9ff";
-let thPreviewAccent = null;
 let thMainColor = null;
 let thMainInput = null;
 
@@ -435,7 +434,7 @@ function thRampForTheme(id) {
 
 function thCurrentRamp() {
 
-    return thPreviewAccent ? thRampFor(thPreviewAccent) : thRampForTheme(thTheme);
+    return thRampForTheme(thTheme);
 
 }
 
@@ -459,7 +458,7 @@ function thApplyVars(ramp) {
         s.setProperty("--secondary", ramp.light);
 
         s.setProperty("--border", "rgba(" + ramp.accentRgb + ",0.18)");
-        const tintArtwork = thTheme !== "default" || Boolean(thPreviewAccent);
+        const tintArtwork = thTheme !== "default";
         s.setProperty("--artwork-tint-opacity", tintArtwork ? "0.65" : "0");
         s.setProperty("--background-tint", tintArtwork ? `rgba(${ramp.accentRgb},0.4)` : "transparent");
 
@@ -495,7 +494,6 @@ function thSetMainColor(color) {
     } catch (error) {}
 
     thApplyMainColor(thMainColor);
-    if (thMainInput) thMainInput.value = thMainColor || THEMES_DEFAULT_MAIN;
 }
 
 
@@ -725,7 +723,7 @@ function thApplyTheme(id, save) {
     const def = thDef(id) || thDef("default");
 
     thTheme = def.id;
-    thPreviewAccent = null;
+    thDraft = null;
 
     if (save !== false) thSave();
 
@@ -767,16 +765,6 @@ function thSetCustom(hex) {
     thSaveCustom();
 
     return thApplyTheme("custom");
-
-}
-
-
-function thPreviewCustom(hex) {
-
-    if (!thValidHex(hex)) return;
-
-    thPreviewAccent = hex.toLowerCase();
-    thApplyPipeline(thCurrentRamp());
 
 }
 
@@ -1002,77 +990,6 @@ function thShowPage(name) {
 }
 
 
-function thGoSettings() {
-
-    thShowPage("settings");
-
-}
-
-
-function thHookNavigation() {
-
-    const nav = thNav();
-
-    if (!nav || !thPageEl) return false;
-
-    try {
-
-        if (nav._els && Array.isArray(nav._els.pages)) {
-
-            if (nav._els.pages.indexOf(thPageEl) < 0) {
-
-                nav._els.pages.push(thPageEl);
-
-            }
-
-            return true;
-
-        }
-
-    } catch (error) {}
-
-    return false;
-
-}
-
-
-function thAddSettingsEntry() {
-
-    try {
-
-        const settings = document.getElementById("appearanceSettings");
-
-        if (!settings) return false;
-
-        if (settings.querySelector('[data-goto-page="' + THEMES_PAGE + '"]')) {
-
-            return true;
-
-        }
-
-        const item = document.createElement("button");
-
-        item.type = "button";
-
-        item.setAttribute("data-goto-page", THEMES_PAGE);
-
-        item.textContent = "🎨 Dashboard Themes";
-
-        item.addEventListener("click", thOpen);
-
-        settings.appendChild(item);
-
-        return true;
-
-    } catch (error) {
-
-        return false;
-
-    }
-
-}
-
-
 function thStyle(el, styles) {
 
     try {
@@ -1089,24 +1006,20 @@ function thStyle(el, styles) {
 
 function thOpen() {
 
-    thShowPage(THEMES_PAGE);
+    thShowPage("settings");
+    thControls?.scrollIntoView({ block: "nearest" });
 
 }
 
 
 function thRefresh() {
 
-    if (thCustomInput) {
+    if (!thControls) return;
 
-        try {
-
-            thCustomInput.value = thCustomAccent;
-
-        } catch (error) {}
-
-    }
-
-    if (!thGridEl) return;
+    thDraft ??= { theme: thTheme, accent: thCustomAccent, main: thMainColor };
+    if (thCustomInput.value !== thDraft.accent) thCustomInput.value = thDraft.accent;
+    thMainInput.value = thDraft.main || THEMES_DEFAULT_MAIN;
+    thUpdateApply();
 
     const focusedTheme = document.activeElement?.dataset.theme;
     thGridEl.innerHTML = "";
@@ -1117,7 +1030,7 @@ function thRefresh() {
 
         const btn = document.createElement("button");
 
-        const active = thTheme === def.id;
+        const active = thDraft.theme === def.id;
         btn.type = "button";
         btn.dataset.theme = def.id;
         btn.setAttribute("aria-pressed", String(active));
@@ -1181,7 +1094,10 @@ function thRefresh() {
 
         btn.appendChild(label);
 
-        btn.addEventListener("click", () => thApplyTheme(def.id));
+        btn.addEventListener("click", () => {
+            thDraft.theme = def.id;
+            thRefresh();
+        });
 
         thGridEl.appendChild(btn);
         if (focusedTheme === def.id) btn.focus({ preventScroll: true });
@@ -1191,7 +1107,24 @@ function thRefresh() {
 }
 
 
-function thBuildColorPicker(container, { id, name, value, preview, save, reset }) {
+function thUpdateApply() {
+    thApplyButton.disabled = thDraft.theme === thTheme &&
+        thDraft.accent === thCustomAccent && thDraft.main === thMainColor;
+}
+
+
+function thApplyDraft() {
+    const { theme, accent, main } = thDraft;
+    if (accent !== thCustomAccent) {
+        thCustomAccent = accent;
+        thSaveCustom();
+    }
+    if (main !== thMainColor) thSetMainColor(main);
+    thApplyTheme(theme, theme !== thTheme);
+}
+
+
+function thBuildColorPicker(container, { id, name, update, reset }) {
     const label = document.createElement("label");
     label.htmlFor = id;
     label.textContent = name;
@@ -1204,10 +1137,8 @@ function thBuildColorPicker(container, { id, name, value, preview, save, reset }
     const input = document.createElement("input");
     input.id = id;
     input.type = "color";
-    input.value = value;
     thStyle(input, { width: "44px", height: "44px", cursor: "pointer" });
-    input.addEventListener("input", () => preview(input.value));
-    input.addEventListener("change", () => save(input.value));
+    input.addEventListener("input", () => update(input.value));
 
     const button = document.createElement("button");
     button.type = "button";
@@ -1220,67 +1151,14 @@ function thBuildColorPicker(container, { id, name, value, preview, save, reset }
 }
 
 
-function thBuildPage() {
+function thBuildSettings() {
 
-    thPageEl = document.createElement("div");
+    const card = document.getElementById("appearanceSettings");
+    if (!card) return;
 
-    thPageEl.className = "aegis-page";
-
-    thPageEl.dataset.page = THEMES_PAGE;
-
-    /* The settings page keeps its own chrome — it is never
-       swept, so the preset swatches always show true colors. */
-
-    thPageEl.setAttribute(THEMES_SKIP_ATTR, "1");
-
-    /* Constrain the page to the dashboard's centered column
-       instead of stretching full-bleed edge to edge. */
-
-    thStyle(thPageEl, {
-
-        width: "min(1200px, 92%)",
-
-        margin: "0 auto"
-
-    });
-
-    const back = document.createElement("button");
-
-    back.className = "aegis-page-back";
-
-    back.textContent = "← Back to Settings";
-
-    back.addEventListener("click", thGoSettings);
-
-    thPageEl.appendChild(back);
-
-    const card = document.createElement("section");
-
-    card.className = "card";
-
-    const h2 = document.createElement("h2");
-
-    h2.textContent = "🎨 Dashboard Themes";
-
-    card.appendChild(h2);
-
-    const note = document.createElement("div");
-
-    note.textContent =
-        "Real theming — recolors the dashboard's actual palette. " +
-        "Your choice is saved automatically.";
-
-    thStyle(note, {
-
-        fontSize: "11px",
-
-        color: "rgba(159, 220, 255, 0.55)",
-
-        marginBottom: "12px"
-
-    });
-
-    card.appendChild(note);
+    thControls = document.createElement("div");
+    thControls.setAttribute(THEMES_SKIP_ATTR, "1");
+    card.appendChild(thControls);
 
     thGridEl = document.createElement("div");
     thStyle(thGridEl, {
@@ -1288,7 +1166,7 @@ function thBuildPage() {
         flexWrap: "wrap"
     });
 
-    card.appendChild(thGridEl);
+    thControls.appendChild(thGridEl);
 
     /* ---- custom color wheel ---- */
 
@@ -1307,28 +1185,39 @@ function thBuildPage() {
     thMainInput = thBuildColorPicker(customWrap, {
         id: "aegis-theme-main-color",
         name: "Main color",
-        value: thMainColor || THEMES_DEFAULT_MAIN,
-        preview: thApplyMainColor,
-        save: thSetMainColor,
-        reset: () => thSetMainColor(null)
+        update: value => {
+            thDraft.main = value;
+            thUpdateApply();
+        },
+        reset: () => {
+            thDraft.main = null;
+            thRefresh();
+        }
     });
     thCustomInput = thBuildColorPicker(customWrap, {
         id: "aegis-theme-accent-color",
         name: "Accent color",
-        value: thCustomAccent,
-        preview: thPreviewCustom,
-        save: thSetCustom,
+        update: value => {
+            const wasCustom = thDraft.theme === "custom";
+            thDraft.accent = value;
+            thDraft.theme = "custom";
+            if (wasCustom) thUpdateApply();
+            else thRefresh();
+        },
         reset: () => {
-            thCustomAccent = thDef("default").accent;
-            thSaveCustom();
-            thApplyTheme("default");
+            thDraft.accent = thDef("default").accent;
+            thDraft.theme = "default";
+            thRefresh();
         }
     });
-    card.appendChild(customWrap);
+    thControls.appendChild(customWrap);
 
-    thPageEl.appendChild(card);
-
-    document.body.appendChild(thPageEl);
+    thApplyButton = document.createElement("button");
+    thApplyButton.type = "button";
+    thApplyButton.textContent = "Apply";
+    thApplyButton.style.marginTop = "16px";
+    thApplyButton.addEventListener("click", thApplyDraft);
+    thControls.appendChild(thApplyButton);
 
 }
 
@@ -1387,7 +1276,6 @@ Aegis.register("themes", {
         thLoad();
         thApplyTheme(thTheme, false);
         thApplyMainColor(thMainColor);
-        if (thMainInput) thMainInput.value = thMainColor || THEMES_DEFAULT_MAIN;
     },
 
     init() {
@@ -1402,32 +1290,12 @@ Aegis.register("themes", {
 
         } catch (error) {}
 
-        thBuildPage();
-
-        thAddSettingsEntry();
+        thBuildSettings();
 
         thApplyTheme(thTheme, false);
         thApplyMainColor(thMainColor);
 
         thWatch();
-
-        if (!thHookNavigation()) {
-
-            let attempts = 0;
-
-            const retry = setInterval(() => {
-
-                attempts += 1;
-
-                if (thHookNavigation() || attempts >= 20) {
-
-                    clearInterval(retry);
-
-                }
-
-            }, 250);
-
-        }
 
         console.log("Dashboard Themes v1.0.0 initialized.");
 
@@ -1437,7 +1305,7 @@ Aegis.register("themes", {
     shutdown() {
 
         thUnwatch();
-        thPreviewAccent = null;
+        thDraft = null;
 
         thRestoreInline();
         thApplyMainColor(null);
@@ -1465,32 +1333,9 @@ Aegis.register("themes", {
 
         } catch (error) {}
 
-        if (thPageEl && thPageEl.parentNode) {
-
-            try {
-
-                thPageEl.parentNode.removeChild(thPageEl);
-
-            } catch (error) {}
-
-        }
-
-        try {
-
-            const entry = document.querySelector(
-                '#appearanceSettings [data-goto-page="' +
-                THEMES_PAGE + '"]'
-            );
-
-            if (entry && entry.parentNode) {
-
-                entry.parentNode.removeChild(entry);
-
-            }
-
-        } catch (error) {}
-
-        thPageEl = null;
+        thControls?.remove();
+        thControls = null;
+        thApplyButton = null;
 
         thGridEl = null;
 
