@@ -750,6 +750,13 @@ Aegis.register("focussounds", {
 
     getStatus: fsGetStatus,
 
+    getPlaylistLinks() {
+        return FS_PLAYLISTS.flatMap(({ id, name }) => {
+            const url = fsPlaylistLinks[id];
+            return url ? [{ name, url }] : [];
+        });
+    },
+
     open: fsOpen,
 
     refresh: fsRefresh,

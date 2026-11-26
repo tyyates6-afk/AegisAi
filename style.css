@@ -86,6 +86,29 @@
     color: var(--secondary);
 }
 
+.focus-playlist-shortcuts:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.focus-playlist-shortcuts a {
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--primary);
+    border-radius: 12px;
+    padding: 8px 12px;
+    text-decoration: none;
+}
+
+.focus-playlist-shortcuts a:hover,
+.focus-playlist-shortcuts a:focus-visible {
+    background: linear-gradient(var(--primary), var(--accent-hover-end));
+    color: #000;
+}
+
 body{
 
     margin:0;

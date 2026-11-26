@@ -158,6 +158,7 @@ function focusTimerTick(remainingSec) {
 
 function focusShowOverlay() {
 
+    focusRenderPlaylistLinks(focusOverlay);
     focusOverlay.style.display = "flex";
 
     focusBtn.style.display = "none";
@@ -518,12 +519,35 @@ function focusOpenSetup() {
 
     if (focusActive) return;
 
+    focusRenderPlaylistLinks(focusSetupWin);
     focusSetupWin.style.display = "block";
 
     focusSetupLabelInput.value = "";
 
     setTimeout(() => focusSetupLabelInput.focus(), 0);
 
+}
+
+function focusRenderPlaylistLinks(screen) {
+    const row = screen.querySelector(".focus-playlist-shortcuts");
+    const playlists = Aegis.getModule("focussounds")?.api?.getPlaylistLinks?.() ?? [];
+    row.replaceChildren();
+    row.hidden = playlists.length === 0;
+    for (const { name, url } of playlists) {
+        const link = document.createElement("a");
+        link.textContent = `Open in ${name}`;
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        row.appendChild(link);
+    }
+}
+
+function focusAddPlaylistRow(screen) {
+    const row = document.createElement("div");
+    row.className = "focus-playlist-shortcuts";
+    row.hidden = true;
+    screen.appendChild(row);
 }
 
 
@@ -876,6 +900,8 @@ function focusBuildSetupWindow() {
 
     focusSetupWin.appendChild(btnRow);
 
+    focusAddPlaylistRow(focusSetupWin);
+
     const soundsBtn = document.createElement("button");
     soundsBtn.type = "button";
     soundsBtn.textContent = "Focus Sounds & playlists";
@@ -896,7 +922,7 @@ function focusBuildSetupWindow() {
 
         if (event.key === "Enter") {
 
-            focusSetupStart();
+            if (!event.target.closest(".focus-playlist-shortcuts")) focusSetupStart();
 
         } else if (event.key === "Escape") {
 
@@ -1092,6 +1118,8 @@ function focusBuildOverlay() {
     focusOverlay.appendChild(focusTimeEl);
 
     focusOverlay.appendChild(row);
+
+    focusAddPlaylistRow(focusOverlay);
 
     document.body.appendChild(focusOverlay);
 
