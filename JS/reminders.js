@@ -347,13 +347,10 @@ function displayReminders(){
 
 
     div.innerHTML = `
-    <strong>
-
-    ${reminder.completed ? "✅" : "⬜"}
-
-    ${reminder.task}
-
-    </strong>
+    <label class="switch-label">
+        <input type="checkbox" role="switch" ${reminder.completed ? "checked" : ""}>
+        <strong></strong>
+    </label>
     
 
     <br>
@@ -367,12 +364,6 @@ function displayReminders(){
     <br><br>
     
     
-
-    <button onclick="toggleReminderComplete(${reminder.id})">
-
-    ${reminder.completed ? "Mark Incomplete" : "Mark Complete"}
-
-    </button>
 
     <button onclick="editReminder(${reminder.id})">
 
@@ -392,6 +383,12 @@ function displayReminders(){
 
 
 
+    div.querySelector("strong").textContent = reminder.task;
+    const completedSwitch = div.querySelector('input[role="switch"]');
+    completedSwitch.setAttribute("aria-label", `Completed: ${reminder.task}`);
+    completedSwitch.addEventListener("change", () => {
+        toggleReminderComplete(reminder.id, document.activeElement === completedSwitch);
+    });
     list.appendChild(div);
 
 
@@ -401,7 +398,7 @@ function displayReminders(){
     
 }
 
-function toggleReminderComplete(id){
+function toggleReminderComplete(id, restoreFocus = false){
 
     const reminder = reminders.find(r => r.id === id);
 
@@ -429,6 +426,9 @@ function toggleReminderComplete(id){
         `.reminder-item[data-id="${id}"]`
     );
 
+    if (restoreFocus) {
+        completedItem?.querySelector('input[role="switch"]')?.focus({ preventScroll: true });
+    }
 
     if(completedItem && reminder.completed){
 

@@ -240,6 +240,103 @@ textarea:focus{
 
 }
 
+.switch-label{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+}
+
+input[type="checkbox"][role="switch"]{
+    appearance:none;
+    position:relative;
+    display:inline-block;
+    flex:none;
+    vertical-align:middle;
+    width:44px;
+    height:24px;
+    padding:0;
+    margin:0;
+    border:1px solid #75869a;
+    border-radius:999px;
+    background:#263648;
+    cursor:pointer;
+}
+
+input[type="checkbox"][role="switch"]::before,
+input[type="checkbox"][role="switch"]::after{
+    content:"";
+    position:absolute;
+    pointer-events:none;
+}
+
+input[type="checkbox"][role="switch"]::before{
+    inset-block-start:3px;
+    inset-inline-start:3px;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#e8fbff;
+}
+
+input[type="checkbox"][role="switch"]:checked{
+    background:var(--primary);
+    border-color:var(--primary);
+}
+
+input[type="checkbox"][role="switch"]:checked::before{
+    inset-inline-start:23px;
+}
+
+input[type="checkbox"][role="switch"]:checked::after{
+    inset-block-start:6px;
+    inset-inline-start:29px;
+    width:4px;
+    height:7px;
+    border:solid #101924;
+    border-width:0 2px 2px 0;
+    transform:rotate(45deg);
+}
+
+input[type="checkbox"][role="switch"]:focus-visible{
+    outline:2px solid var(--text);
+    outline-offset:3px;
+}
+
+input[type="checkbox"][role="switch"]:disabled{
+    opacity:.55;
+    cursor:default;
+}
+
+@media (forced-colors:active){
+    input[type="checkbox"][role="switch"]{
+        forced-color-adjust:none;
+        background:Canvas;
+        border-color:ButtonText;
+    }
+
+    input[type="checkbox"][role="switch"]:checked{
+        background:Highlight;
+        border-color:Highlight;
+    }
+
+    input[type="checkbox"][role="switch"]::before{
+        background:ButtonText;
+    }
+
+    input[type="checkbox"][role="switch"]:checked::before{
+        background:HighlightText;
+    }
+
+    input[type="checkbox"][role="switch"]:checked::after{
+        border-color:Highlight;
+    }
+
+    input[type="checkbox"][role="switch"]:focus-visible{
+        outline-color:ButtonText;
+    }
+}
+
 button{
 
     background:

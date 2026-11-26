@@ -168,8 +168,7 @@ function injectCard() {
             'color:#dff2ff;outline:none">' +
             '<label style="display:flex;align-items:center;gap:8px;' +
             'font-size:12px;color:#9fdcff;margin-bottom:10px;cursor:pointer">' +
-            '<input type="checkbox" id="brainGeminiStream" ' +
-            'style="width:15px;height:15px;accent-color:#50d2ff">' +
+            '<input type="checkbox" role="switch" id="brainGeminiStream">' +
             "<span>Stream responses " +
             '<span style="color:#5b7a93">(words appear as they ' +
             "generate)</span></span></label>" +

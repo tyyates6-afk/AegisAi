@@ -69,7 +69,7 @@
       default "auto") and "aegisPetSeasonalEvents" ("1"/"0",
       default on). Broadcasts "petFestive" { festive, mode }.
     - Settings (Desktop Pet card) has a "Seasonal events" toggle,
-      a "Santa hat" checkbox, and a "Follow the seasonal calendar"
+      a "Santa hat" switch, and a "Follow the seasonal calendar"
       button that returns the hat to auto.
     - The hat is local-only per device: the desktop link mirrors
       moods, not the hat. To get the hat on the desktop pet as well,
@@ -285,9 +285,9 @@ function petInjectLinkSetting() {
             "(WebSocket to this device). Turn off to stop connection attempts.</p>" +
             '<label style="display:flex;align-items:center;gap:10px;' +
             'font-size:14px;cursor:pointer">' +
-            '<input type="checkbox" id="petLinkToggle"' +
+            '<input type="checkbox" role="switch" id="petLinkToggle"' +
             (enabled ? " checked" : "") +
-            ' style="width:20px;height:20px;accent-color:#50d2ff">' +
+            ">" +
             "<span>Desktop pet link enabled</span>" +
             "</label>" +
             '<p class="empty-state" id="petLinkStatus" style="margin-top:8px">' +
@@ -344,13 +344,11 @@ function petInjectLinkSetting() {
         const seasonalToggle = document.createElement("input");
 
         seasonalToggle.type = "checkbox";
+        seasonalToggle.setAttribute("role", "switch");
 
         seasonalToggle.id = "petSeasonalToggle";
 
         seasonalToggle.checked = petSeasonalEnabled;
-
-        seasonalToggle.style.cssText =
-            "width:20px;height:20px;accent-color:#d92632";
 
         seasonalToggle.addEventListener("change", () => {
 
@@ -388,13 +386,11 @@ function petInjectLinkSetting() {
         const festiveToggle = document.createElement("input");
 
         festiveToggle.type = "checkbox";
+        festiveToggle.setAttribute("role", "switch");
 
         festiveToggle.id = "petFestiveToggle";
 
         festiveToggle.checked = petFestive;
-
-        festiveToggle.style.cssText =
-            "width:20px;height:20px;accent-color:#d92632";
 
         festiveToggle.addEventListener("change", () => {
 
