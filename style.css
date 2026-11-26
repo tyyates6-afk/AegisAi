@@ -247,6 +247,48 @@ textarea:focus{
     cursor:pointer;
 }
 
+#eventNotifications{
+    min-inline-size:0;
+    margin:18px 0;
+    padding:0;
+    border:0;
+}
+
+#eventNotifications legend{
+    padding:0;
+    margin-bottom:8px;
+}
+
+.notification-options{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 24px;
+}
+
+.notification-options .switch-label{
+    min-height:36px;
+}
+
+.profile-fields{
+    display:grid;
+    gap:16px;
+    margin-bottom:16px;
+}
+
+.profile-field{
+    display:grid;
+    gap:6px;
+}
+
+.profile-field :is(input, select){
+    margin-top:0;
+}
+
+.profile-fields .switch-label{
+    justify-self:start;
+    min-height:36px;
+}
+
 input[type="checkbox"][role="switch"]{
     appearance:none;
     position:relative;

@@ -307,34 +307,27 @@ type="date">
 
 
 
-<div id="eventNotifications">
-
-<label>
-Notifications:
-</label>
-
-
-<label class="switch-label">
-<input type="checkbox" role="switch" value="60">
-1 hour before
-</label>
-
-<label class="switch-label">
-<input type="checkbox" role="switch" value="30">
-30 minutes before
-</label>
-
-<label class="switch-label">
-<input type="checkbox" role="switch" value="15">
-15 minutes before
-</label>
-
-<label class="switch-label">
-<input type="checkbox" role="switch" value="5">
-5 minutes before
-</label>
-
-</div>
+<fieldset id="eventNotifications">
+    <legend>Notifications</legend>
+    <div class="notification-options">
+        <label class="switch-label">
+            <input type="checkbox" role="switch" value="60">
+            1 hour before
+        </label>
+        <label class="switch-label">
+            <input type="checkbox" role="switch" value="30">
+            30 minutes before
+        </label>
+        <label class="switch-label">
+            <input type="checkbox" role="switch" value="15">
+            15 minutes before
+        </label>
+        <label class="switch-label">
+            <input type="checkbox" role="switch" value="5">
+            5 minutes before
+        </label>
+    </div>
+</fieldset>
 
 
 
@@ -611,127 +604,65 @@ autocomplete="off">
 
 
 <section class="card" id="profileSettings">
+    <h2>⚙️ AEGIS Profile</h2>
 
-<h2>
-⚙️ AEGIS Profile
-</h2>
+    <div class="profile-fields">
+        <label class="profile-field">
+            Name
+            <input id="userName" placeholder="Enter your name">
+        </label>
 
+        <label class="profile-field">
+            Bible Translation
+            <select id="bibleVersion">
+                <option value="NIV">NIV</option>
+                <option value="KJV">KJV</option>
+                <option value="ESV">ESV</option>
+                <option value="NKJV">NKJV</option>
+            </select>
+        </label>
 
-<label>
-Name
-</label>
+        <label class="profile-field">
+            Assistant Style
+            <select id="assistantStyle">
+                <option value="Jarvis">Jarvis</option>
+                <option value="Professional">Professional</option>
+                <option value="Friendly">Friendly</option>
+                <option value="Minimal">Minimal</option>
+            </select>
+        </label>
 
-<input 
-id="userName"
-placeholder="Enter your name">
+        <label class="switch-label">
+            <input type="checkbox" role="switch" id="voiceEnabled" checked>
+            Enable AEGIS Voice Assistant
+        </label>
 
+        <label class="profile-field">
+            City
+            <input id="userCity">
+        </label>
 
+        <label class="profile-field">
+            State
+            <input id="userState">
+        </label>
 
-<label>
-Bible Translation
-</label>
+        <label class="profile-field">
+            Country
+            <input id="userCountry">
+        </label>
 
-<select id="bibleVersion">
-<option value="NIV">
-NIV
-</option>
+        <label class="profile-field">
+            Temperature
+            <select id="temperatureUnit">
+                <option value="F">Fahrenheit</option>
+                <option value="C">Celsius</option>
+            </select>
+        </label>
+    </div>
 
-<option value="KJV">
-KJV
-</option>
-
-<option value="ESV">
-ESV
-</option>
-
-<option value="NKJV">
-NKJV
-</option>
-
-</select>
-
-
-
-<label>
-Assistant Style
-</label>
-
-<select id="assistantStyle">
-<option value="Jarvis">
-Jarvis
-</option>
-
-<option value="Professional">
-Professional
-</option>
-
-<option value="Friendly">
-Friendly
-</option>
-
-<option value="Minimal">
-Minimal
-</option>
-
-</select>
-
-<label class="switch-label">
-<input 
-type="checkbox"
-role="switch"
-id="voiceEnabled"
-checked>
-Enable AEGIS Voice Assistant
-</label>
-
-
-
-<label>
-City
-</label>
-
-<input id="userCity">
-
-<label>
-State
-</label>
-
-<input id="userState">
-
-<label>
-Country
-</label>
-
-<input id="userCountry">
-
-
-
-<label>
-Temperature
-</label>
-
-<select id="temperatureUnit">
-
-<option value="F">
-Fahrenheit
-</option>
-
-<option value="C">
-Celsius
-</option>
-
-</select>
-
-
-
-<button onclick="saveProfile()">
-
-Save Profile
-
-</button>
-
-<p id="profileStatus"></p>
-
+    <button onclick="saveProfile()">Save Profile</button>
+    <p id="profileStatus"></p>
 </section>
 
 <section class="card" id="categoriesSettings">
