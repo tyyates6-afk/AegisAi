@@ -48,10 +48,13 @@
 - Reminder → Dashboard Updates
 - Profile → Dashboard Updates
 - Calendar/Event → Dashboard Updates
+- Command Bar
+- Command Bar Module Integration
+- Global Navigation Commands
+- Quick Actions
 
 ## Planned
 
-- Command Bar
 - Notification Engine
 - Settings Improvements
 - Global Search
@@ -255,11 +258,7 @@ All of these capabilities should ultimately work together through a unified AEGI
 
 # Current Priority
 
-The next major development target is:
-
-**Command Bar**
-
-After the Command Bar:
+Command History is the remaining item in Phase 1. The next major targets are:
 
 1. Notification Engine
 2. Global Search

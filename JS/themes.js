@@ -19,7 +19,7 @@
            keeps a MutationObserver running so later re-renders
            get re-themed without touching those modules.
 
-        Presets: Default, Sunset, Forest, Royal, Mono.
+        Presets: Default, Sunset, Forest, Royal, Mono, Glacier, Rose, Gold.
         Plus a color-wheel Custom theme — pick any color and
         the whole accent ramp (accent / light / soft) is
         derived from it.
@@ -156,6 +156,9 @@ const THEME_DEFS = [
 
     { id: "mono", name: "Mono", accent: "#9aa7b5" },
 
+    { id: "glacier", name: "Glacier", accent: "#7fa8ff" },
+    { id: "rose", name: "Rose", accent: "#ff76ae" },
+    { id: "gold", name: "Gold", accent: "#eac35e" },
     { id: "custom", name: "Custom", accent: null }
 
 ];
@@ -344,6 +347,7 @@ let thCustomHex = null;
 let thTheme = "default";
 
 let thCustomAccent = "#00d9ff";
+let thPreviewAccent = null;
 
 let thObserver = null;
 
@@ -428,7 +432,7 @@ function thRampForTheme(id) {
 
 function thCurrentRamp() {
 
-    return thRampForTheme(thTheme);
+    return thPreviewAccent ? thRampFor(thPreviewAccent) : thRampForTheme(thTheme);
 
 }
 
@@ -594,12 +598,14 @@ function thSweepOne(el, ramp) {
     }
 
     if (!cur || !thHasNeedle(cur)) return;
+    const themed = thRewriteColors(cur, ramp);
+    if (themed === cur) return;
 
     try {
 
         el.setAttribute(THEMES_ORIG_ATTR, cur);
 
-        el.setAttribute("style", thRewriteColors(cur, ramp));
+        el.setAttribute("style", themed);
 
     } catch (error) {}
 
@@ -683,6 +689,7 @@ function thApplyTheme(id, save) {
     const def = thDef(id) || thDef("default");
 
     thTheme = def.id;
+    thPreviewAccent = null;
 
     if (save !== false) thSave();
 
@@ -732,7 +739,8 @@ function thPreviewCustom(hex) {
 
     if (!thValidHex(hex)) return;
 
-    thApplyPipeline(thRampFor(hex.toLowerCase()));
+    thPreviewAccent = hex.toLowerCase();
+    thApplyPipeline(thCurrentRamp());
 
     if (thCustomHex) thCustomHex.textContent = hex.toLowerCase();
 
@@ -924,7 +932,7 @@ function thNav() {
 
     } catch (error) {}
 
-    return null;
+    return window.Navigation || null;
 
 }
 
@@ -1083,6 +1091,7 @@ function thRefresh() {
 
     if (!thGridEl) return;
 
+    const focusedTheme = document.activeElement?.dataset.theme;
     thGridEl.innerHTML = "";
 
     THEME_DEFS.forEach((def) => {
@@ -1092,6 +1101,9 @@ function thRefresh() {
         const btn = document.createElement("button");
 
         const active = thTheme === def.id;
+        btn.type = "button";
+        btn.dataset.theme = def.id;
+        btn.setAttribute("aria-pressed", String(active));
 
         thStyle(btn, {
 
@@ -1101,7 +1113,9 @@ function thRefresh() {
 
             gap: "10px",
 
-            width: "100%",
+            flex: "1 1 150px",
+
+            margin: "0 8px 8px 0",
 
             textAlign: "left",
 
@@ -1120,9 +1134,7 @@ function thRefresh() {
 
             fontSize: "13px",
 
-            cursor: "pointer",
-
-            marginBottom: "8px"
+            cursor: "pointer"
 
         });
 
@@ -1155,6 +1167,7 @@ function thRefresh() {
         btn.addEventListener("click", () => thApplyTheme(def.id));
 
         thGridEl.appendChild(btn);
+        if (focusedTheme === def.id) btn.focus({ preventScroll: true });
 
     });
 
@@ -1224,6 +1237,10 @@ function thBuildPage() {
     card.appendChild(note);
 
     thGridEl = document.createElement("div");
+    thStyle(thGridEl, {
+        display: "flex",
+        flexWrap: "wrap"
+    });
 
     card.appendChild(thGridEl);
 
@@ -1440,6 +1457,7 @@ Aegis.register("themes", {
     shutdown() {
 
         thUnwatch();
+        thPreviewAccent = null;
 
         thRestoreInline();
 

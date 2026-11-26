@@ -109,8 +109,17 @@
         // PAGE SWITCHING
         // ==================================
 
+        getPages() {
+            return (this._els.pages || []).map((page) => page.dataset.page);
+        },
+
         showPage(pageName, options = {}) {
-            if (!this._els.pages) return;
+            if (!this.getPages().includes(pageName)) return false;
+
+            if (this._activeTab !== "command") {
+                this._activeTab = this._tabForPage(pageName);
+                this._updateActiveTab();
+            }
 
             const changingPage =
                 this._activePage !== pageName;
@@ -118,7 +127,7 @@
             if (!changingPage && !options.force) {
                 // Already on this page — nothing to do,
                 // and definitely don't scroll.
-                return;
+                return true;
             }
 
             this._els.pages.forEach((page) => {
@@ -147,6 +156,7 @@
             );
 
             global.Aegis?.broadcast(`navigation:${pageName}`);
+            return true;
         },
         
         // ==================================
@@ -200,23 +210,13 @@
         _bindBackButtons() {
             document.querySelectorAll("[data-back-to]").forEach((button) => {
                 button.addEventListener("click", () => {
-                    const target = button.dataset.backTo;
-
-                    this.showPage(target);
-
-                    this._activeTab = this._tabForPage(target);
-
-                    this._updateActiveTab();
+                    this.showPage(button.dataset.backTo);
                 });
             });
 
             document.querySelectorAll("[data-goto-page]").forEach((button) => {
                 button.addEventListener("click", () => {
                     this.showPage(button.dataset.gotoPage);
-
-                    this._activeTab = this._tabForPage(button.dataset.gotoPage);
-
-                    this._updateActiveTab();
                 });
             });
         },
@@ -283,24 +283,7 @@
                 return;
             }
 
-            this._activeTab = tab;
-            this._updateActiveTab();
-
-            if (tab === "home") {
-                this.showPage("home");
-            
-            } else if (tab === "planner") {
-                this.showPage("planner");
-            
-            } else if (tab === "modules") {
-                this.showPage("modules");
-            
-            } else if (tab === "more") {
-                this.showPage("more");
-            
-            } else if (tab === "settings") {
-                this.showPage("settings");
-            }
+            this.showPage(tab);
         },
 
         _updateActiveTab() {

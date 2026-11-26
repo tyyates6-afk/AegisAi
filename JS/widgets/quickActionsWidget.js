@@ -87,6 +87,7 @@ Dashboard.register("quickActions", {
 
 function openEventCreator(){
 
+    window.Navigation.showPage("planner");
     document.getElementById(
         "eventTitle"
     ).focus();
@@ -97,6 +98,7 @@ function openEventCreator(){
 
 function openReminderCreator(){
 
+    window.Navigation.showPage("reminders");
     document.getElementById(
         "reminderInput"
     ).focus();

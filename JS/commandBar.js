@@ -129,7 +129,8 @@ initialized automatically by Aegis.initModules().
 
             document.removeEventListener(
                 "keydown",
-                this._onGlobalKeydown
+                this._onGlobalKeydown,
+                true
             );
 
             this._initialized = false;
@@ -707,9 +708,7 @@ initialized automatically by Aegis.initModules().
                     this._els.input.value =
                         `/${keyword} `;
 
-                    this._renderSuggestions(
-                        event.target.value
-                    );
+                    box.replaceChildren();
 
                     this._els.input.focus();
 
@@ -1157,6 +1156,41 @@ initialized automatically by Aegis.initModules().
         // ==================================
 
         _registerBuiltinCommands() {
+
+            this.registerCommand(
+                "go",
+                "Open a page (for example, /go planner)",
+                ([page, ...extra]) => {
+                    const pages = global.Navigation?.getPages() || [];
+                    if (!pages.length) return "Navigation is unavailable.";
+
+                    const destination = page?.toLowerCase();
+                    if (extra.length || !pages.includes(destination)) {
+                        return `Usage: /go <page>\nPages: ${pages.join(", ")}`;
+                    }
+
+                    this.close();
+                    global.Navigation.showPage(destination);
+                }
+            );
+
+            this.registerCommand(
+                "event",
+                "Open the Add Event form",
+                () => {
+                    this.close();
+                    global.openEventCreator();
+                }
+            );
+
+            this.registerCommand(
+                "reminder",
+                "Open the Add Reminder form",
+                () => {
+                    this.close();
+                    global.openReminderCreator();
+                }
+            );
 
             this.registerCommand(
                 "help",
