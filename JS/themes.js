@@ -453,6 +453,11 @@ function thApplyVars(ramp) {
         const s = document.documentElement.style;
 
         s.setProperty("--primary", ramp.accent);
+        if (ramp.accent === THEME_DEFS[0].accent) {
+            s.removeProperty("--accent-hover-end");
+        } else {
+            s.setProperty("--accent-hover-end", thMixHex(ramp.accent, "#000000", 0.30));
+        }
 
         s.setProperty("--secondary", ramp.light);
 
@@ -1532,6 +1537,7 @@ Aegis.register("themes", {
             const s = document.documentElement.style;
 
             s.removeProperty("--primary");
+            s.removeProperty("--accent-hover-end");
 
             s.removeProperty("--secondary");
 

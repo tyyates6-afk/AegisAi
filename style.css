@@ -13,6 +13,7 @@
     --dashboard-hero-edge:rgba(10,20,35,.9);
 
     --primary:#00d9ff;
+    --accent-hover-end:#008fc7;
     --secondary:#66ccff;
     --text:#e8fbff;
     --muted:#8db6c9;
@@ -207,9 +208,9 @@ button:hover{
 
         linear-gradient(
 
-            #00d9ff,
+            var(--primary),
 
-            #008fc7
+            var(--accent-hover-end)
 
         );
 
