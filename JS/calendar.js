@@ -202,6 +202,10 @@ function getCalendarEvents(fetchInfo, successCallback, failureCallback) {
                         : ""
                 ),
 
+            end: occurrence.time && occurrence.endTime
+                ? `${occurrence.occurrenceDate}T${occurrence.endTime}`
+                : undefined,
+
             backgroundColor: occurrence.color || "#00d9ff",
             borderColor: occurrence.color || "#00d9ff",
 

@@ -152,6 +152,7 @@ async function loadEventsFromCloud(){
         color:event.color,
         date:event.date,
         time:event.time,
+        endTime:event.end_time?.slice(0, 5) || "",
         location:event.location,
         notes:event.notes,
         recurrence:event.recurrence || "none",
@@ -183,10 +184,12 @@ async function syncEventsToCloud(){
     .api;
 
     for(const event of events){
+        const { endTime, ...data } = event;
         await cloud.save(
             "events",
             {
-                ...event,
+                ...data,
+                end_time:endTime || null,
                 exceptions:event.exceptions || {}
             }
         );
@@ -295,6 +298,14 @@ function applyOverrideToEvent(event, occurrenceDate, override, updateAllFuture){
     return true;
 }
 
+function validEventTimes(start, end){
+    if (!end || (start && end > start)) return true;
+
+    alert(start ? "End time must be after start time." : "Choose a start time before adding an end time.");
+    document.getElementById("eventEndTime").focus();
+    return false;
+}
+
 function addEvent(){
     if(editingEvent){
         saveEventChanges();
@@ -317,6 +328,7 @@ function addEvent(){
     document.getElementById(
         "eventTime"
     ).value;
+    const endTime = document.getElementById("eventEndTime").value;
     const location =
     document.getElementById(
         "eventLocation"
@@ -349,6 +361,8 @@ function addEvent(){
         return;
     }
 
+    if (!validEventTimes(time, endTime)) return;
+
     const categoryInfo =
     categories.find(
         item => item.id === categoryId
@@ -364,6 +378,7 @@ function addEvent(){
         "gray",
         date:date,
         time:time,
+        endTime:endTime,
         location:location,
         notes:notes,
         recurrence:recurrence || "none",
@@ -591,7 +606,7 @@ function displayEvents(){
         <br>
 
         ⏰ Time:
-        ${event.time || "No time set"}
+        ${event.time || "No time set"}${event.time && event.endTime ? ` – ${event.endTime}` : ""}
         ${event.location ? `
         <br>
         📍 Location:
@@ -623,6 +638,8 @@ function displayEvents(){
 
 
 function clearEventForm(){
+    document.getElementById("eventEndTime").value = "";
+
     document.getElementById(
     "eventTitle"
     ).value="";
@@ -676,6 +693,7 @@ function editEvent(id, occurrenceDate){
             color:baseForDisplay.color,
             date:event.date,
             time:baseForDisplay.time,
+            endTime:baseForDisplay.endTime || "",
             location:baseForDisplay.location,
             notes:baseForDisplay.notes,
             recurrence:event.recurrence || "none",
@@ -702,6 +720,7 @@ function editEvent(id, occurrenceDate){
         document.getElementById(
             "eventTime"
         ).value = editingEvent.time;
+        document.getElementById("eventEndTime").value = editingEvent.endTime;
 
         document.getElementById(
             "eventLocation"
@@ -791,6 +810,7 @@ function editEvent(id, occurrenceDate){
         "eventTime"
     ).value =
     editingEvent.time;
+    document.getElementById("eventEndTime").value = editingEvent.endTime || "";
 
     document.getElementById(
         "eventLocation"
@@ -862,6 +882,8 @@ function saveEventChanges(){
     document.getElementById(
         "eventTime"
     ).value;
+    const endTime = document.getElementById("eventEndTime").value;
+    if (!validEventTimes(time, endTime)) return;
 
     const location =
     document.getElementById(
@@ -878,7 +900,7 @@ function saveEventChanges(){
     "#eventNotifications input:checked"
     )
     .forEach(box=>{
-        editingEvent.notifications.push(
+        notifications.push(
             Number(box.value)
         );
     });
@@ -889,6 +911,7 @@ function saveEventChanges(){
     editingEvent.title = title;
     editingEvent.categoryId = categoryId;
     editingEvent.time = time;
+    editingEvent.endTime = endTime;
     editingEvent.location = location;
     editingEvent.notes = notes;
     editingEvent.notifications = notifications;
@@ -923,6 +946,7 @@ function saveEventChanges(){
                 "gray"
             ) : targetEvent.color,
             time:editingEvent.time,
+            endTime:editingEvent.endTime,
             location:editingEvent.location,
             notes:editingEvent.notes,
             notifications:editingEvent.notifications
@@ -946,6 +970,7 @@ function saveEventChanges(){
         syncEventsToCloud();
         editingEvent = null;
         editingOccurrenceDate = null;
+        document.getElementById("eventEndTime").value = "";
 
         document.getElementById("saveEventButton").innerText = "Save Event";
         displayEvents();
@@ -958,18 +983,21 @@ function saveEventChanges(){
         return;
     }
 
-    editingEvent.date = dateField;
-    editingEvent.recurrence =
+    const recurrence =
     document.getElementById(
         "eventRecurrence"
     ).value || "none";
+
+    if (editingEvent.date !== dateField || (editingEvent.recurrence || "none") !== recurrence) {
+        editingEvent.exceptions = {};
+    }
+    editingEvent.date = dateField;
+    editingEvent.recurrence = recurrence;
 
     editingEvent.recurrenceEnd =
     document.getElementById(
         "eventRecurrenceEnd"
     ).value || null;
-
-    editingEvent.exceptions = {};
 
     saveData(
         "events",
@@ -979,6 +1007,7 @@ function saveEventChanges(){
     syncEventsToCloud();
     editingEvent = null;
     editingOccurrenceDate = null;
+    document.getElementById("eventEndTime").value = "";
 
     document.getElementById(
         "saveEventButton"
@@ -1244,10 +1273,12 @@ const GOOGLE_CALENDAR = {
         else{
 
             const start =
-                new Date(`${event.date}T${event.time}:00`);
+                new Date(`${event.date}T${event.time}`);
 
             const end =
-                new Date(start.getTime() + 60 * 60 * 1000);
+                event.endTime
+                    ? new Date(`${event.date}T${event.endTime}`)
+                    : new Date(start.getTime() + 60 * 60 * 1000);
 
             const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 

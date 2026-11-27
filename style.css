@@ -247,6 +247,18 @@ textarea:focus{
     cursor:pointer;
 }
 
+.planner-event-times{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin:14px 0;
+}
+
+.planner-event-times label{
+    flex:1 1 135px;
+    min-width:0;
+}
+
 #eventNotifications{
     min-inline-size:0;
     margin:18px 0;
